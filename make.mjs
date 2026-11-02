@@ -35,7 +35,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const flag = (n) => args.includes('--' + n);
 const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i + 1] : d; };
-const VALUED = ['out', 'voice', 'model', 'variant', 'formats'];
+const VALUED = ['out', 'voice', 'model', 'variant', 'formats', 'look', 'data', 'name', 'outdir'];
 const scene = args.find((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]?.slice(2)));
 if (!scene || !existsSync(scene)) {
   console.error('usage: node make.mjs <scene.html> [--voice-only] [--no-voice] [--no-captions] [--variants] [--voice <id>] [--out file.mp4]');
@@ -43,8 +43,10 @@ if (!scene || !existsSync(scene)) {
 }
 
 const VARIANT = Number(opt('variant', 0));
-const name = basename(scene, extname(scene)) + (opt('variant') != null ? `-v${VARIANT + 1}` : '');
-const OUT = resolve(opt('out', join('out', name + '.mp4')));
+// --data row.json fills M.data() in the scene; --name / --outdir set where the result goes (batches).
+const DATA = opt('data') ? JSON.parse(readFileSync(opt('data'), 'utf8')) : null;
+const name = (opt('name') || (DATA && DATA.name) || basename(scene, extname(scene))) + (opt('variant') != null ? `-v${VARIANT + 1}` : '');
+const OUT = resolve(opt('out', join(opt('outdir', 'out'), name + '.mp4')));
 const WORK = join(ROOT, 'out', '.work', name);
 const CACHE = join(ROOT, 'out', '.cache', 'voice');
 mkdirSync(WORK, { recursive: true }); mkdirSync(CACHE, { recursive: true }); mkdirSync(dirname(OUT), { recursive: true });
@@ -70,19 +72,19 @@ const findSound = (kind, id) => {
 };
 
 // ---- 1. read the scene's sound plan -------------------------------------------------------------
-const engine = await open(scene, { variant: VARIANT });
+const engine = await open(scene, { variant: VARIANT, data: DATA });
 const V = JSON.parse(JSON.stringify(engine.V));
 await engine.close();
 
 // --variants: run this script once per variant, then stop.
 if (flag('variants')) {
   const n = V.variants || 1;
-  if (n < 2) console.warn('  ! this scene has no M.pick([...]) variants; rendering it once.');
   const pass = args.filter((a, i) => a !== '--variants' && a !== scene && !(args[i - 1] === '--out') && a !== '--out');   // --formats etc. pass through
   let failed = 0;
   for (let i = 0; i < n; i++) {
-    console.log(`\n=== variant ${i + 1}/${n} ===`);
-    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), scene, '--variant', String(i), ...pass], { stdio: 'inherit' });
+    if (n > 1) console.log(`\n=== variant ${i + 1}/${n} ===`);
+    // A scene with a single version keeps its plain name (no -v1).
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), scene, ...(n > 1 ? ['--variant', String(i)] : []), ...pass], { stdio: 'inherit' });
     if (r.status !== 0) failed++;
   }
   process.exit(failed ? 1 : 0);
@@ -195,8 +197,12 @@ async function transcribe(m) {
 const mediaWords = [];
 for (const m of allMedia.filter((x) => x.captions)) {
   let ws = null;
+  const side = m.file.replace(/\.[^.\/]+$/, '.words.json');   // word timings written by footage.mjs
   if (m.missing) { if (m.transcript) ws = M_estimate(m.transcript); }
-  else if (KEY && m.hasAudio) { ws = await transcribe(m); console.log(`  captions: transcribed ${m.src} (${ws.length} words)`); }
+  else if (existsSync(side)) {
+    ws = JSON.parse(readFileSync(side, 'utf8')).map((w) => ({ w: w.w, s: (w.s - (m.trim || 0)) / (m.speed || 1), e: (w.e - (m.trim || 0)) / (m.speed || 1) })).filter((w) => w.s >= 0);
+    console.log(`  captions: ${ws.length} words from ${basename(side)}`);
+  } else if (KEY && m.hasAudio) { ws = await transcribe(m); console.log(`  captions: transcribed ${m.src} (${ws.length} words)`); }
   else if (m.transcript) { ws = spreadWords(m.transcript, Math.max(0.5, (seconds(m.file) - (m.trim || 0)) / (m.speed || 1))); warn(`captions for ${m.src} use estimated timing (set ELEVENLABS_API_KEY for exact word timing).`); }
   else warn(`captions for ${m.src} need ELEVENLABS_API_KEY (or a transcript: '...' option on M.video).`);
   if (ws) mediaWords.push(...ws.map((w) => ({ w: w.w, s: +(w.s + m.at).toFixed(3), e: +(w.e + m.at).toFixed(3) })).filter((w) => w.s < V.duration));
@@ -212,7 +218,7 @@ if (flag('voice-only')) {
 
 // ---- 3. picture ---------------------------------------------------------------------------------
 const video = join(WORK, 'video.mp4');
-const rargs = [join(ROOT, 'render.mjs'), scene, '--out', video, '--sheet', '--variant', String(VARIANT)];
+const rargs = [join(ROOT, 'render.mjs'), scene, '--out', video, '--sheet', '--variant', String(VARIANT), ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
 if (V.captions && !flag('no-captions') && words.length) rargs.push('--captions', capFile);
 const rr = spawnSync(process.execPath, rargs, { stdio: 'inherit' });
 if (rr.status !== 0) process.exit(rr.status || 1);
@@ -254,8 +260,18 @@ if (music?.track) {
 
 const final = OUT;
 const hasAudio = buses.voice.length || buses.sfx.length || musicLabel;
+// Colour grade + film grain (luma-only noise, new every frame), applied once at the end.
+const LOOKS = {
+  cinematic: "eq=contrast=1.06:saturation=1.1:gamma=0.98,curves=all='0/0.03 0.25/0.22 0.75/0.79 1/0.97',vignette=angle=PI/5,noise=c0s=7:c0f=t,unsharp=5:5:0.3",
+  punchy: 'eq=contrast=1.12:saturation=1.28,unsharp=5:5:0.55,noise=c0s=3:c0f=t',
+  film: "eq=saturation=0.9:contrast=1.05,colorbalance=rs=0.04:bs=-0.03:rh=0.03:bh=-0.05,curves=all='0/0.05 1/0.95',vignette=angle=PI/4.5,noise=c0s=12:c0f=t+u",
+  clean: '',
+};
+const lookName = opt('look', V.look || '');
+if (lookName && !(lookName in LOOKS)) warn(`unknown look "${lookName}" (use ${Object.keys(LOOKS).join(', ')})`);
+const vcodec = LOOKS[lookName] ? ['-vf', LOOKS[lookName], '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy'];
 if (!hasAudio) {
-  ff(['-i', video, '-c', 'copy', final], 'copy');
+  ff(['-i', video, ...vcodec, '-movflags', '+faststart', final], 'picture');
 } else {
   const mixIn = [];
   if (buses.voice.length) {
@@ -268,7 +284,7 @@ if (!hasAudio) {
   chains.push(`${mixIn.join('')}amix=inputs=${mixIn.length}:normalize=0,apad,atrim=0:${D},loudnorm=I=-14:TP=-2:LRA=11,alimiter=limit=0.79:level=disabled,${FMT}[aout]`);
   const vi = input(video);
   ff([...inputs, '-filter_complex', chains.join(';'), '-map', `${vi}:v`, '-map', '[aout]',
-    '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-t', String(D), '-movflags', '+faststart', final], 'mix');
+    ...vcodec, '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-t', String(D), '-movflags', '+faststart', final], 'mix');
 }
 
 // ---- 5. other sizes ----------------------------------------------------------------------------
@@ -324,10 +340,12 @@ for (const w of warnings) if (!/^clip not found|ELEVENLABS_API_KEY is not set/.t
 const py = ['python3', 'python'].find((c) => spawnSync(c, ['--version']).status === 0);
 let score = null;
 if (!flag('fast') && py) {
-  const textArgs = [join(ROOT, 'render.mjs'), scene, '--out', join(WORK, 'text.mp4'), '--text-only', '--variant', String(VARIANT), '--crf', '28'];
+  const textArgs = [join(ROOT, 'render.mjs'), scene, '--out', join(WORK, 'text.mp4'), '--text-only', '--variant', String(VARIANT), '--crf', '28', ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
   if (V.captions && !flag('no-captions') && words.length) textArgs.push('--captions', capFile);
   const tr = spawnSync(process.execPath, textArgs, { encoding: 'utf8' });
-  if (tr.status === 0) writeFileSync(join(WORK, 'text-mask.json'), JSON.stringify({ video_sha256: createHash('sha256').update(readFileSync(video)).digest('hex') }));
+  if (tr.status === 0) writeFileSync(join(WORK, 'text-mask.json'), JSON.stringify({ video_sha256: createHash('sha256').update(readFileSync(video)).digest('hex'),
+    // Transitions throw text around for a split second by design; don't flag those moments.
+    ignore: (V.cuts || []).map((c) => [c - 0.35, c + 0.35]) }));
   const sr = spawnSync(py, [join(ROOT, 'score.py'), video], { encoding: 'utf8' });
   if (sr.status === 0) {
     score = JSON.parse(sr.stdout);
@@ -340,7 +358,7 @@ if (!flag('fast') && py) {
 const cutsPng = final.replace(/\.mp4$/i, '.cuts.png');
 try {
   const { Canvas, loadImage } = await import('skia-canvas');
-  const eng = await open(scene, { variant: VARIANT, captions: V.captions && words.length ? words : null });
+  const eng = await open(scene, { variant: VARIANT, data: DATA, captions: V.captions && words.length ? words : null });
   const times = [0, ...(V.cuts || []).map((c) => Math.min(D - 0.05, c + 0.2)), Math.max(0, D - 0.4)];
   const tw = 240, th = Math.round(tw * V.height / V.width), pad = 6;
   const sheetC = new Canvas(times.length * (tw + pad) + pad, th + pad * 2 + 28), c2 = sheetC.getContext('2d');

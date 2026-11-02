@@ -4,3 +4,13 @@ __pycache__/
 .env
 *.env
 .DS_Store
+
+# Client footage, edit plans and data stay on your machine (this repo may be public).
+footage/*
+!footage/README.md
+edits/*
+!edits/README.md
+!edits/example-plan.json
+data/*
+!data/README.md
+!data/example-ads.csv

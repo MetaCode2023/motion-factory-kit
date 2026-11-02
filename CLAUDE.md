@@ -9,7 +9,9 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
 
 1. **Figure out the type.**
    - *UGC ad / creator video / Higgsfield clips* → start from `scenes/examples/ugc-ad.html` and read `docs/HIGGSFIELD.md`.
-   - *Explainer / motion graphics / no footage* → start from `scenes/examples/showcase.html`.
+   - *Explainer / motion graphics / no footage* → start from `scenes/examples/showreel.html` (high-end look) or `showcase.html` (simpler).
+   - *A folder of raw client footage → many ads* → the **editor** (`docs/EDITOR.md`, below).
+   - *Many ads from a list/spreadsheet* → a template + `batch-ads.mjs` (below).
    - Read `design/DESIGN.md` either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
 2. **Plan beats before code.** 4–6 beats, one short line each (≤ 7 words on screen), cut times,
    15–30 s total. For ads: hook (0–3 s), problem, show it, proof, CTA. Write 2–3 hook options with
@@ -26,6 +28,38 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    no API key) goes in your handover.
 6. **Hand over** the MP4 path(s) with one or two lines on what's in it and anything the user must
    supply (e.g. "drop your clip at assets/higgsfield/talking-head.mp4 and re-run").
+
+## Make it look expensive (`kit/fx.js`, all on `FX`)
+
+Default to this for explainers and motion graphics; flat backgrounds look cheap.
+- Depth: `FX.aurora` (animated colour fields), `FX.particles`, `FX.grid`, `FX.vignette`, `FX.lightLeak`.
+- Materials: `FX.glass(ctx, x, y, w, h)` (frosted card over what's behind it), `FX.glow(ctx, draw)`, `FX.gradientText`.
+- Kinetic type: `FX.text(ctx, t, str, x, y, { at, mode: 'rise' | 'mask' | 'chars' | 'scramble' | 'pop', accent, font })`.
+- Camera: `const end = FX.camera(ctx, t, { punch: [cut times], shake: 0.15 }); ...; end();`
+- Transitions: `FX.timeline(ctx, t, [{ at, draw: (c) => beat(c, t), transition: 'zoom' | 'whip' | 'circle' | 'wipe' | 'glitch' | 'flash' | 'blur' }])`.
+  Beat functions must draw on the context they're given (`c`), not a global.
+- Finish: `M.setup({ look: 'cinematic' | 'punchy' | 'film', motionBlur: { samples: 6, around: true } })` — colour grade,
+  film grain, and motion blur on the cuts.
+- Glass is the most expensive effect (it blurs what's behind it); use a few cards, not dozens.
+
+## Raw footage → finished ads (`footage.mjs`, details in `docs/EDITOR.md`)
+
+1. Footage goes in `footage/raw/`. Run `node footage.mjs index` → `footage/INDEX.md` (clip IDs, numbered
+   sentences with timings, `(um)` fillers) and `footage/thumbs/<ID>.jpg`.
+2. **You are the editor.** Read INDEX.md and look at the thumbnail images. Pick the strongest hooks and the
+   cleanest, most convincing takes; vary angles across ads (results, price, social proof, objections, curiosity).
+   Write one plan per ad to `edits/<name>.json` (format in docs/EDITOR.md). For horizontal clips set `focus`
+   to where the face is. Keep ads 12–25 s; open on the strongest line.
+3. `node footage.mjs cut edits/<one>.json` to sanity-check a plan, then
+   `node footage.mjs build edits/ --variants --formats 4:5,16:9 --batch <client>`.
+4. Read `out/<batch>/DELIVERY.md` and the reports; fix plans with FIXes and rebuild those.
+Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
+
+## Spreadsheet batches (`batch-ads.mjs`)
+
+`node batch-ads.mjs scenes/templates/<template>.html data/<sheet>.csv --variants --batch <name>`: one ad per row.
+Columns = the template's `M.data` keys (`product.name`, `hook1..hook3`, lists as `a | b | c`). Each template
+documents its keys at the top. Output: `out/<name>/` + `DELIVERY.csv`. To make a sheet, write the CSV yourself.
 
 ## Higgsfield / video clips
 

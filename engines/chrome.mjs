@@ -6,7 +6,7 @@ import { chromium } from 'playwright-core';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-export async function open(scenePath, { cdp = 'http://localhost:9222', mime = 'image/png', captions = null, variant = 0 } = {}) {
+export async function open(scenePath, { cdp = 'http://localhost:9222', mime = 'image/png', captions = null, variant = 0, data = null } = {}) {
   const browser = await chromium.connectOverCDP(cdp).catch((e) => {
     throw new Error(`Could not attach to Chrome at ${cdp}. Is it running with --remote-debugging-port?\n${e.message}`);
   });
@@ -16,6 +16,7 @@ export async function open(scenePath, { cdp = 'http://localhost:9222', mime = 'i
     page.on('pageerror', (e) => console.error('[scene error]', e.message));
     if (captions) await page.addInitScript((c) => { window.CAPTIONS = c; }, captions);
     if (variant) await page.addInitScript((v) => { window.VARIANT = v; }, variant);
+    if (data) await page.addInitScript((d) => { window.DATA = d; }, data);
     await page.goto(pathToFileURL(resolve(scenePath)).href + '?render');
     // Two scene contracts: kit/motion.js scenes (window.VIDEO, #stage), and the legacy
     // starter-kit pages (top-level `const DUR`, global draw(t), <canvas id="c">, optional FOOD_READY).

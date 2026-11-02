@@ -13,6 +13,14 @@ Exact timing, no timeline editor.
 
 ## What's in it
 
+- **A raw-footage editor**: drop a client's Drive folder of footage in, get dozens of finished ads out.
+  Clips are transcribed, Claude picks the best takes and writes an edit plan per ad, and the kit cuts them
+  word-exact (no "um"s, no dead air, punch-in jump cuts, reframed to vertical), adds hooks, captions,
+  B-roll, product cards and CTAs, and writes a delivery sheet for the media buyer. See [docs/EDITOR.md](docs/EDITOR.md).
+- **Batch ads from a spreadsheet** (`batch-ads.mjs`): one template + one CSV = a folder of ads.
+- **High-end visuals** (`kit/fx.js`): animated aurora backgrounds, glass cards, glow, kinetic type, camera
+  punches, cinematic transitions, colour grading, film grain and motion blur.
+
 - **One command to a finished video** (`make.mjs`): picture + narration + captions + music + effects,
   loudness-normalized for social. `--variants` renders every hook option.
 - **Higgsfield-ready** (`M.video`): drop clips into `assets/higgsfield/` (any size, any frame rate).
@@ -76,6 +84,9 @@ node make.mjs scenes/mine/x.html --formats 4:5,1:1,16:9   # plus feed, square an
 node make.mjs scenes/mine/x.html --fast          # skip the picture score for quick drafts
 node make.mjs scenes/mine/x.html --voice-only    # make narration first; prints each line's timing
 node render.mjs scenes/mine/x.html --still 6.5   # one frame as a PNG
+node footage.mjs index                           # raw footage -> transcripts + thumbnails (footage/INDEX.md)
+node footage.mjs build edits/ --variants         # every edit plan -> finished ads + DELIVERY.csv
+node batch-ads.mjs scenes/templates/raw-edit.html data/ads.csv   # one ad per spreadsheet row
 python score.py out/x.mp4                        # quality check
 ```
 

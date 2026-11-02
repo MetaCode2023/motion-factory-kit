@@ -427,6 +427,21 @@
     ctx.restore();
   };
 
+  // ---- data -------------------------------------------------------------------
+  // Content from outside the scene (a spreadsheet row, an edit plan), so one template makes many ads:
+  //   const D = M.data({ product: 'Glow Serum', price: '$29', hooks: ['POV: ...'] });
+  // make.mjs --data row.json (and batch-ads.mjs / footage.mjs) fill it in; the defaults are the preview.
+  M.data = (defaults = {}) => {
+    const d = window.DATA || {};
+    const out = { ...defaults };
+    for (const [k, v] of Object.entries(d)) {
+      if (v === '' || v == null) continue;
+      if (v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k])) out[k] = { ...out[k], ...v };
+      else out[k] = v;
+    }
+    return out;
+  };
+
   // ---- variants --------------------------------------------------------------
   // Render several versions of one scene, e.g. three hooks to A/B test:
   //   const HOOK = M.pick(['POV: your ad finally converts', 'Stop scrolling if you sell online', '3 seconds. That is all you get.']);
@@ -436,6 +451,10 @@
   M.pick = (options) => { M._variants = Math.max(M._variants, options.length); return options[M.variant % options.length]; };
 
   // ---- setup / player --------------------------------------------------------
+  //   look:       colour grade + grain applied by make.mjs: 'cinematic' | 'punchy' | 'film' | 'clean'
+  //   motionBlur: samples per frame, e.g. 4 (filmic; render time grows with it), or
+  //               { samples: 6, around: true } to blur only around the cuts (fast, nearly the same look).
+  //   shutter:    0..1 (0.5 = a 180° shutter)
   // Sound is declared here and built by `node make.mjs <scene>` (see CLAUDE.md):
   //   voice:    [{ at: 0.3, text: 'One sentence per beat.' }, ...]   narration lines (ElevenLabs, or file: 'x.mp3')
   //   sfx:      [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.5 }]   sounds/sfx/<name>.mp3
@@ -453,7 +472,7 @@
     landscape: { width: 1920, height: 1080, safe: { left: 96, top: 54, right: 1824, bottom: 1000 } },
   };
   M.setup = ({ preset = null, width, height, fps = 30, duration, cuts = [], background = '#fff', draw,
-    voice = [], sfx = [], music = null, captions = false }) => {
+    voice = [], sfx = [], music = null, captions = false, look = null, motionBlur = 1, shutter = 0.5 }) => {
     if (!duration) throw new Error('setup needs duration');
     const P = preset ? M.PRESETS[preset] : null;
     if (preset && !P) throw new Error(`unknown preset "${preset}" (try: ${Object.keys(M.PRESETS).join(', ')})`);
@@ -474,7 +493,7 @@
     if (captions && height > width) M.safe.bottom = Math.min(M.safe.bottom, Math.round(height * 0.65));
     const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice)) : [];
 
-    window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, media: M._media, variants: M._variants, variant: M.variant };
+    window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, look, motionBlur, shutter, media: M._media, variants: M._variants, variant: M.variant };
     window.draw = (t) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;

@@ -1,0 +1,15 @@
+{
+  "name": "glow-01-tiktok-buzz",
+  "angle": "social proof: everyone is talking about it",
+  "hooks": ["POV: you finally try the serum everyone's posting", "Is the TikTok serum actually worth it?"],
+  "comment": { "user": "maya.k", "text": "is it actually worth the hype??" },
+  "segments": [
+    { "clip": "C03", "sentence": 0, "focus": 0.5 },
+    { "clip": "C03", "sentences": [1, 2], "focus": 0.5 },
+    { "clip": "C02", "sentence": 1 },
+    { "clip": "C04", "sentence": 1 }
+  ],
+  "broll": [{ "clip": "C01", "from": 0, "to": 2.5, "over": 2 }],
+  "product": { "name": "Glow Serum 30ml", "price": "$29", "oldPrice": "$39", "rating": 4.8, "reviews": "2.1k" },
+  "cta": "Shop now"
+}

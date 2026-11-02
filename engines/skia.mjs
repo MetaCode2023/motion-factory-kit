@@ -87,7 +87,7 @@ function makeCanvas(w, h, textOnly = false) {
 
 // layout: blank every image, so the frames show only code-drawn text and UI. score.py measures
 // the TikTok safe zones on these, because photo texture would otherwise read as text.
-export async function open(scenePath, { layout = false, textOnly = false, captions = null, variant = 0 } = {}) {
+export async function open(scenePath, { layout = false, textOnly = false, captions = null, variant = 0, data = null } = {}) {
   loadFonts();
   const file = resolve(scenePath);
   const html = readFileSync(file, 'utf8');
@@ -178,7 +178,8 @@ export async function open(scenePath, { layout = false, textOnly = false, captio
     return img;
   };
   if (captions) sandbox.CAPTIONS = captions;
-  if (variant) sandbox.VARIANT = variant;   // word timings from make.mjs, read by the kit
+  if (variant) sandbox.VARIANT = variant;
+  if (data) sandbox.DATA = data;   // content for M.data() (batch rows, edit plans)   // word timings from make.mjs, read by the kit
   const context = vm.createContext(sandbox);
 
   // Run the scene's scripts in page order. Errors after draw() exists (usually the preview

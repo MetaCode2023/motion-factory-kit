@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Showreel</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// The high-end pattern: depth (aurora + particles + vignette), kinetic type, glass, glow,
+// camera punches on every cut, and a different cinematic transition into each beat.
+// Graded with look: 'cinematic' and shot with motion blur.
+const C = B.brand.colors, F = B.brand.fonts;
+const D = (w, px) => `${w} ${px}px ${F.display}`;
+const CUTS = [3.6, 7.2, 10.8, 14.4];
+const END = 18;
+
+function backdrop(c, t, hue = 0) {
+  FX.aurora(c, t, { colors: [C.accent, '#6D5BFF', '#18C8FF'].slice(hue % 2), intensity: 0.5 });
+  FX.particles(c, t, { count: 50, opacity: 0.35 });
+}
+
+// 1. Hook
+function hook(c, t) {
+  backdrop(c, t);
+  FX.text(c, t, 'MOTION FACTORY KIT', 120, 300, { font: `600 34px ${F.mono}`, color: C.muted, mode: 'scramble', at: 0.1 });
+  FX.text(c, t, 'Stop the scroll.', 120, 380, { at: 0, mode: 'rise', font: D(800, 150), accent: 'scroll.', maxWidth: 840 });
+  FX.text(c, t, 'Ads and explainers, drawn in code.', 120, 760, { at: 1.1, mode: 'rise', font: D(700, 58), color: C.muted, maxWidth: 820, stagger: 0.04 });
+  // Three hooks cycling in a glass card: one scene, several versions.
+  const k = M.ease.outCubic(M.clamp((t - 0.6) / 0.6));
+  if (k > 0) {
+    c.save(); c.globalAlpha = k; c.translate(0, (1 - k) * 80);
+    FX.glass(c, 120, 980, 840, 300, { radius: 40 });
+    M.text(c, 'HOOK VARIANTS', 170, 1050, { font: `600 30px ${F.mono}`, color: C.muted });
+    const hooks = ['POV: you found the fix', 'Stop scrolling if you sell online', '3 seconds. That is all you get.'];
+    const i = Math.floor(Math.max(0, t - 0.8) / 0.9) % hooks.length;
+    FX.text(c, t, hooks[i], 170, 1110, { at: 0.8 + Math.floor(Math.max(0, t - 0.8) / 0.9) * 0.9, mode: 'mask', font: D(800, 56), maxWidth: 740, color: C.ink });
+    ['A', 'B', 'C'].forEach((l, j) => { c.beginPath(); c.arc(820 + j * 46, 1040, 16, 0, Math.PI * 2); c.fillStyle = j === i ? C.accent : C.line; c.fill(); });
+    c.restore();
+  }
+}
+
+// 2. One command
+function command(c, t) {
+  backdrop(c, t, 1);
+  FX.grid(c, t, { mode: 'dots', opacity: 0.08 });
+  FX.glass(c, 90, 520, 900, 760, { radius: 48 });
+  FX.text(c, t, 'From one command', 160, 610, { at: CUTS[0] + 0.15, mode: 'mask', font: D(800, 64) });
+  FX.glow(c, () => FX.gradientText(c, '1', 160, 1010, { font: D(800, 360), colors: [C.accent, '#FFC23D'], t }), { blur: 50, strength: 0.7 });
+  FX.text(c, t, 'finished, captioned, scored ad', 400, 900, { at: CUTS[0] + 0.5, mode: 'rise', font: D(700, 54), maxWidth: 520, stagger: 0.05 });
+  M.text(c, '$ node make.mjs ad.html --variants', 160, 1190, { font: `600 34px ${F.mono}`, color: C.good, alpha: M.clamp((t - CUTS[0] - 0.9) / 0.3) });
+}
+
+// 3. Features as glowing glass chips
+function features(c, t) {
+  backdrop(c, t);
+  FX.text(c, t, 'Everything a post needs.', 120, 300, { at: CUTS[1] + 0.1, mode: 'rise', font: D(800, 96), accent: 'post', maxWidth: 840 });
+  const chips = [['Word-by-word captions', C.accent], ['3 hooks per ad', '#6D5BFF'], ['Music that ducks', '#18C8FF'], ['Every size', C.good]];
+  chips.forEach(([label, col], i) => {
+    const at = CUTS[1] + 0.7 + i * 0.3, k = M.ease.outBack(M.clamp((t - at) / 0.45));
+    if (k <= 0) return;
+    const y = 640 + i * 175;
+    c.save(); c.globalAlpha = M.clamp((t - at) / 0.2);
+    c.translate(120, y + 60); c.scale(k, k); c.translate(-120, -(y + 60));
+    FX.glass(c, 120, y, 840, 130, { radius: 65, tint: FX.alpha(col, 0.12), border: FX.alpha(col, 0.55), blur: 20 });
+    FX.glow(c, () => { c.beginPath(); c.arc(190, y + 65, 18, 0, Math.PI * 2); c.fillStyle = col; c.fill(); }, { color: col, blur: 30 });
+    M.text(c, label, 240, y + 84, { font: D(700, 50), color: C.ink });
+    c.restore();
+  });
+}
+
+// 4. Product UI in a phone over a grid floor
+function product(c, t) {
+  backdrop(c, t, 1);
+  FX.grid(c, t, { mode: 'floor', opacity: 0.18, color: '#6D5BFF', horizon: 0.55 });
+  const s = CUTS[2];
+  B.phone(c, t, { at: s + 0.1, x: 250, y: 300, w: 580, tilt: -0.04 + 0.02 * Math.sin(t), drawScreen: (cc, x, y, w, h) => {
+    cc.fillStyle = '#0E1118'; cc.fillRect(x, y, w, h);
+    FX.aurora(cc, t, { colors: [C.accent, '#6D5BFF'], intensity: 0.35, base: '#0E1118', x, y, w, h });
+    B.notification(cc, t, { at: s + 0.6, app: 'Shop', title: 'New order', body: 'Glow Serum × 2', x: x + 24, y: y + 120, w: w - 48, light: false });
+    B.chat(cc, t, { x: x + 24, y: y + 420, w: w - 48, size: 36, messages: [{ at: s + 1.3, text: 'Saw your video!' }, { at: s + 2.1, me: true, text: 'Code GLOW gets 20% off' }] });
+  } });
+}
+
+// 5. End
+function end(c, t) {
+  backdrop(c, t);
+  FX.lightLeak(c, t, { at: CUTS[3] - 0.2, dur: 1.4 });
+  const h = FX.text(c, t, 'Built by code.', 540, 560, { at: CUTS[3] + 0.1, mode: 'chars', font: D(800, 140), align: 'center', accent: 'code.', maxWidth: 900, stagger: 0.04 });
+  const h2 = FX.text(c, t, 'Made beautiful.', 540, h.bottom + 40, { at: CUTS[3] + 0.8, mode: 'rise', font: D(700, 80), color: C.muted, align: 'center' });
+  B.ctaButton(c, t, { at: CUTS[3] + 1.4, text: 'Get the kit', y: h2.bottom + 120, tapAt: CUTS[3] + 2.6 });
+}
+
+const BEATS = [
+  { at: 0, draw: (c) => hook(c, T) },
+  { at: CUTS[0], draw: (c) => command(c, T), transition: 'zoom' },
+  { at: CUTS[1], draw: (c) => features(c, T), transition: 'whip' },
+  { at: CUTS[2], draw: (c) => product(c, T), transition: 'circle' },
+  { at: CUTS[3], draw: (c) => end(c, T), transition: 'glitch' },
+];
+let T = 0;
+
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: END, cuts: CUTS, background: C.bg,
+  look: 'cinematic', motionBlur: { samples: 6, around: true },
+  music: { track: 'drive', volume: 0.32 },
+  sfx: [
+    { at: 0, name: 'hit' }, { at: CUTS[0] - 0.25, name: 'whoosh', volume: 0.5 }, { at: CUTS[1] - 0.25, name: 'whoosh', volume: 0.55 },
+    { at: CUTS[2] - 0.25, name: 'whoosh', volume: 0.5 }, { at: CUTS[2] + 0.6, name: 'notify', volume: 0.45 },
+    { at: CUTS[3] - 1.4, name: 'riser', volume: 0.5 }, { at: CUTS[3], name: 'hit', volume: 0.7 }, { at: CUTS[3] + 2.6, name: 'tap' },
+  ],
+  draw(ctx, t) {
+    T = t;
+    const endCam = FX.camera(ctx, t, { zoom: 1.0 + 0.015 * Math.sin(t * 0.5), shake: 0.15, punch: [0, ...CUTS] });
+    FX.timeline(ctx, t, BEATS, { dur: 0.5 });
+    endCam();
+    FX.vignette(ctx, { strength: 0.5 });
+    M.progress(ctx, t, [0, ...CUTS, END], { color: C.accent, track: C.line });
+  },
+});
+</script>
+</body>
+</html>

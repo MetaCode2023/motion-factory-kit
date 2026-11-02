@@ -125,7 +125,9 @@ def score(mp4: Path) -> dict:
             counts = [sum(f[i] > TEXT for i in pixels) for f in texts]
             values = [n / len(pixels) for n in counts]
             # A real glyph (>= 3 reduced pixels), even briefly, needs review.
-            at_times[name] = [round(i / FPS, 1) for i, n in enumerate(counts) if n >= 3][:20]
+            ignore = identity.get('ignore', [])   # transition windows: text moves through zones on purpose
+            at_times[name] = [round(i / FPS, 1) for i, n in enumerate(counts)
+                              if n >= 3 and not any(a <= i / FPS <= b for a, b in ignore)][:20]
         else:
             cells = [(cy, cx) for cy in range(int(y0 * rows), min(rows, round(y1 * rows)))
                      for cx in range(int(x0 * cols), min(cols, round(x1 * cols)))]

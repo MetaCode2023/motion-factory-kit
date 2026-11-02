@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Raw footage edit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// The polish layer for an ad cut from raw footage by footage.mjs. Everything comes from the edit
+// plan (M.data), so `node footage.mjs build edits/` runs this once per plan. Opened on its own it
+// shows a placeholder so you can check the layout.
+const D = M.data({
+  name: 'preview', aroll: '../../assets/footage-preview.mp4', duration: 15,
+  hooks: ['I tried every brand so you don\'t have to'], comment: null, cta: 'Shop now',
+  product: null, productAt: null, broll: [], music: 'pulse', look: 'punchy', endCard: null,
+});
+const HOOK = M.pick(D.hooks.length ? D.hooks : ['']);
+const DUR = D.duration;
+const HOOK_END = Math.min(3.4, DUR * 0.3);
+const CTA_AT = Math.max(HOOK_END + 1, DUR - 2.6);
+const PRODUCT_AT = D.product ? (D.productAt ?? Math.max(HOOK_END + 0.5, DUR * 0.45)) : null;
+
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: DUR, background: '#000',
+  cuts: D.broll.flatMap((b) => [b.at, b.at + b.dur]).filter((x) => x > 0 && x < DUR),
+  captions: true, look: D.look, music: D.music ? { track: D.music, volume: 0.1 } : null,
+  sfx: [
+    { at: 0, name: 'pop', volume: 0.45 },
+    ...D.broll.map((b) => ({ at: Math.max(0, b.at - 0.15), name: 'whoosh', volume: 0.3 })),
+    ...(PRODUCT_AT != null ? [{ at: PRODUCT_AT + 0.15, name: 'coin', volume: 0.4 }] : []),
+    ...(D.cta ? [{ at: CTA_AT + 1.3, name: 'tap', volume: 0.5 }] : []),
+  ],
+  draw,
+});
+
+const aroll = M.video(D.aroll, { at: 0, captions: true, transcript: HOOK });
+const cutaways = D.broll.map((b) => ({ ...b, clip: M.video(b.src, { at: b.at, audio: false }) }));
+
+function draw(ctx, t) {
+  // Picture: the A-roll, with B-roll cutaways over it (the voice keeps going underneath).
+  const b = cutaways.find((c) => t >= c.at && t < c.at + c.dur);
+  if (b) b.clip.draw(ctx, t, 0, 0, 1080, 1920, { zoom: 1 + 0.05 * M.clamp((t - b.at) / b.dur) });
+  else aroll.draw(ctx, t, 0, 0, 1080, 1920);
+  FX.vignette(ctx, { strength: 0.25 });
+
+  // Hook: optional comment sticker, then the hook text. On screen at frame 0.
+  let y = 300;
+  if (D.comment) y = B.commentReply(ctx, t, { at: 0, until: HOOK_END, user: D.comment.user || 'customer', text: D.comment.text || D.comment, y: 250 }).bottom + 30;
+  if (HOOK) B.nativeText(ctx, t, { at: 0, until: HOOK_END, text: HOOK, y });
+
+  if (D.product && PRODUCT_AT != null) {
+    B.productCard(ctx, t, { at: PRODUCT_AT, until: Math.min(CTA_AT - 0.2, PRODUCT_AT + 3.6), ...D.product,
+      image: D.product.image ? M.image(D.product.image) : null, y: 860 });
+  }
+  if (D.cta) B.ctaButton(ctx, t, { at: CTA_AT, text: D.cta, y: 1020, tapAt: CTA_AT + 1.3 });
+  if (D.endCard) B.endCard(ctx, t, { at: DUR - 2, ...D.endCard });
+}
+</script>
+</body>
+</html>
