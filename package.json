@@ -6,10 +6,12 @@
   "description": "Have Claude write motion-graphics videos as code, then render them to MP4 frame-perfect. No browser, no screen recording.",
   "license": "MIT",
   "scripts": {
-    "demo": "node render.mjs scenes/examples/loan-calculator.html --gif --sheet",
+    "demo": "node make.mjs scenes/examples/showcase.html",
+    "ugc": "node make.mjs scenes/examples/ugc-ad.html --variants",
+    "gallery": "node render.mjs scenes/examples/blocks-gallery.html --sheet",
     "render": "node render.mjs",
     "examples": "node batch.mjs scenes/examples --sheet",
-    "test": "node --test tests/kit.test.mjs"
+    "test": "node --test tests/kit.test.mjs tests/sound.test.mjs"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",

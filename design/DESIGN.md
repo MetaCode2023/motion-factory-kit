@@ -87,3 +87,16 @@ A/B comparison of two renders. Edit it as you learn what works for your audience
 - TikTok is sound-on, X is muted: a quiet music bed and a few effects on TikTok, and the picture alone still tells the whole story.
 - Effects mark beats, not elements: one per beat at most. The hook lands on `hit`, the failure on `error`, the payoff on `chime` or `stamp`.
 - Narrate arguments and stories; leave UI demos and code to the bed and effects. One sentence per beat, starting by 0.5 s, saying what the screen says in spoken words.
+
+## UGC ads (creator footage + overlays)
+- It should look like a post, not an ad: TikTok-native text (`B.nativeText`), a comment sticker
+  (`B.commentReply`), real-feeling handheld footage. Polished brand graphics belong at the end only.
+- The face carries the video. Don't cover it: overlays go in the top quarter and lower third; the
+  middle band stays clear while the creator talks.
+- Hook in the first second, on screen at frame 0. Test 2–3 hooks with `M.pick` before anything else;
+  the hook moves results more than any other change.
+- Cut to B-roll or a product shot every 3–5 s, then back to the face. Keep the voice running over the cut.
+- Captions always on (`captions: true`), highlighted word in the accent colour. Most viewers start muted.
+- Music low (0.10–0.15) under speech; one effect per beat.
+- Show the product by second 6–8, price or offer once, CTA in the last 3 s.
+- Don't present AI-generated people as real customers, and only show reviews you can back up.

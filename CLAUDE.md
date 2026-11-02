@@ -1,65 +1,104 @@
 # Motion Factory Kit — instructions for Claude
 
-This repo turns code into motion-graphics videos. You write a **scene** (one HTML file with a
-`draw(ctx, t)` function that paints the frame at `t` seconds), and `render.mjs` steps through every
-frame and encodes an MP4. No screen recording, no dropped frames, no browser needed.
+This repo turns code into finished short-form videos. You write a **scene** (one HTML file with a
+`draw(ctx, t)` function that paints the frame at `t` seconds), and `make.mjs` renders it frame-exact,
+adds narration, captions, music and sound effects, and writes a postable MP4. It's built for
+**UGC-style ads around Higgsfield clips** and for **motion-graphics explainers**.
 
 ## When the user asks for a video
 
-1. **Read `design/DESIGN.md` first.** It's the house style: safe zones, hook rules, pacing, type sizes,
-   motion. Follow it unless the user asks for something different.
-2. **Start from the closest example** in `scenes/examples/`:
-   - `showcase.html` — the default pattern: big hook headline, push cuts between beats, cards that grow
-     row by row, progress bar, slow camera push-in. Copy this structure for most explainers.
-   - `loan-calculator.html` — a chat/UI demo with typed messages and a counted-up result.
-   - `comparison.html` — two lanes, one decision at a time.
-   - `timeline.html` — a request moving through steps.
-3. **Plan beats before code.** Write the script as 4–6 beats (one short headline each, ≤ 7 words),
-   with cut times. 15–30 s total for vertical social video.
-4. **Write the scene** to `scenes/mine/<name>.html`. Load the kit with
-   `<script src="../../kit/motion.js"></script>` and call `M.setup({ width, height, fps, duration, cuts, background, draw })`.
-5. **Render and look at it yourself** before handing it over:
-   ```
-   node render.mjs scenes/mine/<name>.html --sheet      # MP4 + a 6-frame contact sheet
-   node render.mjs scenes/mine/<name>.html --still 4.2  # one PNG at t=4.2s
-   python score.py out/<name>.mp4                        # frozen stretches, slow open, text in unsafe zones
-   ```
-   Open the `.sheet.png` (and stills just after each cut) and fix clipped text, overlaps, empty frames,
-   or anything `score.py` lists under `warnings`. Iterate fast with `--from 8 --to 12`.
-6. **Hand over** `out/<name>.mp4` and say what's in it in a line or two.
+1. **Figure out the type.**
+   - *UGC ad / creator video / Higgsfield clips* → start from `scenes/examples/ugc-ad.html` and read `docs/HIGGSFIELD.md`.
+   - *Explainer / motion graphics / no footage* → start from `scenes/examples/showcase.html`.
+   - Read `design/DESIGN.md` either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
+2. **Plan beats before code.** 4–6 beats, one short line each (≤ 7 words on screen), cut times,
+   15–30 s total. For ads: hook (0–3 s), problem, show it, proof, CTA. Write 2–3 hook options with
+   `M.pick([...])` unless the user wants one.
+3. **Write the scene** to `scenes/mine/<name>.html` with the four script tags (brand, motion, blocks, your code).
+   Use **blocks** (`docs/BLOCKS.md`) instead of hand-drawing common pieces.
+4. **Build it:** `node make.mjs scenes/mine/<name>.html` → `out/<name>.mp4` + `out/<name>.sheet.png`.
+   With hook variants: add `--variants`.
+5. **Check it yourself before handing over.** Look at the sheet and at `node tools/stills.mjs
+   scenes/mine/<name>.html out/check.png 0 2.9 6.2 ...` (stills just after each cut). Run
+   `python score.py out/<name>.mp4`. Read every `!` warning `make.mjs` printed (voice lines that overlap or run long,
+   missing clips, missing keys). Fix and rebuild; 2–3 passes is normal.
+6. **Hand over** the MP4 path(s) with one or two lines on what's in it and anything the user must
+   supply (e.g. "drop your clip at assets/higgsfield/talking-head.mp4 and re-run").
+
+## Higgsfield / video clips
+
+```js
+const creator = M.video('../../assets/higgsfield/talking-head.mp4', { at: 0, captions: true });
+const broll   = M.video('../../assets/higgsfield/product.mp4', { at: 6, audio: false });
+// in draw(ctx, t):
+creator.draw(ctx, t, 0, 0, 1080, 1920, { zoom: 1.03 });   // cover-fit; any size or fps
+```
+
+- Options: `at` (start in the video), `trim` (skip into the file), `speed`, `audio` (mix its sound),
+  `volume`, `captions` (transcribe its speech into captions), `speech` (duck music under it; default = captions),
+  `loop`, `transcript` (estimated captions without an API key).
+- Missing files render as labelled placeholders, so you can build before the footage exists.
+- If the **Higgsfield tools** are connected (mcp `higgsfield`), you can generate clips yourself: use the
+  prompt starters in `docs/HIGGSFIELD.md` (9:16, no text in the video, clear top and lower third),
+  **show the user the prompts and get a yes before spending credits**, then download the result into
+  `assets/higgsfield/`.
+- Never put words inside generated footage; all text goes on in code.
+
+## Sound (declared in `M.setup`, built by `make.mjs`)
+
+```js
+M.setup({ ...,
+  captions: true,                                       // word-by-word captions; keep content above y≈1250
+  music: { track: 'pulse', volume: 0.2 },                // sounds/music: pulse, calm, drive (or your own file)
+  sfx: [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.45 }],
+  voice: [{ at: 0.3, text: 'One sentence per beat.' }],  // ElevenLabs narration (or file: 'x.mp3')
+});
+```
+
+- Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`.
+  One effect per beat at most: `hit` on the hook, `whoosh` on cuts, `success`/`chime` on the payoff,
+  `pop` on badges, `notify` with `B.notification`, `type` with typed text, `coin` on prices.
+- Narration needs `ELEVENLABS_API_KEY` (voice: `ELEVENLABS_VOICE_ID` or `--voice <id>`). Without it the video
+  still gets music + effects, and captions use estimated timing. Run `node make.mjs <scene> --voice-only`
+  to get each line's real start/end, then set cut times to match.
+- Music ducks automatically under narration and under clips with `speech`. Output is loudness-normalized (−14 LUFS).
+- In UGC ads keep music low (0.10–0.15): the creator's voice is the point.
+
+## Blocks (`kit/blocks.js`, all on `B`; details in `docs/BLOCKS.md`)
+
+UGC: `nativeText`, `commentReply`, `productCard`, `review`, `stars`, `ctaButton`, `tap`, `split`, `pip`.
+Explainer: `notification`, `chat`, `checklist`, `stat`, `compare`, `steps`, `bars`, `phone`, `toast`, `endCard`.
+All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.brand`).
 
 ## Kit helpers (`kit/motion.js`, all on `M`)
 
 | Helper | Use it for |
 |---|---|
-| `M.headline(ctx, t, str, x, y, { family, start, accent, accentColor, max, lines, width, align })` | Hook and beat titles. Auto-fits size; readable at frame 0 when `start` ≤ 0. Returns `{ bottom }` for layout below. |
-| `M.push(ctx, t, at, drawOld, drawNew)` | Cut between beats at time `at`. Use instead of crossfades. |
-| `M.stack(ctx, t, box, items, { card, pad, gap })` | A card that builds row by row and scales to fill `box`. Items are `{ at, h, draw(ctx, x, y, w, k) }`. |
-| `M.progress(ctx, t, cuts, { color, track })` | Slim beat bar at the bottom. |
-| `M.prog(t, start, dur, ease)` / `M.window(t, start, end)` | 0→1 progress / fade-in-hold-fade-out opacity. |
-| `M.ease.outCubic / outExpo / outBack / inOutCubic` | Easing curves. `outBack` only for small things. |
-| `M.text(ctx, str, x, y, { font, color, align, alpha, maxWidth })` | Plain text, with wrapping. |
-| `M.type(str, p)` / `M.count(n, p, { prefix })` | Typewriter text / counting numbers. |
-| `M.roundRect`, `M.wrap`, `M.fitFont`, `M.clamp`, `M.lerp` | Drawing and math basics. |
-| `M.safeBox(box)` / `M.clipSafe(ctx, fn)` | Keep content out of the TikTok/Reels UI zones. |
-| `M.image(src)` / `M.cover(ctx, img, x, y, w, h, { dim, zoom })` | Photos as full-bleed backgrounds. |
-| `M.clip(dir, count, fps)` | A video clip as a JPG frame sequence (`dir/0001.jpg` …); draw `clip.at(t, start)` with `M.cover`. Make frames with `ffmpeg -i clip.mp4 -vf fps=15,scale=1080:-1 dir/%04d.jpg`. |
-| `M.fonts([...])` | Preload every font face the scene uses. |
+| `M.headline(ctx, t, str, x, y, { family, start, accent, accentColor, max, lines, width, align })` | Big auto-fitting titles; readable at frame 0 when `start` ≤ 0. Returns `{ bottom }`. |
+| `M.push(ctx, t, at, drawOld, drawNew)` | Cut between beats (never crossfade). |
+| `M.stack(ctx, t, box, items, { card, pad, gap })` | A card that builds row by row and fills `box`. |
+| `M.progress(ctx, t, cuts, { color, track })` | Slim beat bar. |
+| `M.prog`, `M.window`, `M.ease.*`, `M.clamp`, `M.lerp` | Timing and easing. |
+| `M.text`, `M.wrap`, `M.fitFont`, `M.type`, `M.count`, `M.roundRect` | Text and drawing basics. |
+| `M.image(src)`, `M.cover(ctx, img, x, y, w, h, { dim, zoom })`, `M.video(...)` | Pictures and footage. |
+| `M.pick([...])` | Variants (hooks, CTAs); `make.mjs --variants` renders each. Call at the top level. |
+| `M.safeBox`, `M.clipSafe` | Keep words out of the TikTok/Reels UI zones. |
+| `M.fonts([...])` | Preload fonts the scene uses directly (blocks preload their own). |
 
 ## Rules that will bite you
 
-- **Fonts:** only the files in `fonts/` exist for the renderer (Plus Jakarta Sans, Barlow, Barlow Condensed,
-  JetBrains Mono). Name them exactly, e.g. `"Plus Jakarta Sans"`, and list every face in `M.fonts([...])`.
-  To add a font, drop fontsource-style woff2 files in `fonts/` (`<family-slug>-latin-<weight>-normal.woff2`).
-- **Everything is drawn on the canvas.** HTML/CSS layout is ignored by the default engine.
-  No remote `<script src>`; images load from paths relative to the scene.
-- **Safe zones (1080×1920):** no words above y=220 or below y=1440, and keep hook/CTA text inside x 120–960.
-- **Time is the only state.** `draw(ctx, t)` must be a pure function of `t` (no `Date.now()`, no
-  `Math.random()` without a seed) so any frame renders the same every time.
-- **Words live in code**, never baked into generated images.
+- **Fonts:** only files in `fonts/` exist (Plus Jakarta Sans, Barlow, Barlow Condensed, JetBrains Mono).
+- **Everything is drawn on the canvas.** HTML/CSS layout is ignored; no remote scripts; paths are relative to the scene file.
+- **Safe zones (1080×1920):** no words above y=220 or below y=1440; with `captions: true`, keep content above y≈1250.
+- **Time is the only state.** `draw(ctx, t)` must depend only on `t` (no `Date.now()`, no unseeded random).
+- **Honesty:** label example reviews as examples; don't present AI-generated people as real customers.
 
-## Sound
+## Other commands
 
-- `node voice.mjs "script" --out out/voice.mp3` makes narration if `ELEVENLABS_API_KEY` is set.
-- `node render.mjs scene.html --audio out/voice.mp3` muxes any audio file (voice, music) into the MP4.
-- Mixing several tracks: use the ffmpeg that ships in `node_modules/ffmpeg-static` (`amix` filter).
+```
+node render.mjs <scene> --still 4.2            # one PNG at a time (quick look, no sound)
+node render.mjs <scene> --from 8 --to 12       # silent render of one section
+node batch.mjs scenes/mine --sheet             # silent renders of a folder
+node voice.mjs "text" --out out/voice.mp3      # a single narration file
+node tools/make-sounds.mjs                     # regenerate the bundled sound library
+```

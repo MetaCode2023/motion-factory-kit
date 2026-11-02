@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Blocks gallery</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+</head>
+<body>
+<script>
+// Every block in kit/blocks.js, one after another, 3 s each. Render a still of any one with
+//   node render.mjs scenes/examples/blocks-gallery.html --still <segment start + 2>
+const C = B.brand.colors, F = B.brand.fonts;
+const SEG = 3;
+
+// A stand-in "clip" for the split / pip / phone demos: a moving gradient, so the gallery needs no media.
+const fakeClip = (hue) => ({ draw(ctx, t, x, y, w, h) {
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, `hsl(${hue + t * 20},55%,42%)`); g.addColorStop(1, `hsl(${hue + 60 + t * 20},60%,22%)`);
+  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x + w * ((i * 0.37 + t * 0.05) % 1), y + h * ((i * 0.53) % 1), w * 0.12, 0, Math.PI * 2); ctx.fill(); }
+} });
+
+const DEMOS = [
+  ['nativeText', (ctx, t, s) => {
+    fakeClip(200).draw(ctx, t, 0, 0, 1080, 1920);
+    B.nativeText(ctx, t, { at: s + 0.2, text: 'POV: you finally found the fix', y: 340 });
+    B.nativeText(ctx, t, { at: s + 0.9, text: 'wait for it…', y: 900, style: 'outline', size: 72 });
+  }],
+  ['commentReply', (ctx, t, s) => {
+    fakeClip(320).draw(ctx, t, 0, 0, 1080, 1920);
+    B.commentReply(ctx, t, { at: s + 0.2, user: 'jess.makes', text: 'does this actually work or is it just hype??' });
+  }],
+  ['productCard', (ctx, t, s) => {
+    fakeClip(30).draw(ctx, t, 0, 0, 1080, 1920);
+    B.productCard(ctx, t, { at: s + 0.2, name: 'Glow Serum 30ml', price: '$29', oldPrice: '$39', rating: 4.8, reviews: '2.1k', badge: '-25%', y: 900 });
+  }],
+  ['review', (ctx, t, s) => {
+    fakeClip(260).draw(ctx, t, 0, 0, 1080, 1920);
+    B.review(ctx, t, { at: s + 0.2, name: 'Example review', text: 'Booked in two minutes and they showed up early. Would use again.', rating: 5, y: 520 });
+  }],
+  ['ctaButton + tap', (ctx, t, s) => {
+    fakeClip(150).draw(ctx, t, 0, 0, 1080, 1920);
+    B.ctaButton(ctx, t, { at: s + 0.2, text: 'Shop now', y: 1000, tapAt: s + 1.6 });
+  }],
+  ['split', (ctx, t, s) => { B.split(ctx, t, { at: s + 0.1, left: fakeClip(0), right: fakeClip(140), labels: ['BEFORE', 'AFTER'] }); }],
+  ['pip', (ctx, t, s) => {
+    fakeClip(220).draw(ctx, t, 0, 0, 1080, 1920);
+    B.pip(ctx, t, { at: s + 0.2, layer: fakeClip(40) });
+  }],
+  ['notification', (ctx, t, s) => { B.notification(ctx, t, { at: s + 0.2, app: 'Messages', title: 'New lead', body: 'Hi! Do you have anything open this Saturday morning?' }); }],
+  ['chat', (ctx, t, s) => {
+    B.chat(ctx, t, { y: 330, messages: [
+      { at: s + 0.4, text: 'Do you deliver on Sundays?' },
+      { at: s + 1.1, me: true, text: 'Yes! 9 to 5. Want a slot?' },
+      { at: s + 2.0, text: 'Perfect, 10am please' },
+    ] });
+  }],
+  ['checklist', (ctx, t, s) => {
+    B.checklist(ctx, t, { y: 380, items: [
+      { at: s + 0.2, text: 'Logo intro', ok: false },
+      { at: s + 0.7, text: 'Slow fade in', ok: false },
+      { at: s + 1.2, text: 'Problem first' },
+      { at: s + 1.7, text: 'Big, few words' },
+    ] });
+  }],
+  ['stat', (ctx, t, s) => { B.stat(ctx, t, { at: s + 0.2, value: 38, suffix: '%', label: 'more booked jobs', y: 520 }); }],
+  ['compare', (ctx, t, s) => {
+    B.compare(ctx, t, { at: s + 0.1, y: 360, stagger: 0.25,
+      left: { title: 'Voicemail', items: ['Calls back tomorrow', 'Lead goes cold'] },
+      right: { title: 'Text-back', items: ['Replies in 5 sec', 'Books the job'] } });
+  }],
+  ['steps', (ctx, t, s) => {
+    B.steps(ctx, t, { y: 360, steps: [
+      { at: s + 0.2, title: 'Request', sub: 'Form or missed call' },
+      { at: s + 0.9, title: 'Qualify', sub: 'Two quick questions' },
+      { at: s + 1.6, title: 'Book', sub: 'On the calendar' },
+    ] });
+  }],
+  ['bars', (ctx, t, s) => {
+    B.bars(ctx, t, { at: s + 0.2, y: 380, highlight: 2, format: (v) => v + 's',
+      data: [{ label: 'Email', value: 86 }, { label: 'Voicemail', value: 64 }, { label: 'Text-back', value: 5 }] });
+  }],
+  ['phone', (ctx, t, s) => {
+    B.phone(ctx, t, { at: s + 0.1, y: 300, drawScreen: (c, x, y, w, h) => {
+      c.fillStyle = '#F2F2F7'; c.fillRect(x, y, w, h);
+      M.text(c, 'Bookings', x + 40, y + 150, { font: `800 52px ${F.display}`, color: '#111' });
+      [0, 1, 2].forEach((i) => { c.fillStyle = '#fff'; M.roundRect(c, x + 30, y + 200 + i * 150, w - 60, 120, 24); c.fill();
+        M.text(c, ['Sat 9:00', 'Sat 11:30', 'Sun 10:00'][i], x + 60, y + 275 + i * 150, { font: `700 40px ${F.body}`, color: '#111' }); });
+    } });
+  }],
+  ['toast', (ctx, t, s) => {
+    B.toast(ctx, t, { at: s + 0.2, until: s + 1.4, text: 'Payment failed', kind: 'bad', y: 700 });
+    B.toast(ctx, t, { at: s + 1.5, until: s + 3, text: 'Booked for Sat 9:00', kind: 'good', y: 700 });
+  }],
+  ['endCard', (ctx, t, s) => { B.endCard(ctx, t, { at: s + 0.1, takeaway: 'Answer every lead.', cta: 'Try it free' }); }],
+];
+
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: DEMOS.length * SEG, background: C.bg,
+  cuts: DEMOS.map((_, i) => i * SEG).slice(1),
+  draw(ctx, t) {
+    const i = Math.min(DEMOS.length - 1, Math.floor(t / SEG));
+    const [name, demo] = DEMOS[i];
+    demo(ctx, t, i * SEG);
+    // Label (out of the safe zone on purpose: this is a catalogue, not a post).
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; M.roundRect(ctx, 30, 1760, 1020, 110, 24); ctx.fill();
+    M.text(ctx, `B.${name}`, 540, 1832, { font: `600 46px ${F.mono}`, color: '#fff', align: 'center' });
+  },
+});
+</script>
+</body>
+</html>

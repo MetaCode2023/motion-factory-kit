@@ -255,9 +255,10 @@
   // Draw an image to cover the rect (cropping, never stretching), then darken it by `dim` (0..1) so
   // text on top stays readable. fx/fy (0..1) pick the crop focus. zoom > 1 for a slow push (pass 1 + 0.05 * p).
   M.cover = (ctx, img, x, y, w, h, { dim = 0.5, fx = 0.5, fy = 0.5, zoom = 1, radius = 0, alpha = 1 } = {}) => {
-    if (!img || !img.width) return;
-    const s = Math.max(w / img.width, h / img.height) * zoom;
-    const dw = img.width * s, dh = img.height * s;
+    const iw = (img && (img.videoWidth || img.naturalWidth || img.width)) || 0, ih = (img && (img.videoHeight || img.naturalHeight || img.height)) || 0;
+    if (!iw || !ih) return;
+    const s = Math.max(w / iw, h / ih) * zoom;
+    const dw = iw * s, dh = ih * s;
     ctx.save();
     ctx.globalAlpha *= alpha;
     M.roundRect(ctx, x, y, w, h, radius);
@@ -282,6 +283,65 @@
     };
   };
 
+  // A video file (Higgsfield, Veo, Kling, phone footage...) as a layer. Any size, any frame rate.
+  //   const talk = M.video('../../assets/higgsfield/hook.mp4', { at: 0, audio: true, captions: true });
+  //   talk.draw(ctx, t, 0, 0, 1080, 1920, { dim: 0.1 });       // cover-fit, like M.cover
+  // at: when the clip starts in the video. trim: seconds to skip into the file. speed: playback rate.
+  // audio: mix the clip's own sound (make.mjs). speech: the audio is someone talking, so music ducks
+  // under it (default true when captions is on). captions: transcribe the speech into word captions
+  // (needs ELEVENLABS_API_KEY, or pass transcript: '...' for estimated timing). volume: clip audio level. loop / hold: what happens after the file ends.
+  // A missing file draws a labelled placeholder, so scenes can be written before the clip exists.
+  M._media = [];
+  M.video = (src, { at = 0, trim = 0, speed = 1, audio = true, volume = 1, captions = false, speech = captions, loop = false, transcript = '', fps: clipFps } = {}) => {
+    const fps = clipFps || (window.VIDEO && window.VIDEO.fps) || 30;   // match the scene's fps (call after setup, or pass fps)
+    const clip = { src, at, trim, speed, missing: false, duration: 0, width: 0, height: 0 };
+    let frameAt;
+    if (typeof window.__loadVideo === 'function') {             // rendering: exact frames from the engine
+      const meta = window.__loadVideo(src, fps);
+      Object.assign(clip, meta);
+      if (!meta.missing) {
+        let lastI = -1, lastImg = null;
+        frameAt = (i) => (i === lastI ? lastImg : (lastImg = window.__videoFrame(meta.id, (lastI = i))));
+      }
+    } else {                                                     // browser preview: seek a <video>
+      const v = document.createElement('video');
+      v.muted = true; v.preload = 'auto'; v.playsInline = true; v.src = src;
+      v.addEventListener('error', () => { clip.missing = true; });
+      v.addEventListener('loadedmetadata', () => { clip.duration = v.duration; clip.width = v.videoWidth; clip.height = v.videoHeight; });
+      frameAt = (i, sec) => { if (Math.abs(v.currentTime - sec) > 0.5 / fps && !v.seeking) v.currentTime = sec; return v.readyState >= 2 ? v : null; };
+    }
+    clip.frame = (t) => {
+      if (clip.missing || !frameAt) return null;
+      let sec = (t - at) * speed + trim;
+      if (sec < trim) return null;
+      const last = Math.max(0, (clip.frames || Math.round(clip.duration * fps) || 1) - 1);
+      let i = Math.floor(sec * fps + 1e-6);
+      i = loop ? i % (last + 1) : Math.min(i, last);
+      return frameAt(i, i / fps);
+    };
+    clip.at = clip.frame;                                        // same call shape as M.clip
+    clip.playing = (t) => t >= at && (loop || (t - at) * speed + trim < (clip.duration || Infinity));
+    clip.draw = (ctx, t, x, y, w, h, opts = {}) => {
+      const img = clip.frame(t);
+      if (img) { M.cover(ctx, img, x, y, w, h, { dim: 0, ...opts }); return true; }
+      if (!clip.missing) return false;
+      ctx.save();
+      M.roundRect(ctx, x, y, w, h, opts.radius || 0); ctx.clip();
+      const g = ctx.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, '#2A2F3A'); g.addColorStop(1, '#14171E');
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 4; ctx.setLineDash([18, 14]);
+      ctx.strokeRect(x + 20, y + 20, w - 40, h - 40); ctx.setLineDash([]);
+      const s = Math.max(22, Math.min(44, w / 20));
+      M.text(ctx, 'CLIP GOES HERE', x + w / 2, y + h / 2 - s * 0.6, { font: `800 ${s * 1.2}px sans-serif`, color: '#FFFFFF', align: 'center', alpha: 0.85 });
+      M.text(ctx, String(src).split('/').slice(-2).join('/'), x + w / 2, y + h / 2 + s * 0.9, { font: `600 ${s * 0.7}px sans-serif`, color: '#FFFFFF', align: 'center', alpha: 0.6 });
+      ctx.restore();
+      return true;
+    };
+    if (audio || captions) M._media.push({ src, at, trim, speed, volume: audio ? volume : 0, captions, speech, loop, transcript });
+    return clip;
+  };
+
   // Canvas text doesn't trigger web-font loading, so preload every face the scene uses,
   // e.g. M.fonts(['400 40px "Plus Jakarta Sans"', '800 40px "Plus Jakarta Sans"']).
   M.fonts = (specs) => {
@@ -290,8 +350,99 @@
     }
   };
 
+  // ---- captions --------------------------------------------------------------
+  // Word-timed captions, drawn on top of every frame when the scene sets `captions: true`.
+  // make.mjs supplies real word timings from the narration (window.CAPTIONS); without them
+  // (browser preview, no voice yet) the timings are estimated from the voice lines' text.
+  // words: [{ w: 'word', s: startSeconds, e: endSeconds }]
+  M.estimateWords = (lines, wps = 2.7) => {
+    const out = [];
+    let cursor = 0;
+    for (const line of lines || []) {
+      let s = line.at != null ? Math.max(line.at, cursor) : cursor + 0.25;
+      for (const w of String(line.text || '').split(/\s+/).filter(Boolean)) {
+        const d = (0.12 + w.length * 0.045) * (2.7 / wps);
+        out.push({ w, s, e: s + d });
+        s += d + 0.06;
+      }
+      cursor = s;
+    }
+    return out;
+  };
+  // Chunks of up to 3 words (a new chunk after . , ! ? or a pause), shown until the next chunk.
+  M.captionChunks = (words) => {
+    const chunks = [];
+    let cur = null;
+    words.forEach((wd, i) => {
+      const prev = words[i - 1];
+      const brk = !cur || cur.words.length >= 3 || /[.,!?;:]$/.test(prev?.w || '') || wd.s - (prev?.e ?? 0) > 0.45
+        || cur.words.map((x) => x.w).join(' ').length + wd.w.length > 20;
+      if (brk) chunks.push(cur = { words: [] });
+      cur.words.push(wd);
+    });
+    chunks.forEach((c, i) => {
+      c.s = c.words[0].s;
+      const next = chunks[i + 1];
+      const end = c.words[c.words.length - 1].e;
+      c.e = next && next.s - end < 0.6 ? next.s : end + 0.35;
+    });
+    return chunks;
+  };
+  M.drawCaptions = (ctx, t, chunks, { width, height }) => {
+    const c = chunks.find((k) => t >= k.s && t < k.e);
+    if (!c) return;
+    const B = window.BRAND || {};
+    const fam = (B.fonts && B.fonts.display) || '"Plus Jakarta Sans"';
+    let size = Math.round(width * 0.062);
+    const accent = (B.colors && B.colors.accent) || '#FC5C2B';
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.textBaseline = 'middle';
+    const words = c.words.map((w) => w.w);
+    // Shrink long chunks so the pill stays clear of the TikTok/Reels button rail on the right.
+    let space, widths, total;
+    for (let i = 0; i < 12; i++) {
+      ctx.font = `800 ${size}px ${fam}`;
+      space = ctx.measureText(' ').width;
+      widths = words.map((w) => ctx.measureText(w).width);
+      total = widths.reduce((a, b) => a + b, 0) + space * (words.length - 1);
+      if (total + size * 0.9 <= width * 0.68 || size < width * 0.04) break;
+      size = Math.round(size * 0.92);
+    }
+    const cy = height * (height > width ? 0.705 : 0.86);
+    const k = M.prog(t, c.s, 0.18, M.ease.outBack);
+    const padX = size * 0.45, padY = size * 0.32;
+    ctx.translate(width / 2, cy);
+    ctx.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
+    M.roundRect(ctx, -total / 2 - padX, -size / 2 - padY, total + 2 * padX, size + 2 * padY, size * 0.3);
+    ctx.fillStyle = 'rgba(8,10,14,0.78)';
+    ctx.fill();
+    let x = -total / 2;
+    c.words.forEach((wd, i) => {
+      ctx.fillStyle = t >= wd.s && t < (c.words[i + 1]?.s ?? c.e) ? accent : '#FFFFFF';
+      ctx.fillText(words[i], x, 2);
+      x += widths[i] + space;
+    });
+    ctx.restore();
+  };
+
+  // ---- variants --------------------------------------------------------------
+  // Render several versions of one scene, e.g. three hooks to A/B test:
+  //   const HOOK = M.pick(['POV: your ad finally converts', 'Stop scrolling if you sell online', '3 seconds. That is all you get.']);
+  // `node make.mjs scene.html --variants` renders every one (out/<name>-v1.mp4, -v2...).
+  M.variant = Number(window.VARIANT || 0);
+  M._variants = 1;
+  M.pick = (options) => { M._variants = Math.max(M._variants, options.length); return options[M.variant % options.length]; };
+
   // ---- setup / player --------------------------------------------------------
-  M.setup = ({ width = 1080, height = 1920, fps = 30, duration, cuts = [], background = '#fff', draw }) => {
+  // Sound is declared here and built by `node make.mjs <scene>` (see CLAUDE.md):
+  //   voice:    [{ at: 0.3, text: 'One sentence per beat.' }, ...]   narration lines (ElevenLabs, or file: 'x.mp3')
+  //   sfx:      [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.5 }]   sounds/sfx/<name>.mp3
+  //   music:    'pulse' or { track: 'calm', volume: 0.2 }             sounds/music/<track>.mp3
+  //   captions: true   word-by-word captions; keeps the safe area's bottom clear for them
+  M.setup = ({ width = 1080, height = 1920, fps = 30, duration, cuts = [], background = '#fff', draw,
+    voice = [], sfx = [], music = null, captions = false }) => {
     if (!duration) throw new Error('setup needs duration');
     const canvas = document.createElement('canvas');
     canvas.id = 'stage';
@@ -300,13 +451,18 @@
     document.body.appendChild(canvas);
     const ctx = canvas.getContext('2d');
 
-    window.VIDEO = { width, height, fps, duration, cuts };
+    // Captions sit in the band just above the TikTok caption area, so content stays above it.
+    if (captions && height > width) M.safe.bottom = Math.min(M.safe.bottom, Math.round(height * 0.65));
+    const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice)) : [];
+
+    window.VIDEO = { width, height, fps, duration, cuts, voice, sfx, music, captions: !!captions, media: M._media, variants: M._variants, variant: M.variant };
     window.draw = (t) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
       ctx.fillStyle = background;
       ctx.fillRect(0, 0, width, height);
       draw(ctx, t, { width, height });
+      if (capChunks.length) M.drawCaptions(ctx, t, capChunks, { width, height });
     };
     window.__ready = Promise.all([document.fonts.ready, ...assets]).then(() => document.fonts.ready);
 

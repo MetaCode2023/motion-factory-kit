@@ -5,12 +5,16 @@
 // canvases, and everything else in the DOM is a do-nothing stub. That is enough for draw(t)
 // scenes, which paint everything onto the canvas themselves.
 import { Canvas, Image, FontLibrary, Path2D, DOMMatrix } from 'skia-canvas';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync, statSync, mkdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import ffmpegPath from 'ffmpeg-static';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
 const FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fonts');
+const CLIP_CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', '.cache', 'clips');
 const FAMILY_WORDS = { jetbrains: 'JetBrains' };
 
 // Register every fonts/<slug>-latin-<weight>-normal.woff2 under the family named by its slug.
@@ -83,7 +87,7 @@ function makeCanvas(w, h, textOnly = false) {
 
 // layout: blank every image, so the frames show only code-drawn text and UI. score.py measures
 // the TikTok safe zones on these, because photo texture would otherwise read as text.
-export async function open(scenePath, { layout = false, textOnly = false } = {}) {
+export async function open(scenePath, { layout = false, textOnly = false, captions = null, variant = 0 } = {}) {
   loadFonts();
   const file = resolve(scenePath);
   const html = readFileSync(file, 'utf8');
@@ -129,6 +133,7 @@ export async function open(scenePath, { layout = false, textOnly = false } = {})
     get src() { return super.src; }
     set src(v) {
       if (layout || textOnly) { super.src = BLANK_PNG; return; }
+      if (Buffer.isBuffer(v)) { super.src = v; return; }
       super.src = /^(data:|https?:|file:|[a-z]:[\\/]|\/)/i.test(v) ? v : resolve(dirname(file), v);
     }
   }
@@ -145,6 +150,35 @@ export async function open(scenePath, { layout = false, textOnly = false } = {})
     addEventListener() {}, removeEventListener() {},
   };
   sandbox.window = sandbox.self = sandbox.globalThis = sandbox;
+
+  // Video clips (M.video): decode once into a cached JPG sequence at the scene's frame rate, then
+  // hand frames to the scene synchronously, one at a time, so long clips don't fill memory.
+  const clips = [];
+  sandbox.__loadVideo = (src, fps) => {
+    const abs = /^([a-z]:[\\/]|\/)/i.test(src) ? src : resolve(dirname(file), src);
+    if (!existsSync(abs)) return { missing: true, src };
+    const st = statSync(abs);
+    const dir = join(CLIP_CACHE, createHash('sha1').update([abs, st.size, st.mtimeMs, fps].join('|')).digest('hex').slice(0, 16));
+    const probe = spawnSync(ffmpegPath, ['-hide_banner', '-i', abs], { encoding: 'utf8' }).stderr;
+    const dur = probe.match(/Duration: (\d+):(\d+):([\d.]+)/);
+    const size = probe.match(/Video:.*?(\d{2,5})x(\d{2,5})/);
+    if (!existsSync(join(dir, '00001.jpg'))) {
+      mkdirSync(dir, { recursive: true });
+      const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', abs, '-vf', `fps=${fps}`, '-q:v', '3', join(dir, '%05d.jpg')], { encoding: 'utf8' });
+      if (r.status !== 0) throw new Error(`could not decode video ${src}: ${r.stderr}`);
+    }
+    const frames = readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
+    clips.push(dir);
+    return { id: clips.length - 1, frames, fps, duration: dur ? +dur[1] * 3600 + +dur[2] * 60 + +dur[3] : frames / fps,
+      width: size ? +size[1] : 0, height: size ? +size[2] : 0, hasAudio: /Audio:/.test(probe) };
+  };
+  sandbox.__videoFrame = (id, i) => {
+    const img = new SceneImage();
+    img.src = layout || textOnly ? BLANK_PNG : readFileSync(join(clips[id], String(i + 1).padStart(5, '0') + '.jpg'));
+    return img;
+  };
+  if (captions) sandbox.CAPTIONS = captions;
+  if (variant) sandbox.VARIANT = variant;   // word timings from make.mjs, read by the kit
   const context = vm.createContext(sandbox);
 
   // Run the scene's scripts in page order. Errors after draw() exists (usually the preview

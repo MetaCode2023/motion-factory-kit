@@ -5,6 +5,9 @@
 //   node render.mjs scenes/examples/showcase.html [--out out/name.mp4] [--gif] [--sheet]
 //                   [--audio music.mp3] [--fps 30] [--from 0 --to 5]
 //   node render.mjs <scene.html> --still 12        # one PNG at t=12s, for checking a frame
+//   node render.mjs <scene.html> --captions out/x.captions.json   # word timings (make.mjs writes these)
+//
+// For narration, music, effects and captions in one step, use make.mjs instead.
 //
 // Engines:
 //   --engine skia    (default) runs the scene's scripts in Node on skia-canvas. No browser at all.
@@ -13,13 +16,13 @@
 //                    (--cdp <url>, default http://localhost:9222).
 import ffmpegPath from 'ffmpeg-static';
 import { spawn } from 'node:child_process';
-import { mkdirSync, existsSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, statSync, writeFileSync, readFileSync } from 'node:fs';
 import { resolve, basename, extname, dirname, join } from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes('--' + name);
 const opt = (name, dflt) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : dflt; };
-const VALUED = ['out', 'audio', 'fps', 'from', 'to', 'cdp', 'still', 'engine'];
+const VALUED = ['out', 'audio', 'fps', 'from', 'to', 'cdp', 'still', 'engine', 'captions', 'crf', 'variant'];
 const scene = args.find((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]?.slice(2)));
 
 if (!scene || !existsSync(scene)) {
@@ -48,7 +51,8 @@ const { open } = await import(`./engines/${engineName}.mjs`);
 let engine;
 let exitCode = 0;
 try {
-  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222') });
+  const captions = opt('captions') ? JSON.parse(readFileSync(opt('captions'), 'utf8')) : null;
+  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222'), captions, variant: Number(opt('variant', 0)) });
   const { V } = engine;
 
   if (opt('still') !== undefined) {
@@ -70,7 +74,7 @@ try {
     const enc = [
       ...input,
       ...(audio ? ['-ss', String(from), '-i', resolve(audio), '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out,
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', String(opt('crf', 18)), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out,
     ];
 
     const started = Date.now();

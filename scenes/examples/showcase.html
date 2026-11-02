@@ -108,6 +108,20 @@ const BEATS = [beat1, beat2, beat3, beat4, beat5];
 
 M.setup({
   width: 1080, height: 1920, fps: 30, duration: CUTS[CUTS.length - 1], cuts: CUTS.slice(1, -1), background: C.bg,
+  // Sound: built by `node make.mjs scenes/examples/showcase.html`. One effect per beat, quiet bed,
+  // one narrated sentence per beat (needs ELEVENLABS_API_KEY; without it the video still gets music + effects).
+  music: { track: 'pulse', volume: 0.2 },
+  sfx: [
+    { at: 0.0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.45 }, { at: 7.3, name: 'success', volume: 0.5 },
+    { at: 9.6, name: 'whoosh', volume: 0.45 }, { at: 14.6, name: 'whoosh', volume: 0.45 }, { at: 19.0, name: 'chime' },
+  ],
+  voice: [
+    { at: 0.3, text: 'Most people swipe away in the first two seconds.' },
+    { at: 4.9, text: 'So open on the problem. No logo, no fade.' },
+    { at: 9.9, text: 'Then change something every couple of seconds.' },
+    { at: 14.9, text: 'Keep the type big and the words few.' },
+    { at: 19.2, text: 'Hook. Move. Land.' },
+  ],
   draw(ctx, t) {
     // Soft vignette instead of a flat fill.
     const g = ctx.createRadialGradient(540, 800, 100, 540, 900, 1300);
