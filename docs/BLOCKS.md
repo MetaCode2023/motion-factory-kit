@@ -30,6 +30,10 @@ See them all moving: `node render.mjs scenes/examples/blocks-gallery.html`
 | `B.tap` | `x, y` — finger tap ripple |
 | `B.split` | `left, right` (clips or draw functions), `labels: ['BEFORE','AFTER']`, `mode: 'vertical' \| 'horizontal'` |
 | `B.pip` | `layer` (clip or draw function), `x, y, w, h, radius` — picture-in-picture |
+| `B.sticker` | `emoji, at, x, y, size, rotate` — emoji sticker that pops and wobbles |
+| `B.emojiBurst` | `emoji: [...], at, x, y, count, height, spread` — reactions floating up |
+| `B.postCard` | `name, handle, text, image, likes, comments, reposts` — a social post (generic, no logos) |
+| `B.browser` | `url, image or drawPage(ctx, x, y, w, h), scroll` — a browser window |
 
 ## Explainer UI
 

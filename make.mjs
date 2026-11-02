@@ -30,6 +30,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { open } from './engines/skia.mjs';
+import { detectBeats } from './tools/beats.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -72,9 +73,11 @@ const findSound = (kind, id) => {
 };
 
 // ---- 1. read the scene's sound plan -------------------------------------------------------------
-const engine = await open(scene, { variant: VARIANT, data: DATA });
-const V = JSON.parse(JSON.stringify(engine.V));
-await engine.close();
+// Things handed to the scene before it runs (beats of the music, real narration timings), so its
+// timeline can be built from them. Every later render/still gets the same.
+const INJECT = {};
+const readV = async () => { const e = await open(scene, { variant: VARIANT, data: DATA, inject: INJECT }); const v = JSON.parse(JSON.stringify(e.V)); await e.close(); return v; };
+let V = await readV();
 
 // --variants: run this script once per variant, then stop.
 if (flag('variants')) {
@@ -89,13 +92,22 @@ if (flag('variants')) {
   }
   process.exit(failed ? 1 : 0);
 }
+// Beats: from the bundled track's tempo file, or estimated from the audio.
+{
+  const m = typeof V.music === 'string' ? { track: V.music } : V.music;
+  const mf = m?.track ? findSound('music', m.track) : null;
+  if (mf) {
+    const b = detectBeats(mf, V.duration + 2);
+    if (b) { INJECT.BEATS = b; V = await readV(); console.log(`  beats: ${b.bpm} BPM (${b.source === 'meta' ? 'from the track' : 'estimated'})`); }
+  }
+}
 const voiceLines = (V.voice || []).map((l) => (typeof l === 'string' ? { text: l } : l));
 const music = typeof V.music === 'string' ? { track: V.music } : V.music;
 console.log(`${name}: ${V.duration}s, ${voiceLines.length} voice lines, ${(V.sfx || []).length} effects, music: ${music?.track || 'none'}`);
 
 // ---- 2. narration -------------------------------------------------------------------------------
 const KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE_ID = opt('voice', process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB');   // "Adam", a stock voice
+const VOICE_ID = opt('voice', V.voiceId || process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB');   // "Adam", a stock voice
 const MODEL = opt('model', 'eleven_multilingual_v2');
 
 // Character timings from ElevenLabs -> word timings.
@@ -169,6 +181,14 @@ function M_estimate(text) {   // same estimate as M.estimateWords in the kit
   return String(text || '').split(/\s+/).filter(Boolean).map((w) => { const d = 0.12 + w.length * 0.045; const o = { w, s, e: s + d }; s += d + 0.06; return o; });
 }
 
+// Real narration timings -> the scene (M.cues), then re-read it: its cuts and length may follow them.
+if (placed.length) {
+  INJECT.CUES = placed.map((p, i) => ({ start: +p.start.toFixed(3), end: +(p.start + p.dur).toFixed(3), text: voiceLines[i].text }));
+  V = await readV();
+}
+const injectFile = join(WORK, 'inject.json');
+writeFileSync(injectFile, JSON.stringify(INJECT));
+
 // ---- 2b. video clips: audio and transcribed captions ---------------------------------------------
 const allMedia = (V.media || []).map((m) => ({ ...m, file: resolve(dirname(scene), m.src) }));
 for (const m of allMedia) {
@@ -218,7 +238,7 @@ if (flag('voice-only')) {
 
 // ---- 3. picture ---------------------------------------------------------------------------------
 const video = join(WORK, 'video.mp4');
-const rargs = [join(ROOT, 'render.mjs'), scene, '--out', video, '--sheet', '--variant', String(VARIANT), ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
+const rargs = [join(ROOT, 'render.mjs'), scene, '--out', video, '--sheet', '--variant', String(VARIANT), '--inject', injectFile, ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
 if (V.captions && !flag('no-captions') && words.length) rargs.push('--captions', capFile);
 const rr = spawnSync(process.execPath, rargs, { stdio: 'inherit' });
 if (rr.status !== 0) process.exit(rr.status || 1);
@@ -262,14 +282,15 @@ const final = OUT;
 const hasAudio = buses.voice.length || buses.sfx.length || musicLabel;
 // Colour grade + film grain (luma-only noise, new every frame), applied once at the end.
 const LOOKS = {
-  cinematic: "eq=contrast=1.06:saturation=1.1:gamma=0.98,curves=all='0/0.03 0.25/0.22 0.75/0.79 1/0.97',vignette=angle=PI/5,noise=c0s=7:c0f=t,unsharp=5:5:0.3",
-  punchy: 'eq=contrast=1.12:saturation=1.28,unsharp=5:5:0.55,noise=c0s=3:c0f=t',
-  film: "eq=saturation=0.9:contrast=1.05,colorbalance=rs=0.04:bs=-0.03:rh=0.03:bh=-0.05,curves=all='0/0.05 1/0.95',vignette=angle=PI/4.5,noise=c0s=12:c0f=t+u",
+  cinematic: "eq=contrast=1.06:saturation=1.1:gamma=0.98,curves=all='0/0.03 0.25/0.22 0.75/0.79 1/0.97',vignette=angle=PI/5,noise=c0s=4:c0f=t,unsharp=5:5:0.3",
+  punchy: 'eq=contrast=1.12:saturation=1.28,unsharp=5:5:0.55,noise=c0s=2:c0f=t',
+  film: "eq=saturation=0.9:contrast=1.05,colorbalance=rs=0.04:bs=-0.03:rh=0.03:bh=-0.05,curves=all='0/0.05 1/0.95',vignette=angle=PI/4.5,noise=c0s=7:c0f=t+u",
   clean: '',
 };
 const lookName = opt('look', V.look || '');
 if (lookName && !(lookName in LOOKS)) warn(`unknown look "${lookName}" (use ${Object.keys(LOOKS).join(', ')})`);
-const vcodec = LOOKS[lookName] ? ['-vf', LOOKS[lookName], '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy'];
+// Grain is random every frame, so cap the bitrate (~14 Mbps; platforms re-compress uploads anyway).
+const vcodec = LOOKS[lookName] ? ['-vf', LOOKS[lookName], '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-maxrate', '14M', '-bufsize', '28M', '-pix_fmt', 'yuv420p'] : ['-c:v', 'copy'];
 if (!hasAudio) {
   ff(['-i', video, ...vcodec, '-movflags', '+faststart', final], 'picture');
 } else {
@@ -305,10 +326,40 @@ if (opt('formats')) {
     const vf = spec.crop
       ? `scale=${spec.w}:-2,crop=${spec.w}:${spec.h}:0:${Math.round((spec.w * V.height / V.width) * 0.43 - spec.h / 2)}`
       : `split[a][b];[a]scale=${spec.w}:${spec.h}:force_original_aspect_ratio=increase,crop=${spec.w}:${spec.h},boxblur=30:3,eq=brightness=-0.32:saturation=0.8[bg];[b]scale=-2:${spec.h}[fg];[bg][fg]overlay=(W-w)/2:0`;
-    ff(['-i', final, '-filter_complex', `[0:v]${vf}[v]`, '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', out], `format ${f}`);
+    ff(['-i', final, '-filter_complex', `[0:v]${vf}[v]`, '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-maxrate', '14M', '-bufsize', '28M', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', out], `format ${f}`);
     made.push(out);
     console.log(`  ${f.padEnd(5)} -> ${out}`);
   }
+}
+
+// ---- 5b. post kit: cover image, subtitles file, upload caption -----------------------------------
+const kit = [];
+const coverT = Math.max(0, Math.min(D - 0.1, V.cover ?? 0.7));
+for (const f of made) {
+  const cover = f.replace(/\.mp4$/i, '.cover.jpg');
+  ff(['-ss', String(coverT), '-i', f, '-frames:v', '1', '-q:v', '2', cover], 'cover');
+  kit.push(cover);
+}
+if (words.length) {
+  // .srt for YouTube / accessibility / search: lines of up to ~7 words, split at sentences and pauses.
+  const cues = [];
+  let cur = null;
+  words.forEach((w, i) => {
+    const prev = words[i - 1];
+    if (!cur || cur.words.length >= 7 || cur.text.length + w.w.length > 40 || /[.?!]$/.test(prev?.w || '') || w.s - (prev?.e ?? 0) > 0.6) cues.push(cur = { words: [], text: '' });
+    cur.words.push(w); cur.text = cur.words.map((x) => x.w).join(' ');
+  });
+  const ts = (x) => { const ms = Math.max(0, Math.round(x * 1000)); return `${String(Math.floor(ms / 3600000)).padStart(2, '0')}:${String(Math.floor(ms / 60000) % 60).padStart(2, '0')}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+  const srt = cues.map((c, i) => `${i + 1}\n${ts(c.words[0].s)} --> ${ts(Math.max(c.words[c.words.length - 1].e, c.words[0].s + 0.6))}\n${c.text}\n`).join('\n');
+  const srtFile = final.replace(/\.mp4$/i, '.srt');
+  writeFileSync(srtFile, srt);
+  kit.push(srtFile);
+}
+if (V.post && (V.post.caption || V.post.hashtags)) {
+  const tags = [].concat(V.post.hashtags || []).filter(Boolean).map((h) => '#' + String(h).replace(/^#/, '').replace(/\s+/g, ''));
+  const postFile = final.replace(/\.mp4$/i, '.post.txt');
+  writeFileSync(postFile, [V.post.caption || '', '', tags.join(' ')].join('\n').trim() + '\n');
+  kit.push(postFile);
 }
 
 // ---- 6. self-check ------------------------------------------------------------------------------
@@ -340,7 +391,7 @@ for (const w of warnings) if (!/^clip not found|ELEVENLABS_API_KEY is not set/.t
 const py = ['python3', 'python'].find((c) => spawnSync(c, ['--version']).status === 0);
 let score = null;
 if (!flag('fast') && py) {
-  const textArgs = [join(ROOT, 'render.mjs'), scene, '--out', join(WORK, 'text.mp4'), '--text-only', '--variant', String(VARIANT), '--crf', '28', ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
+  const textArgs = [join(ROOT, 'render.mjs'), scene, '--out', join(WORK, 'text.mp4'), '--text-only', '--variant', String(VARIANT), '--crf', '28', '--inject', injectFile, ...(opt('data') ? ['--data', resolve(opt('data'))] : [])];
   if (V.captions && !flag('no-captions') && words.length) textArgs.push('--captions', capFile);
   const tr = spawnSync(process.execPath, textArgs, { encoding: 'utf8' });
   if (tr.status === 0) writeFileSync(join(WORK, 'text-mask.json'), JSON.stringify({ video_sha256: createHash('sha256').update(readFileSync(video)).digest('hex'),
@@ -358,7 +409,7 @@ if (!flag('fast') && py) {
 const cutsPng = final.replace(/\.mp4$/i, '.cuts.png');
 try {
   const { Canvas, loadImage } = await import('skia-canvas');
-  const eng = await open(scene, { variant: VARIANT, data: DATA, captions: V.captions && words.length ? words : null });
+  const eng = await open(scene, { variant: VARIANT, data: DATA, inject: INJECT, captions: V.captions && words.length ? words : null });
   const times = [0, ...(V.cuts || []).map((c) => Math.min(D - 0.05, c + 0.2)), Math.max(0, D - 0.4)];
   const tw = 240, th = Math.round(tw * V.height / V.width), pad = 6;
   const sheetC = new Canvas(times.length * (tw + pad) + pad, th + pad * 2 + 28), c2 = sheetC.getContext('2d');
@@ -377,7 +428,7 @@ const report = [
   `# ${name}`, '',
   `${failed.length ? `**${failed.length} thing(s) to fix or confirm.**` : '**All checks passed.**'} Look at the stills either way.`, '',
   ...checks.map(([ok, area, text]) => `- ${ok ? 'PASS' : 'FIX '} **${area}**: ${text}`), '',
-  '## Files', ...made.map((f) => `- ${rel(f)}`), `- ${rel(cutsPng)} (frame 0, just after each cut, the end)`, `- ${rel(final.replace(/\.mp4$/i, '.sheet.png'))} (six evenly spaced frames)`, '',
+  '## Files', ...made.map((f) => `- ${rel(f)}`), ...kit.map((f) => `- ${rel(f)}`), `- ${rel(cutsPng)} (frame 0, just after each cut, the end)`, `- ${rel(final.replace(/\.mp4$/i, '.sheet.png'))} (six evenly spaced frames)`, '',
   ...(score ? ['## Picture score', '```json', JSON.stringify({ size: score.size, frame0_text: score.frame0_text, longest_still_s: score.longest_still_s, open_motion: score.open_motion, median_fill: score.median_fill, unsafe_ink: score.unsafe_ink }, null, 2), '```', ''] : []),
   ...(placed.length ? ['## Narration timing', '| line | start | end | text |', '|---|---|---|---|', ...placed.map((p, i) => `| ${i + 1} | ${p.start.toFixed(2)} | ${(p.start + p.dur).toFixed(2)} | ${voiceLines[i].text} |`), ''] : []),
 ];

@@ -19,6 +19,12 @@ window.BRAND = {
     good: '#3DDC97',      // success, "after", checks
     bad: '#FF4D5E',       // errors, "before", crosses
   },
+  // Word-by-word captions: style 'pill' | 'bold' | 'box' | 'minimal' | 'karaoke' | 'pop'.
+  // emoji: a sticker pops above the caption when one of these words is spoken.
+  captions: {
+    style: 'pill',
+    emoji: { money: '💰', free: '🎁', fire: '🔥', love: '😍', wow: '🤯', crazy: '😱', results: '📈', sale: '🛍️' },
+  },
   fonts: {
     display: '"Plus Jakarta Sans"',
     body: '"Plus Jakarta Sans"',

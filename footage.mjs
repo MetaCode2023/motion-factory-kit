@@ -256,7 +256,7 @@ async function cut(planFile, { quiet = false } = {}) {
     name, angle: plan.angle || '', aroll, duration,
     hooks: plan.hooks || (plan.hook ? [plan.hook] : []), comment: plan.comment || null, cta: plan.cta || '',
     product: plan.product || null, productAt: plan.productAt ?? null, broll, music: plan.music ?? 'pulse', look: plan.look ?? 'punchy',
-    endCard: plan.endCard || null, segments: segStarts.map((s, i) => ({ i, start: +s.toFixed(3) })),
+    endCard: plan.endCard || null, caption: plan.caption || '', hashtags: plan.hashtags || [], segments: segStarts.map((s, i) => ({ i, start: +s.toFixed(3) })),
   };
   writeFileSync(join(dir, 'data.json'), JSON.stringify(data, null, 1));
   if (!quiet) console.log(`  ${name}: ${pieces.length} cuts, ${duration.toFixed(1)}s (removed ${Math.max(0, removed).toFixed(1)}s of fillers and pauses) -> ${relative(ROOT, aroll)}`);

@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Before / after</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// Before / after: hook, the "before" full screen, a split reveal, the result, CTA.
+// before/after can be video clips or images (same framing works best; generate both in Higgsfield
+// with the same seed). Only show real or clearly-labelled illustrative results.
+// Data keys: name, hooks, accent, before (path), after (path), labels ("BEFORE | AFTER"),
+//   beforeLine, afterLine, result.value, result.prefix, result.suffix, result.label, note, voice, takeaway, cta, url
+const D = M.data({
+  name: 'before-after', hooks: ['Same kitchen. One weekend.'], accent: 'weekend.',
+  before: '../../assets/higgsfield/before.mp4', after: '../../assets/higgsfield/after.mp4', labels: ['BEFORE', 'AFTER'],
+  beforeLine: 'Dark, cramped, dated', afterLine: 'Bright, open, done', note: 'Illustrative',
+  result: { value: 2, prefix: '', suffix: ' days', label: 'start to finish' },
+  voice: [], takeaway: 'Your weekend upgrade.', cta: 'Get a quote', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const L = [].concat(D.labels);
+const CUTS = [3.0, 6.5, 11.0, 14.5], DUR = 18;
+const layer = (p, at) => {
+  if (!p) return null;
+  if (/\.(png|jpe?g|webp)$/i.test(p)) { const img = M.image(p); return { draw: (c, t, x, y, w, h) => M.cover(c, img, x, y, w, h, { dim: 0, zoom: 1.03 + 0.03 * Math.sin(t * 0.3) }) }; }
+  return M.video(p, { at, audio: false, loop: true });
+};
+const before = layer(D.before, 0), after = layer(D.after, CUTS[1]);
+const tag = (c, t, text, color, at, y) => B.nativeText(c, t, { at, text, y, size: 54, bg: color, color: color === B.brand.colors.good ? '#0B0D12' : '#FFFFFF' });
+
+const BEATS = [
+  { at: 0, draw: (c) => { before.draw(c, T, 0, 0, 1080, 1920); FX.vignette(c, { strength: 0.6 }); AD.hook(c, T, { text: HOOK, accent: D.accent }); } },
+  { at: CUTS[0], transition: 'blur', draw: (c) => {
+    before.draw(c, T, 0, 0, 1080, 1920);
+    tag(c, T, L[0], B.brand.colors.bad, CUTS[0] + 0.1, 300);
+    FX.text(c, T, D.beforeLine, 120, 1060, { at: CUTS[0] + 0.4, mode: 'rise', font: AD.font(800, 84), maxWidth: 840 });
+  } },
+  { at: CUTS[1], transition: 'none', draw: (c) => {
+    B.split(c, T, { at: CUTS[1], left: before, right: after, labels: L, mode: 'horizontal' });
+  } },
+  { at: CUTS[2], transition: 'wipe', draw: (c) => {
+    after.draw(c, T, 0, 0, 1080, 1920); FX.vignette(c, { strength: 0.55 });
+    tag(c, T, L[1] || 'AFTER', B.brand.colors.good, CUTS[2] + 0.1, 300);
+    FX.text(c, T, D.afterLine, 120, 760, { at: CUTS[2] + 0.3, mode: 'rise', font: AD.font(800, 84), maxWidth: 840 });
+    if (D.result && D.result.value) B.stat(c, T, { at: CUTS[2] + 0.8, ...D.result, y: 900, size: 200 });
+    if (D.note) M.text(c, D.note, 960, 1380, { font: AD.font(600, 30, B.brand.fonts.body), color: '#FFFFFF', align: 'right', alpha: 0.7 });
+  } },
+  { at: CUTS[3], transition: 'zoom', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CUTS[3] + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: '#000',
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0, voice: AD.voice(D.voice, [0, ...CUTS]),
+  music: { track: 'calm', volume: 0.25 },
+  sfx: [{ at: 0, name: 'hit', volume: 0.5 }, { at: CUTS[1], name: 'riser', volume: 0.4 }, { at: CUTS[1] + 1.4, name: 'success', volume: 0.5 }, { at: CUTS[2] - 0.2, name: 'whoosh', volume: 0.4 }, { at: CUTS[3] + 0.6, name: 'chime', volume: 0.45 }],
+  draw(ctx, t) { T = t; const end = FX.camera(ctx, t, { punch: [0, CUTS[0], CUTS[2], CUTS[3]] }); FX.timeline(ctx, t, BEATS); end(); },
+});
+</script>
+</body>
+</html>

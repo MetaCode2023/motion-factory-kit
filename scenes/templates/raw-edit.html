@@ -26,6 +26,7 @@ const CTA_AT = Math.max(HOOK_END + 1, DUR - 2.6);
 const PRODUCT_AT = D.product ? (D.productAt ?? Math.max(HOOK_END + 0.5, DUR * 0.45)) : null;
 
 M.setup({
+  post: { caption: D.caption || [HOOK, D.cta].filter(Boolean).join('\n\n'), hashtags: [].concat(D.hashtags || []) }, voiceId: D.voiceId || null,
   width: 1080, height: 1920, fps: 30, duration: DUR, background: '#000',
   cuts: D.broll.flatMap((b) => [b.at, b.at + b.dur]).filter((x) => x > 0 && x < DUR),
   captions: true, look: D.look, music: D.music ? { track: D.music, volume: 0.1 } : null,

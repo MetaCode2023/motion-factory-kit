@@ -12,6 +12,8 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    - *Explainer / motion graphics / no footage* → start from `scenes/examples/showreel.html` (high-end look) or `showcase.html` (simpler).
    - *A folder of raw client footage → many ads* → the **editor** (`docs/EDITOR.md`, below).
    - *Many ads from a list/spreadsheet* → a template + `batch-ads.mjs` (below).
+   - *A proven ad format* (3 reasons, us vs them, before/after, testimonials, problem/solution, listicle,
+     unboxing, green screen) → copy the matching file in `scenes/templates/` (`docs/TEMPLATES.md`).
    - Read `design/DESIGN.md` either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
 2. **Plan beats before code.** 4–6 beats, one short line each (≤ 7 words on screen), cut times,
    15–30 s total. For ads: hook (0–3 s), problem, show it, proof, CTA. Write 2–3 hook options with
@@ -54,6 +56,35 @@ Default to this for explainers and motion graphics; flat backgrounds look cheap.
    `node footage.mjs build edits/ --variants --formats 4:5,16:9 --batch <client>`.
 4. Read `out/<batch>/DELIVERY.md` and the reports; fix plans with FIXes and rebuild those.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
+
+## Templates (`scenes/templates/`, see `docs/TEMPLATES.md`)
+
+`three-reasons`, `us-vs-them`, `before-after`, `testimonial-stack`, `problem-solution`, `listicle`, `unboxing`,
+`green-screen`, `raw-edit`. Each reads its content from `M.data({...})` (keys listed at the top of the file), so it
+works for one ad (`node make.mjs scenes/templates/x.html`) or a spreadsheet of them. Shared pieces live in
+`kit/ad.js` (`AD.hook`, `AD.number`, `AD.cta`, `AD.background`, `AD.voice`, `AD.sfx`, `AD.post`).
+
+## Captions, emoji, green screen
+
+- Caption look: `brand.js` → `captions: { style: 'pill' | 'bold' | 'box' | 'minimal' | 'karaoke' | 'pop', emoji: { money: '💰' } }`,
+  or per scene `M.setup({ captions: { style: 'bold' } })`. `bold`/`pop` suit UGC; `pill`/`minimal` suit explainers.
+- Emoji are images (`assets/emoji`, Twemoji): `B.sticker(ctx, t, { emoji: '🔥', at, x, y })`, `B.emojiBurst(...)`.
+  Never type emoji into text; the fonts can't draw them. Unbundled emoji are skipped with a warning.
+- Green screen: `M.video(path, { key: 'green' | 'blue' | '#hex' })` cuts the background out; draw the clip over a
+  `B.postCard`, `B.browser` or image. Template: `scenes/templates/green-screen.html`.
+
+## Timing from the music and the voice
+
+`make.mjs` hands the scene the music's beats and the narration's real timings before it runs:
+`M.snap(t, every)` moves a time onto the nearest beat (use it for cuts), `M.onBeat(t)` is a 0→1 pulse on each beat,
+`M.beats` / `M.bpm`, and `M.cues(VOICE)` gives each narration line's real `{ start, end }` (estimated in preview).
+Prefer voice-first timing for narrated pieces: cuts at `CUES[i].start`, duration `CUES[last].end + 1.5`.
+
+## What a build hands over
+
+`out/<name>.mp4` (+ `-v2`, `.4x5`...), `.cover.jpg` (the frame at `M.setup({ cover })`, default 0.7 s), `.srt`
+(subtitles for YouTube/accessibility), `.post.txt` (from `M.setup({ post: { caption, hashtags } })`), `.report.md`, `.cuts.png`.
+Write a real post caption: the hook, one line of value, the CTA, 3-5 relevant hashtags.
 
 ## Spreadsheet batches (`batch-ads.mjs`)
 
@@ -102,7 +133,8 @@ M.setup({ ...,
 
 ## Blocks (`kit/blocks.js`, all on `B`; details in `docs/BLOCKS.md`)
 
-UGC: `nativeText`, `commentReply`, `productCard`, `review`, `stars`, `ctaButton`, `tap`, `split`, `pip`.
+UGC: `nativeText`, `commentReply`, `productCard`, `review`, `stars`, `ctaButton`, `tap`, `split`, `pip`,
+`sticker`, `emojiBurst`, `postCard`, `browser`.
 Explainer: `notification`, `chat`, `checklist`, `stat`, `compare`, `steps`, `bars`, `phone`, `toast`, `endCard`.
 All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.brand`).
 

@@ -58,6 +58,10 @@ Swap the bracketed parts. Add your model's own style words if you like.
 **Before / after pair** (render twice with the same seed and framing, change only the state)
 > Vertical 9:16, same framing both times, [the problem state] … / … [the solved state], no text.
 
+**Green-screen creator (for `scenes/templates/green-screen.html`)**
+> Vertical 9:16, [person] standing in front of a flat, evenly lit solid bright green background,
+> talking to camera, waist-up, no shadows on the background, no green clothing, no text. They say: "[script]"
+
 **Reaction shot (for picture-in-picture)**
 > Vertical 9:16 close-up of [person] reacting with surprise, then nodding, looking at the camera,
 > plain background, no text.

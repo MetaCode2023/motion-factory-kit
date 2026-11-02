@@ -361,7 +361,18 @@
   //   B.compare(ctx, t, { at: 5, left: { title: 'Before', items: ['Missed calls'] }, right: { title: 'After', items: ['Every call answered'] } })
   B.compare = (ctx, t, { at = 0, left = {}, right = {}, x = 70, y = 560, w = 940, size = 42, stagger = 0.35 } = {}) => {
     const cw = (w - 30) / 2, rows = Math.max((left.items || []).length, (right.items || []).length);
-    const h = 130 + rows * (size * 1.3 + 50) + 20;
+    // Each row is as tall as its longest (wrapped) item on either side, so rows never crowd.
+    // An item whose longest word won't fit the column gets a smaller size instead of overflowing.
+    const fitSize = (it) => {
+      ctx.save(); ctx.font = font(700, size);
+      const widest = Math.max(...String(it || '').split(/\s+/).map((wd) => ctx.measureText(wd).width), 1);
+      ctx.restore();
+      return Math.min(size, Math.floor(size * (cw - 130) / widest));
+    };
+    const nl = (it) => (it ? lines(ctx, it, cw - 130, font(700, fitSize(it))).length : 1);
+    const rowH = Array.from({ length: rows }, (_, i) => Math.max(nl((left.items || [])[i]), nl((right.items || [])[i])) * size * 1.15 + 50);
+    const rowY = rowH.map((_, i) => rowH.slice(0, i).reduce((a, b) => a + b, 0));
+    const h = 130 + rowH.reduce((a, b) => a + b, 0) + 20;
     [[left, x, C.bad, false], [right, x + cw + 30, C.good, true]].forEach(([col, cx, tone, ok], ci) => {
       const ca = appear(t, at + ci * 0.25, 0.35);
       if (ca <= 0) return;
@@ -372,10 +383,11 @@
       (col.items || []).forEach((it, i) => {
         const ia = appear(t, at + 0.4 + i * stagger + ci * 0.15, 0.35);
         if (ia <= 0) return;
-        const iy = y + 130 + i * (size * 1.3 + 50);
+        const iy = y + 130 + rowY[i];
         ctx.save(); ctx.globalAlpha *= ia;
         check(ctx, cx + 56, iy + size * 0.55, size * 0.5, ok, ia);
-        M.text(ctx, it, cx + 100, iy + size * 0.75, { font: font(700, size), color: C.ink, maxWidth: cw - 130, lineHeight: size * 1.15 });
+        const fs = fitSize(it);
+        M.text(ctx, it, cx + 100, iy + size * 0.75, { font: font(700, fs), color: C.ink, maxWidth: cw - 130, lineHeight: fs * 1.15 });
         ctx.restore();
       });
       ctx.restore();
@@ -474,6 +486,125 @@
     if (cta) B.ctaButton(ctx, t, { at: at + 0.6, text: cta, x: w / 2, y: cy + 470 });
     if (url) M.text(ctx, url, w / 2, cy + (cta ? 720 : 520), { font: font(600, 44, F.mono), color: C.muted, align: 'center', alpha: appear(t, at + 0.8, 0.3) });
     ctx.restore();
+  };
+
+  // ===================================================================================== backgrounds for green screen
+
+  // A social post (generic: no platform logos). Use as the "screenshot" a creator reacts to.
+  //   B.postCard(ctx, t, { name: 'Dana Ruiz', handle: '@danaruiz', text: 'Unpopular opinion: ...', likes: '12.4K' })
+  B.postCard = (ctx, t, { at = 0, until = Infinity, name = 'Someone', handle = '@someone', text = '', image = null, likes = '', comments = '', reposts = '', x = 70, y = 260, w = 940, light = true, avatarColor = '#7C8BA1' } = {}) => {
+    const a = Math.min(appear(t, at, 0.2), clamp((until - t) / 0.2));
+    if (a <= 0) return { bottom: y };
+    const tl = balanced(ctx, text, w - 96, font(600, 44)), lh = 58;
+    const imgH = image ? Math.round((w - 96) * 0.56) : 0;
+    const h = 150 + tl.length * lh + (imgH ? imgH + 30 : 0) + (likes || comments || reposts ? 90 : 30);
+    const k = at <= 0 ? 1 : ease.outCubic(appear(t, at, 0.45));
+    const ink = light ? '#0F1419' : '#E7E9EA', mut = light ? '#536471' : '#71767B';
+    ctx.save();
+    ctx.globalAlpha *= a; ctx.translate(0, (1 - k) * 60);
+    shadow(ctx, 50, 18, 0.35);
+    ctx.fillStyle = light ? '#FFFFFF' : '#16181C'; M.roundRect(ctx, x, y, w, h, 32); ctx.fill();
+    noShadow(ctx);
+    avatar(ctx, x + 84, y + 84, 40, name, avatarColor);
+    M.text(ctx, name, x + 144, y + 76, { font: font(800, 40), color: ink });
+    M.text(ctx, handle, x + 144, y + 122, { font: font(600, 34), color: mut });
+    tl.forEach((l, i) => M.text(ctx, l, x + 48, y + 196 + i * lh, { font: font(600, 44), color: ink }));
+    let cy = y + 160 + tl.length * lh;
+    if (image) { ctx.save(); M.roundRect(ctx, x + 48, cy + 10, w - 96, imgH, 24); ctx.clip(); M.cover(ctx, image, x + 48, cy + 10, w - 96, imgH, { dim: 0 }); ctx.restore(); cy += imgH + 30; }
+    if (likes || comments || reposts) {
+      const items = [comments && `💬 ${comments}`, reposts && `🔁 ${reposts}`, likes && `❤ ${likes}`].filter(Boolean);
+      items.forEach((it, i) => M.text(ctx, it.replace(/^\S+ /, ''), x + 110 + i * 250, cy + 54, { font: font(700, 34), color: mut }));
+      items.forEach((it, i) => { const img = B.emoji(it.split(' ')[0] === '❤' ? '❤️' : it.split(' ')[0]); if (img && img.width) ctx.drawImage(img, x + 56 + i * 250, cy + 22, 42, 42); });
+    }
+    ctx.restore();
+    return { bottom: y + h };
+  };
+
+  // A browser window showing a page (pass an image, or draw it yourself with drawPage).
+  B.browser = (ctx, t, { at = 0, until = Infinity, url = B.brand.url, image = null, drawPage = null, x = 40, y = 220, w = 1000, h = 1200, scroll = 0 } = {}) => {
+    const a = Math.min(appear(t, at, 0.2), clamp((until - t) / 0.2));
+    if (a <= 0) return { bottom: y };
+    const k = at <= 0 ? 1 : ease.outCubic(appear(t, at, 0.5));
+    ctx.save();
+    ctx.globalAlpha *= a; ctx.translate(0, (1 - k) * 80);
+    shadow(ctx, 60, 24, 0.45);
+    ctx.fillStyle = '#E8EAED'; M.roundRect(ctx, x, y, w, h, 28); ctx.fill();
+    noShadow(ctx);
+    ['#FF5F57', '#FEBC2E', '#28C840'].forEach((c, i) => { ctx.beginPath(); ctx.arc(x + 40 + i * 34, y + 40, 11, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); });
+    ctx.fillStyle = '#FFFFFF'; M.roundRect(ctx, x + 150, y + 18, w - 190, 46, 23); ctx.fill();
+    M.text(ctx, url, x + 180, y + 52, { font: font(600, 28), color: '#5F6368' });
+    const px = x + 8, py = y + 84, pw = w - 16, ph = h - 92;
+    ctx.save(); M.roundRect(ctx, px, py, pw, ph, 20); ctx.clip();
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(px, py, pw, ph);
+    if (image && image.width) { const s = pw / image.width; ctx.drawImage(image, px, py - scroll, pw, image.height * s); }
+    if (drawPage) drawPage(ctx, px, py - scroll, pw, ph);
+    ctx.restore();
+    ctx.restore();
+    return { bottom: y + h, page: { x: px, y: py, w: pw, h: ph } };
+  };
+
+  // ===================================================================================== emoji
+
+  // Emoji as images (Twemoji, bundled in assets/emoji: see its LICENSE.md). Canvas fonts here have
+  // no colour emoji, so use these instead of typing emoji into text.
+  const emojiCache = {};
+  B.emojiCode = (ch) => [...String(ch)].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== 'fe0f').join('-');
+  const warned = new Set();
+  B.emoji = (ch) => {
+    const c = B.emojiCode(ch);
+    if (emojiCache[c]) return emojiCache[c];
+    if (B.EMOJI_CODES && !B.EMOJI_CODES.has(c)) {             // not bundled: skip it rather than fail the render
+      if (!warned.has(c)) { warned.add(c); console.warn(`[emoji] ${ch} (${c}) isn't in assets/emoji; add ${c}.svg from Twemoji to use it`); }
+      return null;
+    }
+    return (emojiCache[c] = M.image(`${B.root}assets/emoji/${c}.svg`));
+  };
+  window.__emojiImg = (ch) => emojiCache[B.emojiCode(ch)];
+  // The bundled set, preloaded so every frame (including the first) has them. Add an SVG named by its
+  // code points (e.g. 1f525.svg) to assets/emoji and to this list to use another emoji.
+  B.EMOJI = '🆕 🌟 🎁 🎉 🎯 🎵 🏆 🏠 👀 👆 👇 👉 👍 👎 👏 👑 💀 💄 💡 💥 💪 💬 💯 💰 💳 💸 💻 📈 📉 📍 📞 📦 📱 📸 🔊 🔔 🔥 😂 😍 😎 😤 😭 😮 😱 😳 🙄 🙌 🙏 🚀 🚗 🛍 🛒 🤌 🤑 🤔 🤝 🤯 🥰 🥹 🧠 🧴 🧾 🫣 🫶 ‼ ⏰ ☕ ⚠ ⚡ ✅ ✨ ❌ ❤ ➡ ⬇ ⭐'.split(' ');
+  B.EMOJI.push('🔁');
+  B.EMOJI.push(...'📄 🔍 📝 💼 🗓️ 🍕 🍔 🎧 👗 👟 🧘 💅 🧼 🧹 🔧 🛠️ 🚚 📣 🤩 😅 🥳 🙈 😬 🫡 💔 🤷 🙋 👋 ✋ ✌️ 🍷 🌱 🐶 ☀️ 🌙 💎 🏡 🔑 💤 🎬'.split(' '));
+  B.EMOJI_CODES = new Set(B.EMOJI.map(B.emojiCode));
+  B.EMOJI.forEach((ch) => B.emoji(ch));
+
+  // A sticker that pops on with overshoot and a gentle wobble.
+  //   B.sticker(ctx, t, { emoji: '🔥', at: 1.2, x: 860, y: 420, size: 150 })
+  B.sticker = (ctx, t, { emoji = '🔥', at = 0, until = Infinity, x = 540, y = 600, size = 140, rotate = -0.12, wobble = 1 } = {}) => {
+    const img = B.emoji(emoji);
+    const a = Math.min(appear(t, at, 0.08), clamp((until - t) / 0.15));
+    if (a <= 0 || !img || !img.width) return;
+    const k = at <= 0 ? 1 : ease.outBack(appear(t, at, 0.4));
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.translate(x, y);
+    ctx.rotate(rotate + wobble * 0.08 * Math.sin((t - at) * 3.2));
+    ctx.scale(k, k);
+    shadow(ctx, 24, 10, 0.35);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  };
+
+  // A burst of emoji floating up (reactions), e.g. on a payoff.
+  B.emojiBurst = (ctx, t, { emoji = ['🔥', '😍', '💯'], at = 0, x = 540, y = 1300, count = 14, size = 90, seed = 9, dur = 2.2, height = 900, spread = 520 } = {}) => {
+    const list = Array.isArray(emoji) ? emoji : [emoji];
+    const p = (t - at) / dur;
+    if (p <= 0 || p >= 1.4) return;
+    let r = seed;
+    const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+    for (let i = 0; i < count; i++) {
+      const delay = rnd() * 0.35, q = clamp((p - delay) / 0.75);
+      if (q <= 0 || q >= 1) { rnd(); rnd(); rnd(); continue; }
+      const img = B.emoji(list[i % list.length]);
+      const dx = (rnd() - 0.5) * spread, rise = height * (0.55 + rnd() * 0.45), s = size * (0.6 + rnd() * 0.7);
+      if (!img || !img.width) continue;
+      ctx.save();
+      ctx.globalAlpha *= Math.min(1, q * 5) * (1 - Math.pow(q, 3));
+      ctx.translate(x + dx * ease.outCubic(q) + Math.sin(q * 9 + i) * 30, y - rise * ease.outCubic(q));
+      ctx.rotate(Math.sin(q * 6 + i) * 0.3);
+      ctx.drawImage(img, -s / 2, -s / 2, s, s);
+      ctx.restore();
+    }
   };
 
   window.B = B;

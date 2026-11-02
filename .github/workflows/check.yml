@@ -26,6 +26,10 @@ jobs:
           node make.mjs scenes/examples/showcase.html --formats 4:5,16:9
           node make.mjs scenes/examples/ugc-ad.html --variants --fast
           node render.mjs scenes/examples/blocks-gallery.html --sheet
+      - name: Every template renders
+        run: for f in scenes/templates/*.html; do node render.mjs "$f" --still 2 --out "out/templates/$(basename "$f" .html).mp4" || exit 1; done
+      - name: Spreadsheet batch
+        run: node batch-ads.mjs scenes/templates/three-reasons.html data/example-ads.csv --fast --batch ci-batch
       - name: Summary
         if: always()
         run: cat out/*.report.md >> "$GITHUB_STEP_SUMMARY" || true

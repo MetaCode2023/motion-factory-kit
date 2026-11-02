@@ -23,7 +23,7 @@ import { resolve, basename, extname, dirname, join } from 'node:path';
 const args = process.argv.slice(2);
 const flag = (name) => args.includes('--' + name);
 const opt = (name, dflt) => { const i = args.indexOf('--' + name); return i >= 0 ? args[i + 1] : dflt; };
-const VALUED = ['out', 'audio', 'fps', 'from', 'to', 'cdp', 'still', 'engine', 'captions', 'crf', 'variant', 'motion-blur', 'jobs', 'data'];
+const VALUED = ['out', 'audio', 'fps', 'from', 'to', 'cdp', 'still', 'engine', 'captions', 'crf', 'variant', 'motion-blur', 'jobs', 'data', 'inject'];
 const scene = args.find((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]?.slice(2)));
 
 if (!scene || !existsSync(scene)) {
@@ -53,7 +53,7 @@ let engine;
 let exitCode = 0;
 try {
   const captions = opt('captions') ? JSON.parse(readFileSync(opt('captions'), 'utf8')) : null;
-  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222'), captions, variant: Number(opt('variant', 0)), textOnly: flag('text-only'), data: opt('data') ? JSON.parse(readFileSync(opt('data'), 'utf8')) : null });
+  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222'), captions, variant: Number(opt('variant', 0)), textOnly: flag('text-only'), data: opt('data') ? JSON.parse(readFileSync(opt('data'), 'utf8')) : null, inject: opt('inject') ? JSON.parse(readFileSync(opt('inject'), 'utf8')) : null });
   const { V } = engine;
 
   if (opt('still') !== undefined) {

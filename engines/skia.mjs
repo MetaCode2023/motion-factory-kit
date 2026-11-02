@@ -17,7 +17,8 @@ const FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'fonts');
 const CLIP_CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', '.cache', 'clips');
 const FAMILY_WORDS = { jetbrains: 'JetBrains' };
 
-// Register every fonts/<slug>-latin-<weight>-normal.woff2 under the family named by its slug.
+// Register every fonts/<slug>-<subset>-<weight>-normal.woff2 (fontsource naming; latin, cyrillic, arabic,
+// japanese...) under the family named by its slug. Several subsets of one family stack up.
 // The alias matters: the Barlow Condensed files call themselves "Barlow" internally, so without
 // it, "Barlow Condensed" silently falls back to a system font.
 let fontsLoaded = false;
@@ -25,7 +26,7 @@ function loadFonts() {
   if (fontsLoaded) return;
   const groups = {};
   for (const f of readdirSync(FONT_DIR)) {
-    const m = f.match(/^(.+)-latin-\d+-(normal|italic)\.(woff2?|ttf|otf)$/);
+    const m = f.match(/^(.+?)-(?:latin|latin-ext|cyrillic|cyrillic-ext|greek|greek-ext|vietnamese|arabic|hebrew|devanagari|thai|japanese|korean|chinese-simplified|chinese-traditional|chinese-hongkong)-\d+-(normal|italic)\.(woff2?|ttf|otf)$/);
     if (!m) continue;
     const family = m[1].split('-').map((w) => FAMILY_WORDS[w] || w[0].toUpperCase() + w.slice(1)).join(' ');
     (groups[family] ||= []).push(join(FONT_DIR, f));
@@ -87,7 +88,7 @@ function makeCanvas(w, h, textOnly = false) {
 
 // layout: blank every image, so the frames show only code-drawn text and UI. score.py measures
 // the TikTok safe zones on these, because photo texture would otherwise read as text.
-export async function open(scenePath, { layout = false, textOnly = false, captions = null, variant = 0, data = null } = {}) {
+export async function open(scenePath, { layout = false, textOnly = false, captions = null, variant = 0, data = null, inject = null } = {}) {
   loadFonts();
   const file = resolve(scenePath);
   const html = readFileSync(file, 'utf8');
@@ -154,32 +155,37 @@ export async function open(scenePath, { layout = false, textOnly = false, captio
   // Video clips (M.video): decode once into a cached JPG sequence at the scene's frame rate, then
   // hand frames to the scene synchronously, one at a time, so long clips don't fill memory.
   const clips = [];
-  sandbox.__loadVideo = (src, fps) => {
+  // key: 'green' | 'blue' | '#RRGGBB' cuts that colour out (green screen) and keeps transparency.
+  sandbox.__loadVideo = (src, fps, key = null) => {
     const abs = /^([a-z]:[\\/]|\/)/i.test(src) ? src : resolve(dirname(file), src);
     if (!existsSync(abs)) return { missing: true, src };
     const st = statSync(abs);
-    const dir = join(CLIP_CACHE, createHash('sha1').update([abs, st.size, st.mtimeMs, fps].join('|')).digest('hex').slice(0, 16));
+    const dir = join(CLIP_CACHE, createHash('sha1').update([abs, st.size, st.mtimeMs, fps, key || ''].join('|')).digest('hex').slice(0, 16));
+    const ext = key ? 'png' : 'jpg';
+    const keyColor = !key ? null : key === 'green' ? '0x00D040' : key === 'blue' ? '0x0047BB' : '0x' + String(key).replace('#', '');
+    const keyVf = key ? `,chromakey=${keyColor}:${sandbox.__keySimilarity ?? 0.16}:0.06,despill=type=${key === 'blue' ? 'blue' : 'green'},format=rgba` : '';
     const probe = spawnSync(ffmpegPath, ['-hide_banner', '-i', abs], { encoding: 'utf8' }).stderr;
     const dur = probe.match(/Duration: (\d+):(\d+):([\d.]+)/);
     const size = probe.match(/Video:.*?(\d{2,5})x(\d{2,5})/);
-    if (!existsSync(join(dir, '00001.jpg'))) {
+    if (!existsSync(join(dir, `00001.${ext}`))) {
       mkdirSync(dir, { recursive: true });
-      const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', abs, '-vf', `fps=${fps}`, '-q:v', '3', join(dir, '%05d.jpg')], { encoding: 'utf8' });
+      const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', abs, '-vf', `fps=${fps}${keyVf}`, ...(key ? [] : ['-q:v', '3']), join(dir, `%05d.${ext}`)], { encoding: 'utf8' });
       if (r.status !== 0) throw new Error(`could not decode video ${src}: ${r.stderr}`);
     }
-    const frames = readdirSync(dir).filter((f) => f.endsWith('.jpg')).length;
-    clips.push(dir);
+    const frames = readdirSync(dir).filter((f) => f.endsWith('.' + ext)).length;
+    clips.push({ dir, ext });
     return { id: clips.length - 1, frames, fps, duration: dur ? +dur[1] * 3600 + +dur[2] * 60 + +dur[3] : frames / fps,
       width: size ? +size[1] : 0, height: size ? +size[2] : 0, hasAudio: /Audio:/.test(probe) };
   };
   sandbox.__videoFrame = (id, i) => {
     const img = new SceneImage();
-    img.src = layout || textOnly ? BLANK_PNG : readFileSync(join(clips[id], String(i + 1).padStart(5, '0') + '.jpg'));
+    img.src = layout || textOnly ? BLANK_PNG : readFileSync(join(clips[id].dir, String(i + 1).padStart(5, '0') + '.' + clips[id].ext));
     return img;
   };
   if (captions) sandbox.CAPTIONS = captions;
   if (variant) sandbox.VARIANT = variant;
-  if (data) sandbox.DATA = data;   // content for M.data() (batch rows, edit plans)   // word timings from make.mjs, read by the kit
+  if (data) sandbox.DATA = data;   // content for M.data() (batch rows, edit plans)
+  if (inject) Object.assign(sandbox, inject);   // BEATS, CUES from make.mjs   // word timings from make.mjs, read by the kit
   const context = vm.createContext(sandbox);
 
   // Run the scene's scripts in page order. Errors after draw() exists (usually the preview

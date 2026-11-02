@@ -16,11 +16,12 @@
 // Graded with look: 'cinematic' and shot with motion blur.
 const C = B.brand.colors, F = B.brand.fonts;
 const D = (w, px) => `${w} ${px}px ${F.display}`;
-const CUTS = [3.6, 7.2, 10.8, 14.4];
+// Cuts snap to the music: every second beat of the 'drive' track (make.mjs supplies the beats).
+const CUTS = [3.6, 7.2, 10.8, 14.4].map((t) => M.snap(t, 2));
 const END = 18;
 
 function backdrop(c, t, hue = 0) {
-  FX.aurora(c, t, { colors: [C.accent, '#6D5BFF', '#18C8FF'].slice(hue % 2), intensity: 0.5 });
+  FX.aurora(c, t, { colors: [C.accent, '#6D5BFF', '#18C8FF'].slice(hue % 2), intensity: 0.45 + 0.12 * M.onBeat(t, { every: 2 }) });   // breathes with the kick
   FX.particles(c, t, { count: 50, opacity: 0.35 });
 }
 

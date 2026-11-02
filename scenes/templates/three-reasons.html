@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Three reasons</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// "3 reasons why ___": hook, three numbered reasons (each with an optional clip), CTA.
+// Data keys: name, hooks (hook1..3), accent (word to highlight in the hook), sticker (emoji),
+//   reasons (3 short lines, "a | b | c"), details (optional sub-lines), clips (optional, one per reason),
+//   voice (optional narration, one line per beat: hook | r1 | r2 | r3 | cta), takeaway, cta, url
+const D = M.data({
+  name: 'three-reasons', hooks: ['3 reasons people switch to Glow'], accent: 'switch', sticker: '👀',
+  reasons: ['Visible results in 2 weeks', 'No sticky residue', 'Half the price of salon brands'],
+  details: ['Hydrates and brightens', 'Absorbs in seconds', 'From $29, free shipping'],
+  clips: [], voice: [], takeaway: 'Your skin, sorted.', cta: 'Shop Glow', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const R = [].concat(D.reasons).slice(0, 3), DT = [].concat(D.details || []), CL = [].concat(D.clips || []);
+const CUTS = [3.4, 7.2, 11.0, 14.8], DUR = 18;
+const clips = R.map((_, i) => (CL[i] ? M.video(CL[i], { at: CUTS[i], audio: false }) : null));
+
+function reason(c, t, i) {
+  const at = CUTS[i];
+  if (clips[i] && !clips[i].missing) clips[i].draw(c, t, 0, 0, 1080, 1920, { dim: 0.55, zoom: 1.04 + 0.04 * M.clamp((t - at) / 3.8) });
+  else { FX.aurora(c, t, { intensity: 0.5, seed: 7 + i * 3 }); FX.particles(c, t, { count: 40, opacity: 0.3 }); }
+  AD.number(c, t, i + 1, at + 0.05, { y: 320 });
+  const h = FX.text(c, t, R[i] || '', 120, 760, { at: at + 0.25, mode: 'rise', font: AD.font(800, 96), maxWidth: 860 });
+  if (DT[i]) FX.text(c, t, DT[i], 120, h.bottom + 40, { at: at + 0.7, mode: 'rise', font: AD.font(700, 54, B.brand.fonts.body), color: B.brand.colors.muted, maxWidth: 820, stagger: 0.04 });
+  B.checklist(c, t, { y: 1060, items: R.slice(0, i + 1).map((r, j) => ({ at: j < i ? -1 : at + 1.1, text: r })), size: 50, gap: 26 });
+}
+const BEATS = [
+  { at: 0, draw: (c) => { FX.aurora(c, T); FX.particles(c, T, { count: 50, opacity: 0.35 }); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: D.sticker }); } },
+  ...R.map((_, i) => ({ at: CUTS[i], draw: (c) => reason(c, T, i), transition: ['zoom', 'whip', 'circle'][i] })),
+  { at: CUTS[3], draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CUTS[3] + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); }, transition: 'flash' },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: B.brand.colors.bg,
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0,
+  voice: AD.voice(D.voice, [0, ...CUTS]), music: { track: 'drive', volume: 0.22 }, sfx: AD.sfx(CUTS, CUTS[3] + 0.6),
+  draw(ctx, t) {
+    T = t;
+    const end = FX.camera(ctx, t, { punch: [0, ...CUTS], shake: 0.1 });
+    FX.timeline(ctx, t, BEATS);
+    end();
+    FX.vignette(ctx, { strength: 0.45 });
+  },
+});
+</script>
+</body>
+</html>

@@ -59,6 +59,10 @@ A/B comparison of two renders. Edit it as you learn what works for your audience
   [2026-10-16 home-services overlap; frame-by-frame helper regression]
 - Beat titles use `M.headline` too (max 72–96, lines: 1, start: the beat's start), so they fit the width at the largest size instead of a fixed small one.
 - Show interaction: a tap ripple, a cursor, a key typed. Proof beats claims. [review]
+- When there's music, cut on the beat (`M.snap(t, 2)`) and let one element breathe with it (`M.onBeat`).
+  Off-beat cuts feel sloppy even when nobody can say why. [practice]
+- Depth over flatness: an animated background (`FX.aurora`), a few glass cards, one glow, a vignette.
+  Restraint matters: one hero effect per beat. [practice]
 
 ## Your own visuals (assets/)
 - Put photos and clips you made (ChatGPT, Midjourney, Veo, your phone) in `assets/`. Look at each one before writing the scene.

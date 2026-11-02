@@ -13,30 +13,37 @@ Exact timing, no timeline editor.
 
 ## What's in it
 
-- **A raw-footage editor**: drop a client's Drive folder of footage in, get dozens of finished ads out.
+**Make lots of ads**
+- **Raw-footage editor** (`footage.mjs`): drop a client's Drive folder of footage in, get dozens of finished ads out.
   Clips are transcribed, Claude picks the best takes and writes an edit plan per ad, and the kit cuts them
-  word-exact (no "um"s, no dead air, punch-in jump cuts, reframed to vertical), adds hooks, captions,
-  B-roll, product cards and CTAs, and writes a delivery sheet for the media buyer. See [docs/EDITOR.md](docs/EDITOR.md).
-- **Batch ads from a spreadsheet** (`batch-ads.mjs`): one template + one CSV = a folder of ads.
-- **High-end visuals** (`kit/fx.js`): animated aurora backgrounds, glass cards, glow, kinetic type, camera
-  punches, cinematic transitions, colour grading, film grain and motion blur.
+  word-exact (no "um"s, no dead air, punch-in jump cuts, reframed to vertical), adds hooks, captions, B-roll,
+  product cards and CTAs, and writes a delivery sheet for the media buyer. [docs/EDITOR.md](docs/EDITOR.md)
+- **9 proven ad templates**: 3 reasons, us vs them, before/after, testimonial stack, problem/solution,
+  listicle, unboxing, green screen, raw edit. [docs/TEMPLATES.md](docs/TEMPLATES.md)
+- **Spreadsheet batches** (`batch-ads.mjs`): one template + one CSV = a folder of ads, with a delivery sheet.
+- **Hook variants**: write three hooks, get three MP4s. **Every size**: `--formats 4:5,1:1,16:9`.
+- **Other languages**: translated rows, multilingual narration, dubbed creator clips. [docs/LANGUAGES.md](docs/LANGUAGES.md)
 
-- **One command to a finished video** (`make.mjs`): picture + narration + captions + music + effects,
-  loudness-normalized for social. `--variants` renders every hook option.
-- **Higgsfield-ready** (`M.video`): drop clips into `assets/higgsfield/` (any size, any frame rate).
-  Their audio is mixed in and their speech becomes captions. Or connect the Higgsfield connector and let
-  Claude generate the footage too. See [docs/HIGGSFIELD.md](docs/HIGGSFIELD.md).
-- **19 building blocks** (`kit/blocks.js`): comment-reply sticker, TikTok text, product card, reviews,
-  CTA button, split screen, picture-in-picture, notifications, chat, checklists, stats, charts, phone frame,
-  end card. See [docs/BLOCKS.md](docs/BLOCKS.md).
-- **Every size**: vertical by default; `--formats 4:5,1:1,16:9` adds feed, square and YouTube versions in the same run.
-  Or design natively for another platform with `M.setup({ preset: 'youtube' })` (also `feed`, `square`).
-- **Self-checking builds**: every `make.mjs` run writes `out/<name>.report.md` (PASS/FIX for sound,
-  captions, footage, the hook at frame 0, text under the app buttons) and `out/<name>.cuts.png` (a still after every cut).
-- **Your brand in one file** (`brand.js`): colours, fonts, logo, URL. Every block and caption follows it.
-- **A sound library** (`sounds/`): 12 effects and 3 music beds, original and free to use.
-- **A design guide** Claude follows (`design/DESIGN.md`): hooks, safe zones, pacing, type, UGC rules.
-- **Claude instructions** (`CLAUDE.md` + a `make-video` skill), so Claude Code knows the whole workflow.
+**Make them look expensive**
+- **Visual toolkit** (`kit/fx.js`): animated aurora backgrounds, glass cards, glow, gradient and kinetic type,
+  camera punches, zoom/whip/circle/wipe/glitch/flash transitions, colour grades, film grain, motion blur.
+- **Cuts on the beat**: the music's beats are detected and handed to the scene (`M.snap`, `M.onBeat`), and
+  narrated pieces can time themselves from the real voiceover (`M.cues`).
+- **26 building blocks** (`kit/blocks.js`): comment-reply sticker, TikTok text, product card, reviews, CTA,
+  split screen, picture-in-picture, social post, browser window, emoji stickers and reactions, notifications,
+  chat, checklists, stats, charts, phone frame, end card. [docs/BLOCKS.md](docs/BLOCKS.md)
+- **Six caption styles** (pill, bold, box, minimal, karaoke, one-word pop) with keyword emoji.
+- **Green screen**: creators cut out of green/blue backgrounds and placed over posts, pages or photos.
+- **Higgsfield-ready** (`M.video`): any clip, any size or frame rate; its audio is mixed and its speech becomes
+  captions. Or let Claude generate the footage through the Higgsfield connector. [docs/HIGGSFIELD.md](docs/HIGGSFIELD.md)
+
+**Ship them**
+- **One command per video** (`make.mjs`): picture, narration, captions, music ducked under the voice,
+  effects, loudness for social, plus a cover image, a subtitles file and a drafted post caption.
+- **Self-checking**: every build writes a PASS/FIX report and a still after every cut, so Claude fixes
+  problems before you see them. A GitHub check re-renders the examples on every change.
+- **Your brand in one file** (`brand.js`), **a sound library** (15 original effects and beds), a **design guide**
+  Claude follows, and **Claude instructions** (`CLAUDE.md` + a `make-video` skill) for the whole workflow.
 
 ## Setup (5 minutes)
 
@@ -86,7 +93,7 @@ node make.mjs scenes/mine/x.html --voice-only    # make narration first; prints 
 node render.mjs scenes/mine/x.html --still 6.5   # one frame as a PNG
 node footage.mjs index                           # raw footage -> transcripts + thumbnails (footage/INDEX.md)
 node footage.mjs build edits/ --variants         # every edit plan -> finished ads + DELIVERY.csv
-node batch-ads.mjs scenes/templates/raw-edit.html data/ads.csv   # one ad per spreadsheet row
+node batch-ads.mjs scenes/templates/three-reasons.html data/example-ads.csv   # one ad per row
 python score.py out/x.mp4                        # quality check
 ```
 
@@ -122,7 +129,9 @@ brand.js                                           your colours, fonts, logo
 kit/motion.js  kit/blocks.js                       animation helpers and blocks
 design/DESIGN.md                                   the style rules Claude follows
 docs/                                              Higgsfield guide, block reference, the gallery page
-scenes/examples/                                   ugc-ad, showcase, blocks-gallery, and more
+scenes/examples/                                   showreel, ugc-ad, showcase, blocks-gallery, and more
+scenes/templates/                                  the ad formats (spreadsheet-ready)
+footage/  edits/  data/                            raw footage, edit plans, spreadsheets (git-ignored)
 scenes/mine/                                       your scenes
 assets/higgsfield/                                 your clips
 sounds/                                            effects and music beds
@@ -137,4 +146,5 @@ the videos and reports to the run. Fork it and your changes get the same safety 
 
 ## License
 
-Code and sounds: MIT. Fonts: SIL Open Font License (see `fonts/LICENSE.txt`).
+Code and sounds: MIT. Fonts: SIL Open Font License (see `fonts/LICENSE.txt`). Emoji graphics:
+Twemoji, CC-BY 4.0 (see `assets/emoji/LICENSE.md`).

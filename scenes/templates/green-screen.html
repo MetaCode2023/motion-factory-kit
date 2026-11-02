@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Green screen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// TikTok "green screen": the creator, cut out, talking over something (a post, a web page, a photo).
+// Film or generate the creator on a solid green (or blue) background; the kit keys it out.
+//
+// Data keys (spreadsheet columns / M.data):
+//   name, hooks (hook1..hook3), creator (path to the green-screen clip), key ('green' | 'blue' | '#hex'),
+//   background: 'post' | 'page' | 'image'
+//   post.name, post.handle, post.text, post.likes, post.comments, post.reposts   (background: 'post')
+//   page (image path) + url                                                      (background: 'page')
+//   image (path)                                                                 (background: 'image')
+//   cta, duration, transcript (estimated captions when there's no ELEVENLABS_API_KEY)
+const D = M.data({
+  name: 'green-screen', duration: 12, hooks: ['Wait, people actually believe this?'],
+  creator: '../../assets/higgsfield/greenscreen.mp4', key: 'green', background: 'post',
+  post: { name: 'Example Account', handle: '@example', text: 'Unpopular opinion: you don\'t need a 10-step skincare routine.', likes: '48.2K', comments: '3,104', reposts: '9,877' },
+  page: null, url: 'example.com', image: null, cta: 'Try it free',
+  transcript: 'Okay so this post is going viral and I need to talk about it. They are half right.',
+});
+const HOOK = M.pick(D.hooks);
+const DUR = Number(D.duration);
+const pageImg = D.page ? M.image(D.page) : null, bgImg = D.image ? M.image(D.image) : null;
+
+M.setup({
+  post: { caption: D.caption || [HOOK, D.cta].filter(Boolean).join('\n\n'), hashtags: [].concat(D.hashtags || []) }, voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, background: B.brand.colors.bg,
+  captions: { style: 'box' }, look: 'punchy', music: { track: 'pulse', volume: 0.1 },
+  sfx: [{ at: 0, name: 'pop', volume: 0.5 }, { at: DUR - 2.4, name: 'tap', volume: 0.5 }],
+  draw,
+});
+const creator = M.video(D.creator, { at: 0, key: D.key, captions: true, transcript: D.transcript });
+
+function draw(ctx, t) {
+  // What they're talking over.
+  FX.aurora(ctx, t, { intensity: 0.35 });
+  if (D.background === 'image' && bgImg) M.cover(ctx, bgImg, 0, 0, 1080, 1920, { dim: 0.15, zoom: 1 + 0.03 * t / DUR });
+  else if (D.background === 'page') B.browser(ctx, t, { at: 0, url: D.url, image: pageImg, y: 230, h: 1000, scroll: 60 * t });
+  else B.postCard(ctx, t, { at: 0, ...D.post, y: 330 });
+
+  // The creator, keyed, filling the bottom of the frame (feet off-screen, like the real thing).
+  creator.draw(ctx, t, 0, 820, 1080, 1100, { dim: 0, fy: 0.15 });
+
+  B.nativeText(ctx, t, { at: 0, until: 3.2, text: HOOK, y: 180, size: 56 });
+  if (D.cta) B.ctaButton(ctx, t, { at: DUR - 2.6, text: D.cta, y: 1060, tapAt: DUR - 1.4 });
+}
+</script>
+</body>
+</html>

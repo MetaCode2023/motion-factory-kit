@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Unboxing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// Unboxing / product reveal: hook over the box, shots of what's inside with callouts, the price, CTA.
+// Footage: hands-on product clips (Higgsfield "hands demo" / "product B-roll" prompts in docs/HIGGSFIELD.md).
+// Data keys: name, hooks, accent, shots ("clip1.mp4 | clip2.mp4 | clip3.mp4"), callouts (one line per shot),
+//   product.name, product.price, product.oldPrice, product.rating, product.reviews, product.badge, product.image,
+//   voice (or leave empty and use the clips' own sound with clipAudio: true), takeaway, cta, url
+const D = M.data({
+  name: 'unboxing', hooks: ['Unboxing the grinder everyone keeps asking about'], accent: 'everyone',
+  shots: ['../../assets/higgsfield/unbox-1.mp4', '../../assets/higgsfield/unbox-2.mp4', '../../assets/higgsfield/unbox-3.mp4'],
+  callouts: ['Solid steel burrs', '40 grind settings', 'Fits in your bag'], clipAudio: false,
+  product: { name: 'Travel Grinder', price: '$79', oldPrice: '$99', rating: 4.8, reviews: '1.3k', badge: 'NEW' },
+  voice: [], takeaway: 'Fresh coffee anywhere.', cta: 'Get yours', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const SH = [].concat(D.shots), CO = [].concat(D.callouts);
+const SHOT = 3.2, CUTS = [2.8, ...SH.slice(1).map((_, i) => 2.8 + (i + 1) * SHOT)];
+const PRICE_AT = 2.8 + SH.length * SHOT, CTA_AT = PRICE_AT + 3.6, DUR = CTA_AT + 3.3;
+const shots = SH.map((p, i) => M.video(p, { at: i === 0 ? 0 : CUTS[i], audio: !!D.clipAudio, loop: true }));
+const all = [...CUTS, PRICE_AT, CTA_AT];
+
+function shot(c, t, i, at, callout = true) {
+  shots[i].draw(c, t, 0, 0, 1080, 1920, { dim: 0.12, zoom: 1.03 + 0.05 * M.clamp((t - at) / SHOT) });
+  FX.vignette(c, { strength: 0.5 });
+  if (callout && CO[i]) {
+    // Callout: a dot, a line drawing out, and the label in a glass pill.
+    const k = M.ease.outCubic(M.clamp((t - at - 0.5) / 0.5)), x0 = 620, y0 = 1000, x1 = 300, y1 = 760;
+    if (k > 0) {
+      FX.glow(c, () => { c.beginPath(); c.arc(x0, y0, 16, 0, Math.PI * 2); c.fillStyle = '#FFFFFF'; c.fill(); }, { color: '#FFFFFF', blur: 24 });
+      c.save(); c.strokeStyle = '#FFFFFF'; c.lineWidth = 5; c.beginPath(); c.moveTo(x0, y0); c.lineTo(M.lerp(x0, x1, k), M.lerp(y0, y1, k)); c.stroke(); c.restore();
+    }
+    if (k >= 1) {
+      c.save(); c.font = AD.font(800, 56); const w = c.measureText(CO[i]).width + 80; c.restore();
+      const px = Math.max(70, Math.min(x1 - w / 2, 1010 - w));
+      FX.glass(c, px, y1 - 120, w, 110, { radius: 55, blur: 16 });
+      M.text(c, CO[i], px + 40, y1 - 45, { font: AD.font(800, 56), color: '#FFFFFF' });
+    }
+  }
+}
+const BEATS = [
+  { at: 0, draw: (c) => { shot(c, T, 0, 0, false); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: '📦' }); } },
+  ...SH.map((_, i) => ({ at: CUTS[i], transition: i === 0 ? 'blur' : ['whip', 'zoom', 'wipe'][i % 3], draw: (c) => shot(c, T, i, CUTS[i]) })),
+  { at: PRICE_AT, transition: 'circle', draw: (c) => {
+    FX.aurora(c, T); FX.particles(c, T, { count: 40 });
+    FX.text(c, T, 'And the price?', 120, 360, { at: PRICE_AT + 0.1, mode: 'rise', font: AD.font(800, 100), accent: 'price?' });
+    B.productCard(c, T, { at: PRICE_AT + 0.7, ...D.product, image: D.product.image ? M.image(D.product.image) : null, y: 760 });
+  } },
+  { at: CTA_AT, transition: 'flash', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CTA_AT + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: all, background: '#000',
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0, voice: AD.voice(D.voice, [0, ...all]),
+  music: { track: 'pulse', volume: D.clipAudio ? 0.12 : 0.25 },
+  sfx: [...AD.sfx(all.slice(0, -1), CTA_AT + 0.6), ...SH.map((_, i) => ({ at: CUTS[i] + 0.5, name: 'pop', volume: 0.4 })), { at: PRICE_AT + 0.9, name: 'coin', volume: 0.5 }],
+  draw(ctx, t) { T = t; const end = FX.camera(ctx, t, { punch: [0, ...all] }); FX.timeline(ctx, t, BEATS); end(); },
+});
+</script>
+</body>
+</html>

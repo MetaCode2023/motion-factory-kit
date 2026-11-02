@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Testimonial stack</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// Testimonial stack: hook, reviews piling up one after another, the rating, CTA.
+// Use real reviews you have permission to use. The template labels them "Example review" until you
+// set names.
+// Data keys: name, hooks, accent, clip (optional background footage), reviews (JSON list of
+//   { name, text, rating } in a .json row, or review1..review4 as "Name: text"), rating (e.g. 4.8),
+//   count (e.g. "2,100+ reviews"), voice, takeaway, cta, url
+const D = M.data({
+  name: 'testimonial-stack', hooks: ['2,100 people can\'t be wrong'], accent: 'wrong', clip: null,
+  reviews: [
+    { name: 'Example review', text: 'Booked in two minutes. They showed up early.', rating: 5 },
+    { name: 'Example review', text: 'Best money I spent this year, honestly.', rating: 5 },
+    { name: 'Example review', text: 'Fast, friendly, and cleaner than when they arrived.', rating: 5 },
+  ],
+  review1: '', review2: '', review3: '', review4: '',
+  rating: 4.9, count: '2,100+ reviews', voice: [], takeaway: 'See why they switched.', cta: 'Book now', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const fromCells = [D.review1, D.review2, D.review3, D.review4].filter(Boolean).map((s) => { const [n, ...r] = String(s).split(':'); return r.length ? { name: n.trim(), text: r.join(':').trim(), rating: 5 } : { name: 'Customer', text: s, rating: 5 }; });
+const REV = (fromCells.length ? fromCells : [].concat(D.reviews)).slice(0, 4);
+const START = 3.0, EACH = 2.6, RATING_AT = START + REV.length * EACH, CTA_AT = RATING_AT + 3.2, DUR = CTA_AT + 3.5;
+const CUTS = [START, RATING_AT, CTA_AT];
+const bg = AD.background(D.clip, { dim: 0.6, audio: false });
+
+function stack(c, t) {
+  bg(c, t);
+  FX.text(c, t, 'What people are saying', 120, 240, { at: START + 0.05, mode: 'mask', font: AD.font(800, 64), maxWidth: 860 });
+  REV.forEach((r, i) => {
+    const at = START + 0.2 + i * EACH, age = REV.filter((_, j) => j > i && t >= START + 0.2 + j * EACH).length;
+    if (t < at) return;
+    c.save();
+    c.translate(0, 0 - age * 60); c.globalAlpha = Math.max(0.35, 1 - age * 0.28);
+    c.translate(540, 1000); c.scale(1 - age * 0.05, 1 - age * 0.05); c.translate(-540, -1000);
+    c.rotate((i % 2 ? 1 : -1) * 0.012);
+    B.review(c, t, { at, ...r, y: 720 + Math.min(i, 2) * 40 });
+    c.restore();
+  });
+}
+const BEATS = [
+  { at: 0, draw: (c) => { bg(c, T); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: '⭐' }); } },
+  { at: START, transition: 'zoom', draw: (c) => stack(c, T) },
+  { at: RATING_AT, transition: 'circle', draw: (c) => {
+    FX.aurora(c, T); FX.particles(c, T, { count: 50 });
+    B.stat(c, T, { at: RATING_AT + 0.2, value: Number(D.rating), decimals: 1, suffix: ' / 5', label: D.count, x: 540, y: 620, align: 'center', size: 230 });
+    B.stars(c, T, { at: RATING_AT + 0.8, x: 540 - (5 * 96 - 16) / 2, y: 1040, size: 80, gap: 16, rating: Number(D.rating) });
+    B.emojiBurst(c, T, { at: RATING_AT + 1.0, emoji: ['⭐', '😍', '🙌'], y: 1750, height: 380, spread: 900 });
+  } },
+  { at: CTA_AT, transition: 'flash', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CTA_AT + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: B.brand.colors.bg,
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0, voice: AD.voice(D.voice, [0, ...CUTS]),
+  music: { track: 'calm', volume: 0.25 },
+  sfx: [{ at: 0, name: 'hit', volume: 0.5 }, ...REV.map((_, i) => ({ at: START + 0.2 + i * EACH, name: 'pop', volume: 0.45 })), { at: RATING_AT + 0.9, name: 'success', volume: 0.5 }, { at: CTA_AT + 0.6, name: 'chime', volume: 0.45 }],
+  draw(ctx, t) { T = t; const end = FX.camera(ctx, t, { punch: [0, ...CUTS] }); FX.timeline(ctx, t, BEATS); end(); FX.vignette(ctx, { strength: 0.45 }); },
+});
+</script>
+</body>
+</html>

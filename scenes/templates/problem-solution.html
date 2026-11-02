@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Problem / solution</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// Problem → agitate → solution: the classic direct-response arc.
+// Data keys: name, hooks, accent, problem (line), pains ("a | b | c"), agitate.value, agitate.prefix,
+//   agitate.suffix, agitate.label, solution (line), product.name, product.price, product.oldPrice,
+//   product.rating, product.reviews, product.image, clip (optional footage for the solution beat),
+//   voice, takeaway, cta, url
+const D = M.data({
+  name: 'problem-solution', hooks: ['Still losing leads after 5pm?'], accent: 'after 5pm?',
+  problem: 'Every missed call is a missed job.', pains: ['Voicemail at 6pm', 'Call back tomorrow', 'They already hired someone else'],
+  agitate: { value: 62, suffix: '%', label: 'of callers won\'t leave a voicemail' },
+  solution: 'Text back every missed call in 5 seconds.', product: null, clip: null,
+  voice: [], takeaway: 'Never miss a job again.', cta: 'Start free', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const CUTS = [3.2, 8.0, 11.6, 16.0], DUR = 19.5;
+const C = B.brand.colors;
+const solutionBg = AD.background(D.clip, { dim: 0.5, audio: false });
+const BEATS = [
+  { at: 0, draw: (c) => { FX.aurora(c, T, { colors: [C.bad, '#6D5BFF'], intensity: 0.45 }); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: '😤' }); } },
+  { at: CUTS[0], transition: 'glitch', draw: (c) => {
+    FX.aurora(c, T, { colors: [C.bad, '#3A0A12'], intensity: 0.4 });
+    FX.text(c, T, D.problem, 120, 300, { at: CUTS[0] + 0.1, mode: 'rise', font: AD.font(800, 88), maxWidth: 860 });
+    B.checklist(c, T, { y: 760, size: 54, gap: 34, items: [].concat(D.pains).map((p, i) => ({ at: CUTS[0] + 0.9 + i * 0.9, text: p, ok: false })) });
+    B.toast(c, T, { at: CUTS[0] + 3.6, until: CUTS[1], text: 'Lead lost', kind: 'bad', y: 1220 });
+  } },
+  { at: CUTS[1], transition: 'zoom', draw: (c) => {
+    FX.aurora(c, T, { colors: [C.bad, '#6D5BFF'], intensity: 0.45 });
+    B.stat(c, T, { at: CUTS[1] + 0.2, ...D.agitate, color: C.bad, y: 560, size: 300 });
+  } },
+  { at: CUTS[2], transition: 'circle', draw: (c) => {
+    solutionBg(c, T);
+    FX.lightLeak(c, T, { at: CUTS[2] - 0.1, dur: 1.4, color: C.good });
+    FX.text(c, T, D.solution, 120, 300, { at: CUTS[2] + 0.2, mode: 'rise', font: AD.font(800, 92), maxWidth: 860, accent: (D.solution.match(/\d+\s*\w+/) || [''])[0] });
+    if (D.product) B.productCard(c, T, { at: CUTS[2] + 1.0, ...D.product, image: D.product.image ? M.image(D.product.image) : null, y: 900 });
+    else B.chat(c, T, { y: 820, messages: [{ at: CUTS[2] + 1.0, text: 'Hey! Sorry I missed your call. What can I help with?' }, { at: CUTS[2] + 2.3, me: true, text: 'Need a quote for Saturday' }] });
+  } },
+  { at: CUTS[3], transition: 'flash', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CUTS[3] + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: C.bg,
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0, voice: AD.voice(D.voice, [0, ...CUTS]),
+  music: { track: 'pulse', volume: 0.22 },
+  sfx: [...AD.sfx(CUTS, CUTS[3] + 0.6), ...[0, 1, 2].map((i) => ({ at: CUTS[0] + 0.9 + i * 0.9, name: 'error', volume: 0.3 })), { at: CUTS[2] + 1.0, name: 'notify', volume: 0.45 }],
+  draw(ctx, t) { T = t; const end = FX.camera(ctx, t, { punch: [0, ...CUTS], shake: 0.1 }); FX.timeline(ctx, t, BEATS); end(); FX.vignette(ctx, { strength: 0.45 }); },
+});
+</script>
+</body>
+</html>

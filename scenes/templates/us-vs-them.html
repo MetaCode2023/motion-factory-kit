@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Us vs them</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// "Us vs them": hook, a side-by-side comparison that builds row by row, the verdict, CTA.
+// Compare against a category ("drugstore brands"), not a named competitor, unless you can back every claim.
+// Data keys: name, hooks, accent, them.title, them.items ("a | b | c"), us.title, us.items,
+//   verdict (big line), stat.value, stat.prefix, stat.suffix, stat.label, voice, takeaway, cta, url
+const D = M.data({
+  name: 'us-vs-them', hooks: ['Why I stopped buying drugstore serums'], accent: 'stopped',
+  them: { title: 'Drugstore', items: ['Sticky finish', 'Fragrance', 'Results in months'] },
+  us: { title: 'Glow', items: ['Absorbs in seconds', 'Fragrance-free', 'Results in 2 weeks'] },
+  verdict: 'Not even close.', stat: { value: 29, prefix: '$', suffix: '', label: 'for a 3-month supply' },
+  voice: [], takeaway: 'Make the switch.', cta: 'Try Glow', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const items = (x) => [].concat(x || []);
+const CUTS = [3.2, 10.4, 14.0], DUR = 17.5;
+const BEATS = [
+  { at: 0, draw: (c) => { FX.aurora(c, T); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: '🤔' }); } },
+  { at: CUTS[0], transition: 'wipe', draw: (c) => {
+    FX.aurora(c, T, { colors: [B.brand.colors.bad, B.brand.colors.good, '#6D5BFF'], intensity: 0.4 });
+    FX.text(c, T, `${D.them.title} vs ${D.us.title}`, 120, 300, { at: CUTS[0] + 0.1, mode: 'mask', font: AD.font(800, 90), accent: D.us.title, maxWidth: 860 });
+    B.compare(c, T, { at: CUTS[0] + 0.5, y: 500, stagger: 0.9, size: 54,
+      left: { title: D.them.title, items: items(D.them.items) }, right: { title: D.us.title, items: items(D.us.items) } });
+  } },
+  { at: CUTS[1], transition: 'zoom', draw: (c) => {
+    FX.aurora(c, T); FX.particles(c, T, { count: 40 });
+    FX.text(c, T, D.verdict, 120, 320, { at: CUTS[1] + 0.1, mode: 'pop', font: AD.font(800, 120), maxWidth: 860, accent: D.verdict.split(' ').pop() });
+    if (D.stat && D.stat.value) B.stat(c, T, { at: CUTS[1] + 0.6, ...D.stat, y: 760 });
+    B.emojiBurst(c, T, { at: CUTS[1] + 0.8, emoji: ['💯', '🔥', '✅'], y: 1750, height: 420, spread: 900 });
+  } },
+  { at: CUTS[2], transition: 'circle', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CUTS[2] + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: B.brand.colors.bg,
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: items(D.voice).length > 0, voice: AD.voice(D.voice, [0, ...CUTS]),
+  music: { track: 'pulse', volume: 0.22 }, sfx: [...AD.sfx(CUTS, CUTS[2] + 0.6), ...[0, 1, 2].map((i) => ({ at: CUTS[0] + 0.9 + i * 0.9, name: 'tick', volume: 0.5 }))],
+  draw(ctx, t) {
+    T = t;
+    const end = FX.camera(ctx, t, { punch: [0, ...CUTS], shake: 0.08 });
+    FX.timeline(ctx, t, BEATS);
+    end();
+    FX.vignette(ctx, { strength: 0.45 });
+  },
+});
+</script>
+</body>
+</html>

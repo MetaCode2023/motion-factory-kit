@@ -290,14 +290,16 @@
   // audio: mix the clip's own sound (make.mjs). speech: the audio is someone talking, so music ducks
   // under it (default true when captions is on). captions: transcribe the speech into word captions
   // (needs ELEVENLABS_API_KEY, or pass transcript: '...' for estimated timing). volume: clip audio level. loop / hold: what happens after the file ends.
+  // key: 'green' | 'blue' | '#RRGGBB' removes a green/blue screen (the person floats over your scene;
+  // use clip.draw with { dim: 0 }). The browser preview shows the unkeyed clip.
   // A missing file draws a labelled placeholder, so scenes can be written before the clip exists.
   M._media = [];
-  M.video = (src, { at = 0, trim = 0, speed = 1, audio = true, volume = 1, captions = false, speech = captions, loop = false, transcript = '', fps: clipFps } = {}) => {
+  M.video = (src, { at = 0, trim = 0, speed = 1, audio = true, volume = 1, captions = false, speech = captions, loop = false, transcript = '', key = null, fps: clipFps } = {}) => {
     const fps = clipFps || (window.VIDEO && window.VIDEO.fps) || 30;   // match the scene's fps (call after setup, or pass fps)
     const clip = { src, at, trim, speed, missing: false, duration: 0, width: 0, height: 0 };
     let frameAt;
     if (typeof window.__loadVideo === 'function') {             // rendering: exact frames from the engine
-      const meta = window.__loadVideo(src, fps);
+      const meta = window.__loadVideo(src, fps, key);
       Object.assign(clip, meta);
       if (!meta.missing) {
         let lastI = -1, lastImg = null;
@@ -369,13 +371,13 @@
     }
     return out;
   };
-  // Chunks of up to 3 words (a new chunk after . , ! ? or a pause), shown until the next chunk.
-  M.captionChunks = (words) => {
+  // Chunks of up to `max` words (a new chunk after . , ! ? or a pause), shown until the next chunk.
+  M.captionChunks = (words, max = 3) => {
     const chunks = [];
     let cur = null;
     words.forEach((wd, i) => {
       const prev = words[i - 1];
-      const brk = !cur || cur.words.length >= 3 || /[.,!?;:]$/.test(prev?.w || '') || wd.s - (prev?.e ?? 0) > 0.45
+      const brk = !cur || cur.words.length >= max || /[.,!?;:]$/.test(prev?.w || '') || wd.s - (prev?.e ?? 0) > 0.45
         || cur.words.map((x) => x.w).join(' ').length + wd.w.length > 20;
       if (brk) chunks.push(cur = { words: [] });
       cur.words.push(wd);
@@ -388,43 +390,127 @@
     });
     return chunks;
   };
-  M.drawCaptions = (ctx, t, chunks, { width, height }) => {
+
+  // Caption looks. Pick one in brand.js (captions: { style }) or per scene (M.setup({ captions: { style } })):
+  //   'pill'     dark rounded pill, spoken word in the accent colour (default)
+  //   'bold'     big uppercase white with a heavy outline, spoken word in accent and bigger (the "Hormozi" look)
+  //   'box'      TikTok-native white label, black text
+  //   'minimal'  clean white text with a soft shadow, spoken word underlined
+  //   'karaoke'  the whole chunk faint, words light up as they're spoken
+  //   'pop'      one word at a time, huge, punching in
+  // Other options: uppercase, position (0-1 down the frame), size (scale), emoji: { word: '💰' } (adds a
+  // sticker when that word is spoken; needs kit/blocks.js).
+  M.CAPTION_STYLES = ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop'];
+  M.drawCaptions = (ctx, t, chunks, { width, height }, opts = {}) => {
     const c = chunks.find((k) => t >= k.s && t < k.e);
     if (!c) return;
-    const B = window.BRAND || {};
-    const fam = (B.fonts && B.fonts.display) || '"Plus Jakarta Sans"';
-    let size = Math.round(width * 0.062);
-    const accent = (B.colors && B.colors.accent) || '#FC5C2B';
+    const BR = window.BRAND || {};
+    const style = opts.style || 'pill';
+    const fam = (BR.fonts && BR.fonts.display) || '"Plus Jakarta Sans"';
+    const accent = opts.accent || (BR.colors && BR.colors.accent) || '#FC5C2B';
+    const upper = opts.uppercase ?? (style === 'bold' || style === 'pop');
+    const base = { pill: 0.062, bold: 0.082, box: 0.06, minimal: 0.058, karaoke: 0.066, pop: 0.12 }[style] || 0.062;
+    let size = Math.round(width * base * (opts.size || 1));
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.textBaseline = 'middle';
-    const words = c.words.map((w) => w.w);
-    // Shrink long chunks so the pill stays clear of the TikTok/Reels button rail on the right.
+    const words = c.words.map((w) => (upper ? w.w.toUpperCase() : w.w));
+    const activeI = c.words.findIndex((wd, i) => t >= wd.s && t < (c.words[i + 1]?.s ?? c.e));
+    // Shrink long chunks so they stay clear of the TikTok/Reels button rail on the right.
     let space, widths, total;
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 14; i++) {
       ctx.font = `800 ${size}px ${fam}`;
       space = ctx.measureText(' ').width;
       widths = words.map((w) => ctx.measureText(w).width);
       total = widths.reduce((a, b) => a + b, 0) + space * (words.length - 1);
-      if (total + size * 0.9 <= width * 0.68 || size < width * 0.04) break;
+      if (total + size * 0.9 <= width * 0.68 || size < width * 0.035) break;
       size = Math.round(size * 0.92);
     }
-    const cy = height * (height > width ? 0.705 : 0.86);
+    const cy = height * (opts.position ?? (height > width ? 0.705 : 0.86));
     const k = M.prog(t, c.s, 0.18, M.ease.outBack);
-    const padX = size * 0.45, padY = size * 0.32;
     ctx.translate(width / 2, cy);
-    ctx.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
-    M.roundRect(ctx, -total / 2 - padX, -size / 2 - padY, total + 2 * padX, size + 2 * padY, size * 0.3);
-    ctx.fillStyle = 'rgba(8,10,14,0.78)';
-    ctx.fill();
+    if (style !== 'pop') ctx.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
+    const padX = size * 0.45, padY = size * 0.32;
+    if (style === 'pill') {
+      M.roundRect(ctx, -total / 2 - padX, -size / 2 - padY, total + 2 * padX, size + 2 * padY, size * 0.3);
+      ctx.fillStyle = 'rgba(8,10,14,0.78)'; ctx.fill();
+    }
+    if (style === 'box') {
+      M.roundRect(ctx, -total / 2 - padX * 0.7, -size / 2 - padY * 0.8, total + 1.4 * padX, size + 1.6 * padY, size * 0.22);
+      ctx.fillStyle = '#FFFFFF'; ctx.fill();
+    }
     let x = -total / 2;
-    c.words.forEach((wd, i) => {
-      ctx.fillStyle = t >= wd.s && t < (c.words[i + 1]?.s ?? c.e) ? accent : '#FFFFFF';
-      ctx.fillText(words[i], x, 2);
+    words.forEach((w, i) => {
+      const active = i === activeI, spoken = t >= c.words[i].s;
+      const wk = M.prog(t, c.words[i].s, 0.16, M.ease.outBack);
+      ctx.save();
+      ctx.translate(x + widths[i] / 2, 0);
+      if (style === 'bold' && active) ctx.scale(1 + 0.12 * wk, 1 + 0.12 * wk);
+      if (style === 'pop') { const s = 0.5 + 0.5 * M.prog(t, c.s, 0.22, M.ease.outBack); ctx.scale(s, s); }
+      ctx.textAlign = 'center';
+      if (style === 'bold' || style === 'pop') {
+        ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.2; ctx.strokeStyle = '#000000';
+        ctx.strokeText(w, 0, 2);
+        ctx.fillStyle = style === 'pop' ? (chunks.indexOf(c) % 3 === 0 ? accent : '#FFFFFF') : active ? accent : '#FFFFFF';
+      } else if (style === 'box') {
+        ctx.fillStyle = active ? accent : '#111111';
+      } else if (style === 'minimal') {
+        ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = size * 0.35; ctx.shadowOffsetY = size * 0.06;
+        ctx.fillStyle = '#FFFFFF';
+      } else if (style === 'karaoke') {
+        ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.14; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.strokeText(w, 0, 2);
+        ctx.fillStyle = active ? accent : spoken ? '#FFFFFF' : 'rgba(255,255,255,0.45)';
+      } else {
+        ctx.fillStyle = active ? accent : '#FFFFFF';
+      }
+      ctx.fillText(w, 0, 2);
+      if (style === 'minimal' && active) { ctx.shadowBlur = 0; ctx.fillStyle = accent; ctx.fillRect(-widths[i] / 2, size * 0.55, widths[i] * wk, Math.max(4, size * 0.08)); }
+      ctx.restore();
       x += widths[i] + space;
     });
+    // Emoji sticker for keywords: emoji: { money: '💰', love: '😍' }
+    const emap = opts.emoji || {};
+    const hit = c.words.find((wd) => emap[String(wd.w).toLowerCase().replace(/[^a-z0-9']/g, '')]);
+    if (hit && window.__emojiImg) {
+      const img = window.__emojiImg(emap[String(hit.w).toLowerCase().replace(/[^a-z0-9']/g, '')]);
+      if (img && img.width) {
+        const ek = M.prog(t, hit.s, 0.3, M.ease.outBack), es = size * 1.5;
+        ctx.save(); ctx.translate(0, -size * 1.45); ctx.rotate(-0.1 + 0.06 * Math.sin(t * 4)); ctx.scale(ek, ek);
+        ctx.drawImage(img, -es / 2, -es / 2, es, es); ctx.restore();
+      }
+    }
     ctx.restore();
+  };
+
+  // ---- beats & narration cues -------------------------------------------------------
+  // make.mjs finds the beats in the scene's music and the real start/end of each narration line, and
+  // hands both to the scene before it runs, so timings can be built from them:
+  //   const CUTS = [3, 6.5, 10].map((t) => M.snap(t));          // move each cut onto the nearest beat
+  //   FX.camera(ctx, t, { punch: M.beats.filter((_, i) => i % 4 === 0) })   // punch on every bar
+  //   const s = 1 + 0.03 * M.onBeat(t);                          // pulse something with the kick
+  //   const CUES = M.cues(VOICE);  CUES[2].start                 // when narration line 3 really starts
+  // In the browser preview (no make.mjs) beats are empty and cues are estimated from the text.
+  M.beats = (window.BEATS && window.BEATS.beats) || [];
+  M.bpm = (window.BEATS && window.BEATS.bpm) || 0;
+  M.snap = (t, every = 1) => {
+    const list = every > 1 ? M.beats.filter((_, i) => i % every === 0) : M.beats;
+    return list.length ? list.reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a)) : t;
+  };
+  M.onBeat = (t, { decay = 0.16, every = 1 } = {}) => {
+    let last = -1;
+    for (let i = 0; i < M.beats.length; i += every) { if (M.beats[i] <= t) last = M.beats[i]; else break; }
+    return last < 0 ? 0 : Math.exp(-(t - last) / decay);
+  };
+  M.cues = (lines = [], { gap = 0.25 } = {}) => {
+    if (window.CUES && window.CUES.length) return window.CUES;
+    let cursor = 0;
+    return lines.map((l) => {
+      const text = typeof l === 'string' ? l : l.text, start = (typeof l === 'object' && l.at != null) ? l.at : cursor + gap;
+      const end = start + String(text).split(/\s+/).filter(Boolean).reduce((a, w) => a + 0.18 + w.length * 0.045, 0);
+      cursor = end;
+      return { start, end, text };
+    });
   };
 
   // ---- data -------------------------------------------------------------------
@@ -451,6 +537,8 @@
   M.pick = (options) => { M._variants = Math.max(M._variants, options.length); return options[M.variant % options.length]; };
 
   // ---- setup / player --------------------------------------------------------
+  //   post:       { caption, hashtags: ['a', 'b'] } -> out/<name>.post.txt for the upload
+  //   cover:      seconds: the frame used for out/<name>.cover.jpg (default 0.7 s)
   //   look:       colour grade + grain applied by make.mjs: 'cinematic' | 'punchy' | 'film' | 'clean'
   //   motionBlur: samples per frame, e.g. 4 (filmic; render time grows with it), or
   //               { samples: 6, around: true } to blur only around the cuts (fast, nearly the same look).
@@ -472,7 +560,7 @@
     landscape: { width: 1920, height: 1080, safe: { left: 96, top: 54, right: 1824, bottom: 1000 } },
   };
   M.setup = ({ preset = null, width, height, fps = 30, duration, cuts = [], background = '#fff', draw,
-    voice = [], sfx = [], music = null, captions = false, look = null, motionBlur = 1, shutter = 0.5 }) => {
+    voice = [], sfx = [], music = null, captions = false, look = null, motionBlur = 1, shutter = 0.5, post = null, cover = null, voiceId = null }) => {
     if (!duration) throw new Error('setup needs duration');
     const P = preset ? M.PRESETS[preset] : null;
     if (preset && !P) throw new Error(`unknown preset "${preset}" (try: ${Object.keys(M.PRESETS).join(', ')})`);
@@ -491,16 +579,17 @@
 
     // Captions sit in the band just above the TikTok caption area, so content stays above it.
     if (captions && height > width) M.safe.bottom = Math.min(M.safe.bottom, Math.round(height * 0.65));
-    const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice)) : [];
+    const capOpts = { ...((window.BRAND || {}).captions || {}), ...(typeof captions === 'object' && captions ? captions : {}) };
+    const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice), capOpts.style === 'pop' ? 1 : (capOpts.maxWords || 3)) : [];
 
-    window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, look, motionBlur, shutter, media: M._media, variants: M._variants, variant: M.variant };
+    window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, look, motionBlur, shutter, post, cover, voiceId, media: M._media, variants: M._variants, variant: M.variant };
     window.draw = (t) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
       ctx.fillStyle = background;
       ctx.fillRect(0, 0, width, height);
       draw(ctx, t, { width, height });
-      if (capChunks.length) M.drawCaptions(ctx, t, capChunks, { width, height });
+      if (capChunks.length) M.drawCaptions(ctx, t, capChunks, { width, height }, capOpts);
     };
     window.__ready = Promise.all([document.fonts.ready, ...assets]).then(() => document.fonts.ready);
 

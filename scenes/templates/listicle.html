@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Listicle</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/ad.js"></script>
+</head>
+<body>
+<script>
+// Listicle / countdown: "5 things ___", one item per beat, each with a different transition.
+// Data keys: name, hooks, accent, items ("a | b | c | d | e", 3-7), notes (optional sub-lines),
+//   emoji (optional, one per item: "🔥 | 💰 | ..."), clips (optional footage per item), countdown (true = 5..1),
+//   voice, takeaway, cta, url
+const D = M.data({
+  name: 'listicle', hooks: ['5 things I wish I knew before buying a home'], accent: 'wish',
+  items: ['Get pre-approved first', 'Budget for closing costs', 'Inspect everything', 'Look at the commute at rush hour', 'Don\'t skip the walkthrough'],
+  notes: [], emoji: ['📄', '💸', '🔍', '🚗', '🏠'], clips: [], countdown: false,
+  voice: [], takeaway: 'Buy smarter.', cta: 'Get the checklist', url: B.brand.url,
+});
+const HOOK = M.pick(D.hooks);
+const IT = [].concat(D.items).slice(0, 7), NO = [].concat(D.notes || []), EM = [].concat(D.emoji || []), CL = [].concat(D.clips || []);
+const HOOK_LEN = 3.0, EACH = IT.length > 5 ? 2.4 : 2.9;
+const CUTS = [...IT.map((_, i) => HOOK_LEN + i * EACH), HOOK_LEN + IT.length * EACH], DUR = CUTS[CUTS.length - 1] + 3.4;
+const TR = ['zoom', 'whip', 'wipe', 'circle', 'glitch', 'blur', 'zoom'];
+const clips = IT.map((_, i) => (CL[i] ? M.video(CL[i], { at: CUTS[i], audio: false }) : null));
+
+function item(c, t, i) {
+  const at = CUTS[i], n = D.countdown ? IT.length - i : i + 1;
+  if (clips[i] && !clips[i].missing) clips[i].draw(c, t, 0, 0, 1080, 1920, { dim: 0.55, zoom: 1.04 + 0.04 * M.clamp((t - at) / EACH) });
+  else { FX.aurora(c, t, { seed: 5 + i * 4, intensity: 0.5 }); FX.particles(c, t, { count: 35, opacity: 0.3 }); }
+  AD.number(c, t, n, at + 0.05, { y: 300, size: 280 });
+  if (EM[i]) B.sticker(c, t, { emoji: EM[i], at: at + 0.35, x: 860, y: 460, size: 200 });
+  const h = FX.text(c, t, IT[i], 120, 760, { at: at + 0.2, mode: i % 2 ? 'mask' : 'rise', font: AD.font(800, 96), maxWidth: 860 });
+  if (NO[i]) FX.text(c, t, NO[i], 120, h.bottom + 40, { at: at + 0.6, mode: 'rise', font: AD.font(700, 52, B.brand.fonts.body), color: B.brand.colors.muted, maxWidth: 820, stagger: 0.04 });
+  M.progress(c, t, CUTS, { y: 1180, color: B.brand.colors.accent, strength: 0.9, h: 8 });
+}
+const BEATS = [
+  { at: 0, draw: (c) => { FX.aurora(c, T); FX.particles(c, T, { count: 50 }); AD.hook(c, T, { text: HOOK, accent: D.accent, sticker: '👇' }); } },
+  ...IT.map((_, i) => ({ at: CUTS[i], transition: TR[i % TR.length], draw: (c) => item(c, T, i) })),
+  { at: CUTS[IT.length], transition: 'flash', draw: (c) => { FX.aurora(c, T); AD.cta(c, T, { at: CUTS[IT.length] + 0.1, takeaway: D.takeaway, cta: D.cta, url: D.url }); } },
+];
+let T = 0;
+M.setup({
+  post: AD.post(D, HOOK), voiceId: D.voiceId || null,
+  width: 1080, height: 1920, fps: 30, duration: DUR, cuts: CUTS, background: B.brand.colors.bg,
+  look: 'cinematic', motionBlur: { samples: 5, around: true },
+  captions: [].concat(D.voice).filter(Boolean).length > 0, voice: AD.voice(D.voice, [0, ...CUTS]),
+  music: { track: 'drive', volume: 0.22 }, sfx: AD.sfx(CUTS, CUTS[IT.length] + 0.6),
+  draw(ctx, t) { T = t; const end = FX.camera(ctx, t, { punch: [0, ...CUTS], shake: 0.1 }); FX.timeline(ctx, t, BEATS); end(); FX.vignette(ctx, { strength: 0.45 }); },
+});
+</script>
+</body>
+</html>
