@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Showcase: hook, push cuts, growing cards</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../kit/motion.js"></script>
+</head>
+<body>
+<script>
+// The pattern to copy. A 22 s vertical explainer built only from kit helpers:
+//   - M.headline   hook already readable at frame 0, accent word with a sweeping underline
+//   - M.push       hard push cuts between beats (no washed-out crossfades)
+//   - M.stack      cards that grow row by row and fill the space under the headline
+//   - M.progress   slim beat bar at the bottom
+//   - a slow camera push-in so no frame is static
+const F = '"Plus Jakarta Sans"', MONO = '"JetBrains Mono"';
+M.fonts([`800 100px ${F}`, `600 60px ${F}`, `600 40px ${MONO}`]);
+
+const C = { bg: '#0B0D12', card: '#161A22', line: '#2A303C', ink: '#F5F7FA', muted: '#8A93A6', accent: '#FC5C2B', good: '#3DDC97' };
+const CUTS = [0, 4.6, 9.6, 14.6, 19.0, 22.0];   // beat boundaries; the last is the video length
+
+function card(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+  M.roundRect(ctx, x, y, w, h, 32); ctx.fillStyle = C.card; ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; M.roundRect(ctx, x, y, w, h, 32); ctx.stroke();
+}
+
+function row(ctx, x, y, w, label, ok, k) {
+  ctx.fillStyle = ok ? C.good : C.accent;
+  ctx.beginPath(); ctx.arc(x + 30, y + 44, 26, 0, Math.PI * 2); ctx.fill();
+  M.text(ctx, ok ? '✓' : '✕', x + 30, y + 58, { font: `800 38px ${F}`, color: C.bg, align: 'center' });
+  M.text(ctx, label, x + 84, y + 60, { font: `600 52px ${F}`, color: ok ? C.ink : C.muted });
+  if (!ok) { ctx.font = `600 52px ${F}`; ctx.fillStyle = C.muted; ctx.fillRect(x + 84, y + 42, ctx.measureText(label).width * M.clamp(k * 1.4 - 0.4), 5); }
+}
+
+// Beat 1 — the hook. Words on screen at t = 0, plus a retention line that drains right away.
+function beat1(ctx, t) {
+  const h = M.headline(ctx, t, 'Most viewers leave in 2 seconds.', 120, 260, { family: F, accent: '2 seconds.', accentColor: C.accent });
+  const x0 = 120, y0 = h.bottom + 120, w = 780, ht = 520;
+  card(ctx, 70, y0 - 60, 880, ht + 120);
+  M.text(ctx, 'VIEWERS STILL WATCHING', x0, y0, { font: `600 32px ${MONO}`, color: C.muted });
+  const p = M.prog(t, 0.2, 3.2, M.ease.outCubic);
+  ctx.strokeStyle = C.accent; ctx.lineWidth = 10; ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i <= 60 * p; i++) {
+    const u = i / 60, v = 0.18 + 0.82 * Math.exp(-u * 4.2);
+    const px = x0 + u * w, py = y0 + 60 + (1 - v) * (ht - 120);
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.stroke();
+  const pct = Math.round(100 * (0.18 + 0.82 * Math.exp(-p * 4.2)));
+  M.text(ctx, pct + '%', x0 + w, y0 + ht - 10, { font: `800 120px ${F}`, color: C.ink, align: 'right' });
+}
+
+// Beat 2 — a card that grows one row at a time.
+function beat2(ctx, t) {
+  const S = CUTS[1];
+  const h = M.headline(ctx, t, 'Open on the problem.', 120, 260, { family: F, start: S, accent: 'problem.', accentColor: C.accent, max: 120 });
+  const items = [['Logo intro', false], ['Fade from black', false], ['Problem first', true]];
+  M.stack(ctx, t, { x: 70, y: h.bottom + 80, w: 900, h: 1380 - h.bottom - 80 },
+    items.map(([label, ok], i) => ({ at: S + 0.5 + i * 1.1, h: 90, draw: (c, x, y, w, k) => row(c, x, y, w, label, ok, k) })),
+    { card, pad: 56, gap: 40 });
+}
+
+// Beat 3 — a rhythm strip: something changes every 1.5–3 seconds.
+function beat3(ctx, t) {
+  const S = CUTS[2];
+  const h = M.headline(ctx, t, 'Change something every 2 s.', 120, 260, { family: F, start: S, accent: 'every 2 s.', accentColor: C.accent, max: 120 });
+  const y = h.bottom + 160;
+  card(ctx, 70, y - 80, 880, 700);
+  const ticks = 10, x0 = 130, w = 760;
+  for (let i = 0; i < ticks; i++) {
+    const at = S + 0.4 + i * 0.42, k = M.prog(t, at, 0.45, M.ease.outBack);
+    const bx = x0 + (i / (ticks - 1)) * w;
+    ctx.fillStyle = i % 3 === 2 ? C.accent : C.ink;
+    ctx.globalAlpha = M.clamp((t - at) / 0.2);
+    M.roundRect(ctx, bx - 22, y + 180 - 140 * k, 44, 140 * k, 12); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = C.line; ctx.fillRect(x0 - 30, y + 196, w + 60, 4);
+  M.text(ctx, '8–12 beats in 25 s', 130, y + 420, { font: `800 76px ${F}`, color: C.ink });
+  M.text(ctx, 'nothing frozen > 3 s', 130, y + 500, { font: `600 48px ${MONO}`, color: C.muted });
+}
+
+// Beat 4 — a number that counts.
+function beat4(ctx, t) {
+  const S = CUTS[3];
+  const h = M.headline(ctx, t, 'Big type. Few words.', 120, 260, { family: F, start: S, accent: 'Few', accentColor: C.accent, max: 120 });
+  const y = h.bottom + 100;
+  card(ctx, 70, y, 880, 820);
+  M.text(ctx, 'WORDS PER SCREEN', 130, y + 110, { font: `600 32px ${MONO}`, color: C.muted });
+  M.text(ctx, '≤ ' + M.count(7, M.prog(t, S + 0.5, 1.2, M.ease.outExpo)), 130, y + 400, { font: `800 300px ${F}`, color: C.accent });
+  M.text(ctx, 'headlines 96–140 px', 130, y + 560, { font: `600 52px ${F}`, color: C.ink, alpha: M.clamp((t - S - 1.4) / 0.3) });
+  M.text(ctx, 'labels never under 36 px', 130, y + 640, { font: `600 52px ${F}`, color: C.ink, alpha: M.clamp((t - S - 1.9) / 0.3) });
+}
+
+// Beat 5 — end card: the takeaway in 3–4 words.
+function beat5(ctx, t) {
+  const S = CUTS[4];
+  M.headline(ctx, t, 'Hook. Move. Land.', 540, 700, { family: F, start: S, align: 'center', accent: 'Land.', accentColor: C.accent, max: 140, lines: 1, width: 900 });
+  M.text(ctx, 'made with motion-factory-kit', 540, 1000, { font: `600 40px ${MONO}`, color: C.muted, align: 'center', alpha: M.clamp((t - S - 0.6) / 0.4) });
+}
+
+const BEATS = [beat1, beat2, beat3, beat4, beat5];
+
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: CUTS[CUTS.length - 1], cuts: CUTS.slice(1, -1), background: C.bg,
+  draw(ctx, t) {
+    // Soft vignette instead of a flat fill.
+    const g = ctx.createRadialGradient(540, 800, 100, 540, 900, 1300);
+    g.addColorStop(0, '#161B26'); g.addColorStop(1, C.bg);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 1080, 1920);
+
+    // Which beat are we in? Push-cut from the previous beat at each boundary.
+    let i = 0; while (i < BEATS.length - 1 && t >= CUTS[i + 1]) i++;
+    const at = CUTS[i];
+    const beatStart = i > 0 ? at : 0;
+    // Slow camera push-in within each beat.
+    const zoom = 1 + 0.03 * M.clamp((t - beatStart) / 5);
+    ctx.save();
+    ctx.translate(540, 960); ctx.scale(zoom, zoom); ctx.translate(-540, -960);
+    if (i === 0) BEATS[0](ctx, t);
+    else M.push(ctx, t, at, () => BEATS[i - 1](ctx, t), () => BEATS[i](ctx, t));
+    ctx.restore();
+
+    M.progress(ctx, t, CUTS.slice(0, -1), { color: C.accent, track: C.line });
+  },
+});
+</script>
+</body>
+</html>

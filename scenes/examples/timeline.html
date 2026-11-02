@@ -1,0 +1,38 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&display=block"><script src="../../kit/motion.js"></script><script>
+const F='"Plus Jakarta Sans"';
+M.fonts([`800 100px ${F}`,`600 60px ${F}`]);
+const cuts=[3,7,11,15];
+const titles=['Sunday. Office closed.', 'A request arrives.', 'Ask for photos.', 'Choose a time.', 'Ready for Monday.'];
+const labels=['Request','Photos','Estimate'];
+function beat(ctx,t,i) {
+  const start=i?cuts[i-1]:0;
+  M.headline(ctx,t,titles[i],120,270,{family:F,start,width:780,max:120});
+  M.clipSafe(ctx,()=>{
+    // A slow tracking move follows the request along the timeline.
+    ctx.translate(0,Math.sin(t * 1.8) * 14);
+    const active=Math.min(2,Math.max(0,i-1));
+    ctx.strokeStyle='#3B4B45'; ctx.lineWidth=8;
+    ctx.beginPath(); ctx.moveTo(170,720); ctx.lineTo(170,1200); ctx.stroke();
+    labels.forEach((label,n)=>{
+      const p=M.prog(t,start+n*0.06,0.6), y=720+n*220;
+      ctx.fillStyle=n<=active?'#203E32':'#202B26';
+      M.roundRect(ctx,110,y-64,760,184,24);ctx.fill();
+      ctx.strokeStyle=n===active?'#66D4AB':'#3B4B45';ctx.lineWidth=4;
+      ctx.stroke();
+      ctx.fillStyle=n<=active?'#66D4AB':'#3B4B45';
+      ctx.beginPath(); ctx.arc(170,y,22+p*4,0,Math.PI*2); ctx.fill();
+      M.text(ctx,label,240,y+18,{font:`800 64px ${F}`,color:n<=active?'#F5F7FA':'#A4ADA8'});
+      if(n===active) M.text(ctx,'Example',240,y+83,{font:`600 40px ${F}`,color:'#66D4AB'});
+    });
+    // A request token moves down the path, keeping its progress visible between events.
+    const travel=(t-start)/Math.max(0.1,(cuts[i]||18)-start);
+    ctx.fillStyle='#F5F7FA';ctx.beginPath();ctx.arc(170,720+440*Math.min(1,travel),12,0,Math.PI*2);ctx.fill();
+  });
+}
+M.setup({duration:18,cuts,background:'#101B17',draw(ctx,t){
+  const i=cuts.filter(c=>t>=c).length;
+  if(i&&t<cuts[i-1]+0.4) M.push(ctx,t,cuts[i-1],()=>beat(ctx,t,i-1),()=>beat(ctx,t,i));
+  else beat(ctx,t,i);
+  M.progress(ctx,t,[0,...cuts,18],{color:'#66D4AB',track:'#3B4B45'});
+}});
+</script>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Loan calculator walkthrough</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=block">
+<script src="../../kit/motion.js"></script>
+</head>
+<body>
+<script>
+// Example scene: a vertical 9:16 walkthrough of a chat-style loan calculator.
+// Every scene follows the same pattern: constants up top, small draw helpers, one draw(ctx, t).
+const { prog, window: win, text, type, count, roundRect, wrap, clamp, lerp, ease } = M;
+
+const C = { bg: '#f7f5f1', ink: '#151515', muted: '#6b6760', line: '#e3ded5', copper: '#b8692e', card: '#ffffff', user: '#151515' };
+const F = (w, px) => `${w} ${px}px "Plus Jakarta Sans"`;
+M.fonts([F(400, 40), F(600, 40), F(800, 40)]);
+
+// The deal shown on screen. The payment is computed here, not hard-coded.
+const deal = { price: 240000, downPct: 0.10, rate: 0.05, years: 30 };
+deal.down = deal.price * deal.downPct;
+deal.financed = deal.price - deal.down;
+const r = deal.rate / 12, n = deal.years * 12;
+deal.payment = Math.round(deal.financed * r / (1 - Math.pow(1 + r, -n)));
+
+const STEPS = [
+  { label: 'Type the deal.', start: 2.4, end: 6.0 },
+  { label: 'It asks what’s missing.', start: 6.0, end: 11.4 },
+  { label: 'Get your number.', start: 11.4, end: 15.6 },
+];
+
+function bubble(ctx, str, { y, side, alpha = 1, rise = 0 }) {
+  ctx.font = F(400, 40);
+  const maxW = 700, pad = 34, lh = 54;
+  const lines = wrap(ctx, str || ' ', maxW);
+  const w = Math.min(maxW, Math.max(...lines.map((l) => ctx.measureText(l).width))) + pad * 2;
+  const h = lines.length * lh + pad * 2 - 14;
+  const x = side === 'user' ? 990 - w : 90;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(0, (1 - rise) * 30);
+  roundRect(ctx, x, y, w, h, 34);
+  ctx.fillStyle = side === 'user' ? C.user : C.card;
+  ctx.fill();
+  if (side !== 'user') { ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.stroke(); }
+  lines.forEach((l, i) => text(ctx, l, x + pad, y + pad + 40 + i * lh - 8, { font: F(400, 40), color: side === 'user' ? '#fff' : C.ink }));
+  ctx.restore();
+  return h;
+}
+
+function typingDots(ctx, x, y, t, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  roundRect(ctx, x, y, 150, 90, 34); ctx.fillStyle = C.card; ctx.fill();
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    const b = Math.sin(t * 9 - i * 0.9) * 0.5 + 0.5;
+    ctx.beginPath(); ctx.arc(x + 45 + i * 30, y + 45 - b * 8, 9, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(107,103,96,${0.4 + b * 0.6})`; ctx.fill();
+  }
+  ctx.restore();
+}
+
+function steps(ctx, t, alpha) {
+  STEPS.forEach((s, i) => {
+    const y = 250 + i * 92;
+    const active = t >= s.start && t < s.end, done = t >= s.end;
+    const a = alpha * (active ? 1 : done ? 0.55 : 0.3);
+    text(ctx, String(i + 1), 110, y, { font: F(800, 34), color: active ? C.copper : C.ink, alpha: a });
+    text(ctx, s.label, 160, y, { font: F(600, 40), color: C.ink, alpha: a });
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.fillStyle = C.line; ctx.fillRect(160, y + 22, 760, 4);
+    ctx.fillStyle = C.copper; ctx.fillRect(160, y + 22, 760 * clamp((t - s.start) / (s.end - s.start)), 4);
+    ctx.restore();
+  });
+}
+
+function resultCard(ctx, t) {
+  const p = prog(t, 11.6, 0.7, ease.outBack), a = clamp((t - 11.6) / 0.4);
+  const x = 90, y = 1050, w = 900, h = 560;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(x + w / 2, y + h / 2); ctx.scale(lerp(0.92, 1, p), lerp(0.92, 1, p)); ctx.translate(-(x + w / 2), -(y + h / 2));
+  ctx.shadowColor = 'rgba(0,0,0,0.08)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 12;
+  roundRect(ctx, x, y, w, h, 40); ctx.fillStyle = C.card; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2; ctx.stroke();
+  text(ctx, 'MONTHLY PAYMENT', x + 60, y + 100, { font: F(600, 28), color: C.muted });
+  text(ctx, count(deal.payment, prog(t, 12.0, 1.4, ease.outExpo), { prefix: '$' }) + '/mo', x + 60, y + 220, { font: F(800, 110), color: C.copper });
+  const rows = [
+    ['Price', '$' + deal.price.toLocaleString()],
+    ['Down payment (10%)', '$' + deal.down.toLocaleString()],
+    ['Seller carries', '$' + deal.financed.toLocaleString()],
+    ['Terms', `${(deal.rate * 100).toFixed(1)}% · ${deal.years} years`],
+  ];
+  rows.forEach(([k, v], i) => {
+    const ra = clamp((t - 12.6 - i * 0.18) / 0.35);
+    const ry = y + 310 + i * 62;
+    text(ctx, k, x + 60, ry, { font: F(400, 36), color: C.muted, alpha: ra });
+    text(ctx, v, x + w - 60, ry, { font: F(600, 36), color: C.ink, align: 'right', alpha: ra });
+  });
+  ctx.restore();
+}
+
+const USER1 = '3 bed house. Seller wants $240,000 and is open to terms.';
+const BOT1 = 'Got it. Two things I still need: how much down, and what rate will the seller accept?';
+const USER2 = '10% down, 5%, 30 years.';
+
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: 18.5, background: C.bg,
+  draw(ctx, t) {
+    // 1. Title card
+    const ta = win(t, 0, 2.3, 0.4);
+    if (ta > 0) {
+      const p = prog(t, 0.1, 0.8);
+      text(ctx, 'EXAMPLE · DEAL CALCULATOR', 540, 820, { font: F(600, 30), color: C.copper, align: 'center', alpha: ta * p });
+      text(ctx, 'What should you', 540, 940 + (1 - p) * 30, { font: F(800, 88), color: C.ink, align: 'center', alpha: ta * p });
+      text(ctx, 'offer the seller?', 540, 1045 + (1 - p) * 30, { font: F(800, 88), color: C.ink, align: 'center', alpha: ta * p });
+    }
+
+    // 2. The conversation, with the three steps tracking above it
+    const ca = win(t, 2.2, 15.8, 0.4);
+    if (ca > 0) {
+      steps(ctx, t, ca);
+      ctx.save(); ctx.globalAlpha = ca;
+      let y = 600;
+      // Once the result arrives, the chat slides up and fades to make room.
+      const shift = prog(t, 11.4, 0.7, ease.inOutCubic);
+      ctx.translate(0, -shift * 140); ctx.globalAlpha = ca * lerp(1, 0.35, shift);
+      if (t > 2.5) y += bubble(ctx, type(USER1, (t - 2.6) / 2.4), { y, side: 'user', alpha: 1 - shift, rise: prog(t, 2.5, 0.4) }) + 28;
+      if (t > 6.1 && t < 6.9) typingDots(ctx, 90, y, t, clamp((t - 6.1) / 0.2));
+      if (t > 6.9) y += bubble(ctx, BOT1, { y, side: 'bot', alpha: clamp((t - 6.9) / 0.3), rise: prog(t, 6.9, 0.4) }) + 28;
+      if (t > 9.0) bubble(ctx, type(USER2, (t - 9.1) / 1.2), { y, side: 'user', rise: prog(t, 9.0, 0.4) });
+      ctx.restore();
+      if (t > 11.6) { ctx.save(); ctx.globalAlpha = ca; resultCard(ctx, t); ctx.restore(); }
+    }
+
+    // 3. End card
+    const ea = clamp((t - 15.8) / 0.5);
+    if (ea > 0) {
+      const p = prog(t, 15.8, 0.8);
+      text(ctx, 'Try it with your deal →', 540, 900 + (1 - p) * 30, { font: F(800, 76), color: C.ink, align: 'center', alpha: ea });
+      text(ctx, 'example.com/calculator', 540, 1000 + (1 - p) * 30, { font: F(600, 42), color: C.copper, align: 'center', alpha: ea });
+    }
+  },
+});
+</script>
+</body>
+</html>

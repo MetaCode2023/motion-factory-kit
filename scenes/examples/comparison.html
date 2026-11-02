@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800&display=block"><script src="../../kit/motion.js"></script><script>
+const F = '"Plus Jakarta Sans"';
+M.fonts([`800 100px ${F}`, `600 60px ${F}`]);
+const cuts = [3, 8, 13, 16];
+const titles = ['Read or change?', 'A report comes back.', 'A write needs approval.', 'Two different doors.', 'Read by default.'];
+function beat(ctx, t, i) {
+  const start = i ? cuts[i - 1] : 0;
+  M.headline(ctx, t, titles[i], 120, 270, {family:F, start, width:780, max:120});
+  M.clipSafe(ctx, () => {
+    const p = M.prog(t, start, 1.2);
+    const drift = Math.sin(t * 1.7) * 12;
+    ctx.translate(0, drift);
+    [110, 530].forEach((dx,n) => {
+      ctx.fillStyle=n?'#30261F':'#152B42';
+      M.roundRect(ctx,dx,630,350,610,28); ctx.fill();
+      ctx.strokeStyle=n?'#FFB56B':'#58A6FF';ctx.lineWidth=6;
+      ctx.strokeRect(dx+30,670,290,530);
+      M.text(ctx,n?'ASK':'OPEN',dx+50,1150,{font:`800 62px ${F}`,color:n?'#FFB56B':'#58A6FF'});
+    });
+    ctx.strokeStyle = '#333F54'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(180, 820); ctx.lineTo(820, 820); ctx.stroke();
+    const x = i === 2 ? 730 : 250;
+    ctx.fillStyle = i === 2 ? '#FFB56B' : '#58A6FF';
+    ctx.beginPath(); ctx.arc(x, 990 + Math.sin(t * 2) * 60, 36 + p * 12, 0, Math.PI * 2); ctx.fill();
+    M.text(ctx, 'READ', 140, 760, {font:`800 70px ${F}`, color:'#58A6FF'});
+    M.text(ctx, 'WRITE', 555, 760, {font:`800 70px ${F}`, color:'#FFB56B'});
+    const label = i === 2 ? 'Ask first.' : i === 1 ? 'Report received.' : i === 3 ? 'Separate permissions.' : 'Example workflow';
+    M.text(ctx, label, 120, 1360, {font:`600 56px ${F}`, color:'#F5F7FA', maxWidth:760});
+  });
+}
+M.setup({duration:19, cuts, background:'#0B0D12', draw(ctx,t) {
+  let i=cuts.filter(c=>t>=c).length;
+  if (i && t<cuts[i-1]+0.4) M.push(ctx,t,cuts[i-1],()=>beat(ctx,t,i-1),()=>beat(ctx,t,i));
+  else beat(ctx,t,i);
+  M.progress(ctx,t,[0,...cuts,19],{color:'#58A6FF',track:'#333F54'});
+}});
+</script>
