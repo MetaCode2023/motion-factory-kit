@@ -70,7 +70,18 @@ def motion(a: bytes, b: bytes) -> float:
     return sum(abs(a[i] - b[i]) for i in range(0, len(a), 3)) / (len(a) / 3)
 
 
+def size_of(mp4: Path) -> tuple[int, int]:
+    err = subprocess.run([str(FFMPEG), "-hide_banner", "-i", str(mp4)], capture_output=True, text=True).stderr
+    m = __import__("re").search(r"Video:.*?(\d{2,5})x(\d{2,5})", err)
+    return (int(m.group(1)), int(m.group(2))) if m else (1080, 1920)
+
+
 def score(mp4: Path) -> dict:
+    # Analyse at 1/10 scale in the video's own shape (multiples of the cell size).
+    global W, H
+    vw, vh = size_of(mp4)
+    W, H = max(CELL, round(vw / 10 / CELL) * CELL), max(CELL, round(vh / 10 / CELL) * CELL)
+    vertical = abs(vw / vh - 9 / 16) < 0.02
     fs = frames(mp4)
     if len(fs) < FPS * 2:
         raise RuntimeError(f"only {len(fs)} analysis frames in {mp4}")
@@ -106,7 +117,8 @@ def score(mp4: Path) -> dict:
                 raise RuntimeError('text mask duration does not match video')
             text_mask = True
     unsafe, peaks, at_times = {}, {}, {}
-    for name, (x0, y0, x1, y1) in UNSAFE.items():
+    # The TikTok/Reels overlay zones only apply to vertical video.
+    for name, (x0, y0, x1, y1) in (UNSAFE.items() if vertical else []):
         if text_mask:
             pixels = [y * W + x for y in range(math.ceil(y0 * H), min(H, math.ceil(y1 * H)))
                       for x in range(math.ceil(x0 * W), min(W, math.ceil(x1 * W)))]
@@ -121,8 +133,17 @@ def score(mp4: Path) -> dict:
         unsafe[name] = round(sum(values) / len(values), 4)
         peaks[name] = round(max(values), 4)
 
+    # The first frame is the thumbnail: it should already carry words (the hook).
+    if text_mask:
+        first = texts[0]
+        frame0_text = round(sum(v > TEXT for v in first) / len(first), 4)
+    else:
+        first = texts[0]
+        frame0_text = round(sum(map(sum, first)) / (rows * cols), 4)
     s = {
+        "size": f"{vw}x{vh}",
         "duration_s": round(dur, 1),
+        "frame0_text": frame0_text,
         "longest_still_s": round(longest / FPS, 1),
         "open_motion": round(sum(mv[:FPS]) / FPS, 2),
         "mean_motion": round(sum(mv) / len(mv), 2),
@@ -135,6 +156,8 @@ def score(mp4: Path) -> dict:
     }
     T = THRESHOLDS
     warn = []
+    if frame0_text < 0.002:
+        warn.append("no words on screen at frame 0: the first frame is the thumbnail, so put the hook on it")
     if s["longest_still_s"] > T["max_still_s"]:
         warn.append(f"frozen for {s['longest_still_s']}s at a stretch (keep something alive: a drift, a pulse, a counter)")
     if s["open_motion"] < T["min_open_motion"]:

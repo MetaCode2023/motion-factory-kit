@@ -52,7 +52,7 @@ let engine;
 let exitCode = 0;
 try {
   const captions = opt('captions') ? JSON.parse(readFileSync(opt('captions'), 'utf8')) : null;
-  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222'), captions, variant: Number(opt('variant', 0)) });
+  engine = await open(scene, { cdp: opt('cdp', process.env.CDP_URL || 'http://localhost:9222'), captions, variant: Number(opt('variant', 0)), textOnly: flag('text-only') });
   const { V } = engine;
 
   if (opt('still') !== undefined) {

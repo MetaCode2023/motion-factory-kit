@@ -338,7 +338,7 @@
       ctx.restore();
       return true;
     };
-    if (audio || captions) M._media.push({ src, at, trim, speed, volume: audio ? volume : 0, captions, speech, loop, transcript });
+    M._media.push({ src, at, trim, speed, audio, volume, captions, speech, loop, transcript });
     return clip;
   };
 
@@ -441,9 +441,28 @@
   //   sfx:      [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.5 }]   sounds/sfx/<name>.mp3
   //   music:    'pulse' or { track: 'calm', volume: 0.2 }             sounds/music/<track>.mp3
   //   captions: true   word-by-word captions; keeps the safe area's bottom clear for them
-  M.setup = ({ width = 1080, height = 1920, fps = 30, duration, cuts = [], background = '#fff', draw,
+  //   preset:   'tiktok' | 'reels' | 'shorts' (1080x1920, the default), 'feed' (1080x1350, 4:5),
+  //             'square' (1080x1080), 'youtube' (1920x1080). Sets the size and that platform's safe zone.
+  //             To get other sizes from one vertical video instead, use make.mjs --formats.
+  M.PRESETS = {
+    tiktok: { width: 1080, height: 1920 }, reels: { width: 1080, height: 1920 }, shorts: { width: 1080, height: 1920 },
+    vertical: { width: 1080, height: 1920 },
+    feed: { width: 1080, height: 1350, safe: { left: 60, top: 60, right: 1020, bottom: 1290 } },
+    square: { width: 1080, height: 1080, safe: { left: 60, top: 60, right: 1020, bottom: 1020 } },
+    youtube: { width: 1920, height: 1080, safe: { left: 96, top: 54, right: 1824, bottom: 1000 } },
+    landscape: { width: 1920, height: 1080, safe: { left: 96, top: 54, right: 1824, bottom: 1000 } },
+  };
+  M.setup = ({ preset = null, width, height, fps = 30, duration, cuts = [], background = '#fff', draw,
     voice = [], sfx = [], music = null, captions = false }) => {
     if (!duration) throw new Error('setup needs duration');
+    const P = preset ? M.PRESETS[preset] : null;
+    if (preset && !P) throw new Error(`unknown preset "${preset}" (try: ${Object.keys(M.PRESETS).join(', ')})`);
+    width = width || (P && P.width) || 1080;
+    height = height || (P && P.height) || 1920;
+    if (P && P.safe) Object.assign(M.safe, P.safe);
+    else if (Math.abs(width / height - 9 / 16) > 0.02) {                // a custom non-vertical size: 5% margins
+      Object.assign(M.safe, { left: Math.round(width * 0.05), top: Math.round(height * 0.05), right: Math.round(width * 0.95), bottom: Math.round(height * 0.95) });
+    }
     const canvas = document.createElement('canvas');
     canvas.id = 'stage';
     canvas.width = width;
@@ -455,7 +474,7 @@
     if (captions && height > width) M.safe.bottom = Math.min(M.safe.bottom, Math.round(height * 0.65));
     const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice)) : [];
 
-    window.VIDEO = { width, height, fps, duration, cuts, voice, sfx, music, captions: !!captions, media: M._media, variants: M._variants, variant: M.variant };
+    window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, media: M._media, variants: M._variants, variant: M.variant };
     window.draw = (t) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;

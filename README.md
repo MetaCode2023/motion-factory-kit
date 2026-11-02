@@ -7,7 +7,9 @@ TikTok-native text, word-by-word captions from the creator's own voice, product 
 CTAs, music that ducks under the voice, sound effects, and several hook variants to A/B test.
 Exact timing, no timeline editor.
 
-![Blocks, part 1](docs/blocks-1.png)
+![Three example videos made with the kit](docs/media/hero.gif)
+
+**[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
 ## What's in it
 
@@ -19,10 +21,13 @@ Exact timing, no timeline editor.
 - **19 building blocks** (`kit/blocks.js`): comment-reply sticker, TikTok text, product card, reviews,
   CTA button, split screen, picture-in-picture, notifications, chat, checklists, stats, charts, phone frame,
   end card. See [docs/BLOCKS.md](docs/BLOCKS.md).
+- **Every size**: vertical by default; `--formats 4:5,1:1,16:9` adds feed, square and YouTube versions in the same run.
+  Or design natively for another platform with `M.setup({ preset: 'youtube' })` (also `feed`, `square`).
+- **Self-checking builds**: every `make.mjs` run writes `out/<name>.report.md` (PASS/FIX for sound,
+  captions, footage, the hook at frame 0, text under the app buttons) and `out/<name>.cuts.png` (a still after every cut).
 - **Your brand in one file** (`brand.js`): colours, fonts, logo, URL. Every block and caption follows it.
 - **A sound library** (`sounds/`): 12 effects and 3 music beds, original and free to use.
 - **A design guide** Claude follows (`design/DESIGN.md`): hooks, safe zones, pacing, type, UGC rules.
-- **Self-checks**: contact sheets, stills, and `score.py` (frozen stretches, slow opens, text under the app UI).
 - **Claude instructions** (`CLAUDE.md` + a `make-video` skill), so Claude Code knows the whole workflow.
 
 ## Setup (5 minutes)
@@ -54,6 +59,7 @@ Run `claude` in this folder and ask. For example:
 > Make a 15-second UGC ad for Glow Serum, $29. Give me 3 hooks.
 
 > Make a 20-second explainer on why texting back missed calls beats voicemail. Dark, orange accent, narrated.
+> Also give me feed and YouTube versions.
 
 > Generate a Higgsfield clip of a creator unboxing our coffee grinder and build an ad around it.
 
@@ -66,6 +72,8 @@ Claude writes `scenes/mine/<name>.html`, builds it, checks the frames, fixes pro
 ```bash
 node make.mjs scenes/mine/x.html                 # finished MP4 with sound and captions
 node make.mjs scenes/mine/x.html --variants      # one MP4 per M.pick option
+node make.mjs scenes/mine/x.html --formats 4:5,1:1,16:9   # plus feed, square and YouTube versions
+node make.mjs scenes/mine/x.html --fast          # skip the picture score for quick drafts
 node make.mjs scenes/mine/x.html --voice-only    # make narration first; prints each line's timing
 node render.mjs scenes/mine/x.html --still 6.5   # one frame as a PNG
 python score.py out/x.mp4                        # quality check
@@ -102,7 +110,7 @@ make.mjs render.mjs batch.mjs voice.mjs score.py   the tools
 brand.js                                           your colours, fonts, logo
 kit/motion.js  kit/blocks.js                       animation helpers and blocks
 design/DESIGN.md                                   the style rules Claude follows
-docs/                                              Higgsfield guide, block reference
+docs/                                              Higgsfield guide, block reference, the gallery page
 scenes/examples/                                   ugc-ad, showcase, blocks-gallery, and more
 scenes/mine/                                       your scenes
 assets/higgsfield/                                 your clips
@@ -110,6 +118,11 @@ sounds/                                            effects and music beds
 fonts/                                             bundled open-source fonts
 out/                                               renders (git-ignored)
 ```
+
+## Checks on every change
+
+`.github/workflows/check.yml` re-renders the examples and runs the tests on every push, and attaches
+the videos and reports to the run. Fork it and your changes get the same safety net.
 
 ## License
 

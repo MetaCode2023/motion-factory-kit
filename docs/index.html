@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion Factory Kit</title>
+<meta name="description" content="Turn Higgsfield clips into finished UGC ads, or make motion-graphics explainers, by asking Claude.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root { --bg: #0B0D12; --surface: #151922; --line: #262C38; --ink: #F5F7FA; --muted: #8A93A6; --accent: #FC5C2B; --good: #3DDC97; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 500 17px/1.6 "Plus Jakarta Sans", system-ui, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 72px 0 40px; }
+  .eyebrow { font: 500 13px "JetBrains Mono", monospace; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  h1 { font-weight: 800; font-size: clamp(36px, 6vw, 64px); line-height: 1.05; margin: 14px 0 18px; letter-spacing: -0.02em; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { color: var(--muted); font-size: 19px; max-width: 680px; margin: 0 0 28px; }
+  .buttons { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 13px 22px; border-radius: 999px; font-weight: 700; background: var(--accent); color: #fff; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn:hover { text-decoration: none; filter: brightness(1.08); }
+  h2 { font-size: 28px; font-weight: 800; margin: 64px 0 8px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 18px; }
+  figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  video { display: block; width: 100%; aspect-ratio: 9 / 16; background: #000; object-fit: cover; }
+  figcaption { padding: 12px 14px 14px; font-size: 14px; color: var(--muted); }
+  figcaption b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 2px; }
+  .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+  .card b { display: block; margin-bottom: 4px; }
+  .card span { color: var(--muted); font-size: 15px; }
+  pre { background: #07090D; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; overflow-x: auto; font: 500 14px/1.6 "JetBrains Mono", monospace; color: #D7DCE5; }
+  pre .c { color: var(--muted); }
+  blockquote { margin: 0 0 12px; padding: 14px 18px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 12px 12px 0; color: var(--ink); }
+  footer { color: var(--muted); font-size: 14px; padding: 56px 0 48px; border-top: 1px solid var(--line); margin-top: 72px; }
+  @media (max-width: 520px) { header { padding-top: 44px; } .grid { grid-template-columns: 1fr 1fr; gap: 12px; } figcaption { font-size: 13px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Open source · works with Claude Code</div>
+    <h1>Higgsfield clips in.<br><em>Postable ads</em> out.</h1>
+    <p class="lede">Describe the video to Claude. It writes a small code scene and Motion Factory Kit builds the MP4:
+      TikTok-native text, word-by-word captions from the creator's voice, product cards, reviews, CTAs,
+      music that ducks under the voice, sound effects, and hook variants to A/B test.</p>
+    <div class="buttons">
+      <a class="btn" href="https://github.com/MetaCode2023/motion-factory-kit">Get it on GitHub</a>
+      <a class="btn ghost" href="https://github.com/MetaCode2023/motion-factory-kit/blob/main/docs/HIGGSFIELD.md">Higgsfield guide</a>
+    </div>
+  </header>
+
+  <h2>Made with the kit</h2>
+  <p class="sub">Every frame below is drawn by code. Tap a video for sound.</p>
+  <div class="grid">
+    <figure><video src="media/showcase.mp4" poster="media/showcase.jpg" muted loop autoplay playsinline controls preload="metadata"></video>
+      <figcaption><b>Explainer</b>Hook, push cuts, growing cards, music and effects.</figcaption></figure>
+    <figure><video src="media/gallery.mp4" poster="media/gallery.jpg" muted loop autoplay playsinline controls preload="metadata"></video>
+      <figcaption><b>All 19 blocks</b>Comment sticker, product card, CTA, split, chat and more.</figcaption></figure>
+    <figure><video src="media/ugc-template.mp4" poster="media/ugc-template.jpg" muted loop autoplay playsinline controls preload="metadata"></video>
+      <figcaption><b>UGC ad template</b>Shown before any clips are added: drop in your Higgsfield footage.</figcaption></figure>
+    <figure><video src="media/loan-calculator.mp4" poster="media/loan-calculator.jpg" muted loop autoplay playsinline controls preload="metadata"></video>
+      <figcaption><b>Product demo</b>A chat-style walkthrough with a counted-up result.</figcaption></figure>
+    <figure><video src="media/timeline.mp4" poster="media/timeline.jpg" muted loop autoplay playsinline controls preload="metadata"></video>
+      <figcaption><b>Timeline</b>A request moving through steps.</figcaption></figure>
+  </div>
+
+  <h2>What's in the box</h2>
+  <p class="sub">Everything a short-form video needs, driven by one command.</p>
+  <div class="features">
+    <div class="card"><b>One command to a finished video</b><span>Picture, narration, captions, music, effects, loudness for social. <code>node make.mjs</code></span></div>
+    <div class="card"><b>Higgsfield-ready</b><span>Any clip, any size or frame rate. Its audio is mixed and its speech becomes captions.</span></div>
+    <div class="card"><b>19 building blocks</b><span>TikTok-native pieces for UGC, plus explainer UI: notifications, chat, charts, phone frames.</span></div>
+    <div class="card"><b>Hook variants</b><span>Write three hooks, get three MP4s. The cheapest A/B test there is.</span></div>
+    <div class="card"><b>Every size</b><span>Vertical by default, plus 4:5 feed, square and 16:9 YouTube versions in the same run.</span></div>
+    <div class="card"><b>Self-checking</b><span>Each build writes a PASS/FIX report and stills after every cut, so Claude fixes problems first.</span></div>
+    <div class="card"><b>Your brand in one file</b><span>Colours, fonts, logo, URL. Every block and caption follows it.</span></div>
+    <div class="card"><b>Sound library</b><span>12 effects and 3 music beds, original and free to use.</span></div>
+  </div>
+
+  <h2>Start in five minutes</h2>
+  <p class="sub">You need Node.js 18+, Python 3 and Claude Code.</p>
+<pre>git clone https://github.com/MetaCode2023/motion-factory-kit.git
+cd motion-factory-kit
+npm install
+node make.mjs scenes/examples/ugc-ad.html     <span class="c"># your first build</span>
+
+<span class="c"># optional</span>
+export ELEVENLABS_API_KEY=...                  <span class="c"># narration + exact captions</span>
+claude mcp add --transport http higgsfield https://mcp.higgsfield.ai</pre>
+  <p class="sub">Then run <code>claude</code> in the folder and ask:</p>
+  <blockquote>I put a talking-head clip in assets/higgsfield/hook.mp4. Make a 15-second UGC ad for Glow Serum, $29. Give me 3 hooks, plus feed and YouTube versions.</blockquote>
+  <blockquote>Make a 20-second narrated explainer on why texting back missed calls beats voicemail.</blockquote>
+
+  <footer>Motion Factory Kit · MIT licensed · Fonts under the SIL Open Font License ·
+    <a href="https://github.com/MetaCode2023/motion-factory-kit">Source on GitHub</a></footer>
+</div>
+</body>
+</html>

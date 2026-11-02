@@ -1,0 +1,40 @@
+# Re-renders the examples on every push and pull request, so a change that breaks rendering,
+# sound or the self-check is caught before anyone uses it. The rendered videos and reports are
+# attached to each run (Actions tab -> the run -> Artifacts).
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npm test
+      - name: Build the examples
+        run: |
+          node make.mjs scenes/examples/showcase.html --formats 4:5,16:9
+          node make.mjs scenes/examples/ugc-ad.html --variants --fast
+          node render.mjs scenes/examples/blocks-gallery.html --sheet
+      - name: Summary
+        if: always()
+        run: cat out/*.report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: renders
+          path: |
+            out/*.mp4
+            out/*.png
+            out/*.report.md
+          retention-days: 14

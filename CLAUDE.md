@@ -16,12 +16,14 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    `M.pick([...])` unless the user wants one.
 3. **Write the scene** to `scenes/mine/<name>.html` with the four script tags (brand, motion, blocks, your code).
    Use **blocks** (`docs/BLOCKS.md`) instead of hand-drawing common pieces.
-4. **Build it:** `node make.mjs scenes/mine/<name>.html` → `out/<name>.mp4` + `out/<name>.sheet.png`.
-   With hook variants: add `--variants`.
-5. **Check it yourself before handing over.** Look at the sheet and at `node tools/stills.mjs
-   scenes/mine/<name>.html out/check.png 0 2.9 6.2 ...` (stills just after each cut). Run
-   `python score.py out/<name>.mp4`. Read every `!` warning `make.mjs` printed (voice lines that overlap or run long,
-   missing clips, missing keys). Fix and rebuild; 2–3 passes is normal.
+4. **Build it:** `node make.mjs scenes/mine/<name>.html` → `out/<name>.mp4`.
+   With hook variants: add `--variants`. Other sizes: add `--formats 4:5,1:1,16:9` (feed, square, YouTube)
+   when the user wants them. Drafts: `--fast` skips the picture score.
+5. **Check it yourself before handing over.** Every build writes `out/<name>.report.md` (PASS/FIX for sound,
+   captions, footage, the hook at frame 0, text under the app buttons, frozen stretches) and
+   `out/<name>.cuts.png` (frame 0, a still just after every cut, the end). **Read the report and look at the
+   cuts image**, fix every FIX you can, rebuild. 2–3 passes is normal. A FIX you can't fix (missing footage,
+   no API key) goes in your handover.
 6. **Hand over** the MP4 path(s) with one or two lines on what's in it and anything the user must
    supply (e.g. "drop your clip at assets/higgsfield/talking-head.mp4 and re-run").
 
@@ -90,6 +92,9 @@ All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.bra
 - **Fonts:** only files in `fonts/` exist (Plus Jakarta Sans, Barlow, Barlow Condensed, JetBrains Mono).
 - **Everything is drawn on the canvas.** HTML/CSS layout is ignored; no remote scripts; paths are relative to the scene file.
 - **Safe zones (1080×1920):** no words above y=220 or below y=1440; with `captions: true`, keep content above y≈1250.
+- **Other platforms:** for a natively designed non-vertical video use `M.setup({ preset: 'youtube' | 'feed' | 'square' })`
+  (sets size and safe zone, `M.safe`); blocks default to vertical positions, so pass `x`/`y` explicitly there.
+  For most requests, design vertical and export other sizes with `--formats` instead.
 - **Time is the only state.** `draw(ctx, t)` must depend only on `t` (no `Date.now()`, no unseeded random).
 - **Honesty:** label example reviews as examples; don't present AI-generated people as real customers.
 

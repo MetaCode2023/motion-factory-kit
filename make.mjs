@@ -7,6 +7,10 @@
 //   node make.mjs scenes/mine/x.html --no-voice      # music + effects only (no ElevenLabs calls)
 //   node make.mjs scenes/mine/x.html --no-captions   # skip burned-in captions
 //   node make.mjs scenes/mine/x.html --variants      # every M.pick variant -> out/x-v1.mp4, x-v2.mp4...
+//   node make.mjs scenes/mine/x.html --formats 4:5,1:1,16:9   # also feed, square and YouTube versions
+//   node make.mjs scenes/mine/x.html --fast          # skip the picture score (quicker drafts)
+//
+// Every build ends with a self-check: out/x.report.md (PASS/FIX list) and out/x.cuts.png.
 //
 // Video clips (M.video, e.g. Higgsfield UGC) bring their own audio; with captions: true their speech
 // is transcribed (ElevenLabs speech-to-text) into the same word-by-word captions.
@@ -31,7 +35,7 @@ const ROOT = dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const flag = (n) => args.includes('--' + n);
 const opt = (n, d) => { const i = args.indexOf('--' + n); return i >= 0 ? args[i + 1] : d; };
-const VALUED = ['out', 'voice', 'model', 'variant'];
+const VALUED = ['out', 'voice', 'model', 'variant', 'formats'];
 const scene = args.find((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]?.slice(2)));
 if (!scene || !existsSync(scene)) {
   console.error('usage: node make.mjs <scene.html> [--voice-only] [--no-voice] [--no-captions] [--variants] [--voice <id>] [--out file.mp4]');
@@ -74,7 +78,7 @@ await engine.close();
 if (flag('variants')) {
   const n = V.variants || 1;
   if (n < 2) console.warn('  ! this scene has no M.pick([...]) variants; rendering it once.');
-  const pass = args.filter((a, i) => a !== '--variants' && a !== scene && !(args[i - 1] === '--out') && a !== '--out');
+  const pass = args.filter((a, i) => a !== '--variants' && a !== scene && !(args[i - 1] === '--out') && a !== '--out');   // --formats etc. pass through
   let failed = 0;
   for (let i = 0; i < n; i++) {
     console.log(`\n=== variant ${i + 1}/${n} ===`);
@@ -231,7 +235,7 @@ placed.filter((p) => p.file).forEach((p, i) => {
   chains.push(`[${k}:a]${FMT},volume=${s.volume ?? 0.6},adelay=${Math.round((s.at || 0) * 1000)}:all=1[s${i}]`);
   buses.sfx.push(`[s${i}]`);
 });
-media.filter((m) => m.hasAudio).forEach((m, i) => {
+media.filter((m) => m.hasAudio && m.audio !== false).forEach((m, i) => {
   const k = input(m.file, !!m.loop);
   const tempo = m.speed && m.speed !== 1 ? `,atempo=${Math.min(2, Math.max(0.5, m.speed))}` : '';
   chains.push(`[${k}:a]${FMT},atrim=start=${m.trim || 0},asetpts=PTS-STARTPTS${tempo},volume=${m.volume ?? 1},adelay=${Math.round(m.at * 1000)}:all=1[c${i}]`);
@@ -267,15 +271,100 @@ if (!hasAudio) {
     '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-t', String(D), '-movflags', '+faststart', final], 'mix');
 }
 
-// ---- 5. checks ----------------------------------------------------------------------------------
+// ---- 5. other sizes ----------------------------------------------------------------------------
+// From a vertical build: 4:5 is a centred crop (it keeps the whole safe zone); 1:1 and 16:9 put the
+// vertical video over a blurred, darkened copy of itself.
+const FORMATS = {
+  '4:5': { w: 1080, h: 1350, crop: true }, '1:1': { w: 1080, h: 1080 }, '16:9': { w: 1920, h: 1080 }, '9:16': null,
+};
+const made = [final];
+if (opt('formats')) {
+  const vertical = Math.abs(V.width / V.height - 9 / 16) < 0.02;
+  for (const f of String(opt('formats')).split(',').map((x) => x.trim()).filter(Boolean)) {
+    const spec = FORMATS[f];
+    if (spec === null) continue;
+    if (!spec) { warn(`unknown format "${f}" (use 4:5, 1:1, 16:9)`); continue; }
+    if (!vertical) { warn(`--formats needs a vertical (9:16) scene; this one is ${V.width}x${V.height}`); break; }
+    const out = final.replace(/\.mp4$/i, `.${f.replace(':', 'x')}.mp4`);
+    const vf = spec.crop
+      ? `scale=${spec.w}:-2,crop=${spec.w}:${spec.h}:0:${Math.round((spec.w * V.height / V.width) * 0.43 - spec.h / 2)}`
+      : `split[a][b];[a]scale=${spec.w}:${spec.h}:force_original_aspect_ratio=increase,crop=${spec.w}:${spec.h},boxblur=30:3,eq=brightness=-0.32:saturation=0.8[bg];[b]scale=-2:${spec.h}[fg];[bg][fg]overlay=(W-w)/2:0`;
+    ff(['-i', final, '-filter_complex', `[0:v]${vf}[v]`, '-map', '[v]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-c:a', 'copy', '-movflags', '+faststart', out], `format ${f}`);
+    made.push(out);
+    console.log(`  ${f.padEnd(5)} -> ${out}`);
+  }
+}
+
+// ---- 6. self-check ------------------------------------------------------------------------------
+// Everything Claude (or you) should look at before calling the video done, in one report:
+// out/<name>.report.md plus out/<name>.cuts.png (a still right after every cut).
 const sheet = video.replace(/\.mp4$/, '.sheet.png');
 if (existsSync(sheet)) writeFileSync(final.replace(/\.mp4$/i, '.sheet.png'), readFileSync(sheet));
+const checks = [];   // [ok: boolean, area, text]
+const check = (ok, area, text) => checks.push([ok, area, text]);
+
+let peak = null, loud = null;
 if (hasAudio) {
-  const vd = spawnSync(ffmpegPath, ['-hide_banner', '-i', final, '-af', 'volumedetect', '-vn', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
-  const peak = +(vd.match(/max_volume: ([-\d.]+)/)?.[1] ?? -99), mean = +(vd.match(/mean_volume: ([-\d.]+)/)?.[1] ?? -99);
-  if (peak > -0.5) warn(`audio peaks at ${peak} dB (may clip)`);
-  if (mean < -45) warn(`audio is nearly silent (mean ${mean} dB)`);
-  console.log(`  audio: peak ${peak} dB, mean ${mean} dB`);
-}
-console.log(`\n${name}: done -> ${final}`);
-if (warnings.length) { console.log(`${warnings.length} warning(s) above.`); process.exitCode = 0; }
+  const vd = spawnSync(ffmpegPath, ['-hide_banner', '-i', final, '-af', 'volumedetect,ebur128=framelog=quiet', '-vn', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
+  peak = +(vd.match(/max_volume: ([-\d.]+)/)?.[1] ?? -99);
+  loud = +(vd.match(/\n\s+I:\s+([-\d.]+) LUFS/)?.[1] ?? -99);
+  check(peak <= -0.5, 'sound', `peak ${peak} dB${peak > -0.5 ? ' (may clip)' : ''}`);
+  check(loud > -18 && loud < -11, 'sound', `loudness ${loud} LUFS (social target about -14)`);
+  console.log(`  audio: peak ${peak} dB, loudness ${loud} LUFS`);
+} else check(false, 'sound', 'no sound at all: add music, effects or narration');
+if (voiceLines.length) check(placed.every((p) => p.file) || flag('no-voice'), 'sound', placed.every((p) => p.file) ? `narration: ${placed.length} lines` : 'narration lines are silent (no ELEVENLABS_API_KEY)');
+if (V.captions) check(!flag('no-captions') && words.length > 0, 'captions', words.length ? `${words.length} words captioned${KEY ? '' : ' (estimated timing)'}` : 'captions are on but there are no words to show');
+const missing = allMedia.filter((m) => m.missing);
+check(!missing.length, 'footage', missing.length ? `placeholders still showing for: ${missing.map((m) => m.src).join(', ')}` : `${media.length} clip(s) found`);
+check(D >= 6 && D <= 90, 'length', `${D}s`);
+for (const w of warnings) if (!/^clip not found|ELEVENLABS_API_KEY is not set/.test(w)) check(false, 'build', w);
+
+// Picture checks need the quality scorer (Python). Text-only frames make the UI-zone check exact,
+// so footage under the TikTok buttons isn't mistaken for text.
+const py = ['python3', 'python'].find((c) => spawnSync(c, ['--version']).status === 0);
+let score = null;
+if (!flag('fast') && py) {
+  const textArgs = [join(ROOT, 'render.mjs'), scene, '--out', join(WORK, 'text.mp4'), '--text-only', '--variant', String(VARIANT), '--crf', '28'];
+  if (V.captions && !flag('no-captions') && words.length) textArgs.push('--captions', capFile);
+  const tr = spawnSync(process.execPath, textArgs, { encoding: 'utf8' });
+  if (tr.status === 0) writeFileSync(join(WORK, 'text-mask.json'), JSON.stringify({ video_sha256: createHash('sha256').update(readFileSync(video)).digest('hex') }));
+  const sr = spawnSync(py, [join(ROOT, 'score.py'), video], { encoding: 'utf8' });
+  if (sr.status === 0) {
+    score = JSON.parse(sr.stdout);
+    const sw = score.warnings || [];
+    check(!sw.length, 'picture', sw.length ? sw.join('; ') : `no frozen stretches, quick open, frame filled, words clear of the app UI`);
+  } else check(false, 'picture', 'quality scorer failed: ' + (sr.stderr || '').trim().split('\n').pop());
+} else if (!py) check(true, 'picture', 'skipped the picture score (Python not found)');
+
+// Stills right after each cut (and frame 0, and the end), with captions, for a quick visual check.
+const cutsPng = final.replace(/\.mp4$/i, '.cuts.png');
+try {
+  const { Canvas, loadImage } = await import('skia-canvas');
+  const eng = await open(scene, { variant: VARIANT, captions: V.captions && words.length ? words : null });
+  const times = [0, ...(V.cuts || []).map((c) => Math.min(D - 0.05, c + 0.2)), Math.max(0, D - 0.4)];
+  const tw = 240, th = Math.round(tw * V.height / V.width), pad = 6;
+  const sheetC = new Canvas(times.length * (tw + pad) + pad, th + pad * 2 + 28), c2 = sheetC.getContext('2d');
+  c2.fillStyle = '#444'; c2.fillRect(0, 0, sheetC.width, sheetC.height);
+  for (const [i, t] of times.entries()) {
+    c2.drawImage(await loadImage(await eng.still(t)), pad + i * (tw + pad), pad, tw, th);
+    c2.fillStyle = '#fff'; c2.font = '600 18px sans-serif'; c2.fillText(`${t.toFixed(1)}s`, pad + i * (tw + pad) + 4, th + pad + 22);
+  }
+  await eng.close();
+  writeFileSync(cutsPng, await sheetC.toBuffer('png'));
+} catch (e) { check(false, 'build', 'could not make the cut stills: ' + e.message); }
+
+const failed = checks.filter(([ok]) => !ok);
+const rel = (p) => p.startsWith(ROOT) ? p.slice(ROOT.length + 1) : p;
+const report = [
+  `# ${name}`, '',
+  `${failed.length ? `**${failed.length} thing(s) to fix or confirm.**` : '**All checks passed.**'} Look at the stills either way.`, '',
+  ...checks.map(([ok, area, text]) => `- ${ok ? 'PASS' : 'FIX '} **${area}**: ${text}`), '',
+  '## Files', ...made.map((f) => `- ${rel(f)}`), `- ${rel(cutsPng)} (frame 0, just after each cut, the end)`, `- ${rel(final.replace(/\.mp4$/i, '.sheet.png'))} (six evenly spaced frames)`, '',
+  ...(score ? ['## Picture score', '```json', JSON.stringify({ size: score.size, frame0_text: score.frame0_text, longest_still_s: score.longest_still_s, open_motion: score.open_motion, median_fill: score.median_fill, unsafe_ink: score.unsafe_ink }, null, 2), '```', ''] : []),
+  ...(placed.length ? ['## Narration timing', '| line | start | end | text |', '|---|---|---|---|', ...placed.map((p, i) => `| ${i + 1} | ${p.start.toFixed(2)} | ${(p.start + p.dur).toFixed(2)} | ${voiceLines[i].text} |`), ''] : []),
+];
+const reportFile = final.replace(/\.mp4$/i, '.report.md');
+writeFileSync(reportFile, report.join('\n'));
+console.log(`\n${name}: done -> ${rel(final)}`);
+console.log(failed.length ? `Check: ${failed.length} to fix or confirm (see ${rel(reportFile)}):` : `Check: all passed (${rel(reportFile)})`);
+for (const [, area, text] of failed) console.log(`  - ${area}: ${text}`);
