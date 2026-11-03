@@ -11,6 +11,12 @@ Exact timing, no timeline editor.
 
 **[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
+**Try it in one command, no API keys:** `npm install && npm run demo` cuts a bundled synthetic street-poll
+shoot into finished vertical ads with a client review page ([examples/demo](examples/demo)).
+
+**Plug it into your agent:** an MCP server exposes every step as a tool (index footage, check and write
+edit plans, build, apply client feedback, render and *look at* frames). [docs/MCP.md](docs/MCP.md)
+
 **Use all of it, or one piece.** Already have a pipeline? Point your agent at
 [docs/MODULES.md](docs/MODULES.md): a checklist to compare against, and which pieces (word-exact cutting,
 street-audio cleanup, face-following reframe, overlays, client review loop) lift out on their own.
@@ -71,6 +77,9 @@ node make.mjs scenes/examples/ugc-ad.html    # builds out/ugc-ad.mp4 (with place
 Optional, but worth it:
 
 ```bash
+npm run demo                              # the footage editor end to end on bundled demo clips, no keys
+claude mcp add motion-factory -- node "$PWD/mcp/server.mjs"   # the kit as tools for your agent (auto in this folder)
+pip install faster-whisper opencv-python-headless   # local transcripts (no key) + face-following reframe
 export ELEVENLABS_API_KEY=your_key        # narration + exact captions from speech (PowerShell: $env:ELEVENLABS_API_KEY="your_key")
 claude mcp add --transport http higgsfield https://mcp.higgsfield.ai   # let Claude generate Higgsfield clips
 ```

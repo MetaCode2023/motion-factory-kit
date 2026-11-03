@@ -49,6 +49,13 @@ Default to this for explainers and motion graphics; flat backgrounds look cheap.
 
 ## Raw footage → finished ads (`footage.mjs`, details in `docs/EDITOR.md`)
 
+If the `motion-factory` MCP tools are connected (`.mcp.json`; `docs/MCP.md`), use them for these steps:
+`footage_index`, `footage_check_plan` before every `footage_write_plan`, `footage_build`, `look_at` the cut
+stills, `review_feedback`. Without them, the commands below do the same (add `--json` for a machine-readable
+last line). New to the editor? `npm run demo` runs it end to end on `examples/demo`.
+Transcripts come from, in order: a `<clip>.words.json` / `.srt` / `.vtt` next to the clip, `ELEVENLABS_API_KEY`
+(with speakers), local faster-whisper (`pip install faster-whisper`), the openai-whisper CLI.
+
 1. Footage goes in `footage/raw/`. Run `node footage.mjs index` → `footage/INDEX.md` (clip IDs, numbered
    sentences with timings, `(um)` fillers) and `footage/thumbs/<ID>.jpg`.
 2. **You are the editor.** Read INDEX.md and look at the thumbnail images. Pick the strongest hooks and the

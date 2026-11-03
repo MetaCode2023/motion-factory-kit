@@ -1,0 +1,12 @@
+{
+  "name": "switch",
+  "angle": "switching intent: opens on the strongest line, windy clip cleaned hard",
+  "hooks": ["\"I would switch tomorrow\""],
+  "hookStyle": "blue",
+  "audio": { "denoise": "strong", "wind": true },
+  "segments": [
+    { "clip": "C04", "sentences": [0, 1] },
+    { "clip": "C02", "sentence": 4 }
+  ],
+  "cta": "Try a bottle"
+}

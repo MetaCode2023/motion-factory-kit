@@ -1,0 +1,14 @@
+{
+  "name": "eight-dollars",
+  "angle": "price: would people pay $8 (a real split: one yes, one no)",
+  "hooks": ["Would you pay $8 for a cold brew?", "We asked strangers about an $8 coffee"],
+  "street": { "total": 2 },
+  "segments": [
+    { "clip": "C02", "sentence": 1, "question": true },
+    { "clip": "C02", "sentences": [2, 4] },
+    { "clip": "C05", "sentences": [1, 3] }
+  ],
+  "broll": [{ "clip": "C01", "from": 0.5, "to": 2.0, "over": 1, "offset": 1.2 }],
+  "tally": { "title": "Would you pay $8?", "options": [{ "label": "Yes", "value": 1 }, { "label": "No", "value": 1 }] },
+  "cta": "Try a bottle"
+}

@@ -1,0 +1,188 @@
+#!/usr/bin/env node
+// mcp/server.mjs: the kit as MCP tools, so any agent (Claude Code, Claude Desktop, Cursor, ...) can call
+// it directly instead of reading docs and shelling out. stdio transport.
+//
+//   claude mcp add motion-factory -- node /path/to/motion-factory-kit/mcp/server.mjs
+//
+// Every tool returns JSON (the same objects the CLIs print with --json); render_still and look_at
+// also return the picture, so the agent can see what it made. Long builds block until done.
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+import { spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { checkPlan, loadIndex } from '../tools/plans.mjs';
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
+const FOOT = () => (process.env.FOOTAGE_DIR ? resolve(process.env.FOOTAGE_DIR) : join(ROOT, 'footage'));
+
+// Paths from the agent are relative to the repo; nothing outside it is written.
+const inRepo = (p) => { const a = isAbsolute(p) ? p : join(ROOT, p); const r = relative(ROOT, a); if (r.startsWith('..') || isAbsolute(r)) throw new Error(`path outside the kit: ${p}`); return a; };
+
+// Run one of the CLIs with --json; resolve with its last JSON line (logs are kept for errors).
+function cli(script, args, { timeoutMs = 60 * 60 * 1000 } = {}) {
+  return new Promise((done) => {
+    const child = spawn(process.execPath, [join(ROOT, script), ...args, '--json'], { cwd: ROOT, env: process.env });
+    let out = '', err = '';
+    const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      const line = out.trim().split('\n').reverse().find((l) => l.startsWith('{'));
+      let json = null;
+      try { json = line ? JSON.parse(line) : null; } catch {}
+      done(json ? { ...json, exit: code } : { ok: false, exit: code, error: 'no result', log: (out + '\n' + err).trim().split('\n').slice(-25).join('\n') });
+    });
+  });
+}
+const text = (obj) => ({ content: [{ type: 'text', text: JSON.stringify(obj, null, 1) }] });
+const picture = (file, extra = {}) => {
+  const ext = extname(file).toLowerCase();
+  return { content: [
+    { type: 'image', data: readFileSync(file).toString('base64'), mimeType: ext === '.png' ? 'image/png' : 'image/jpeg' },
+    { type: 'text', text: JSON.stringify({ file: relative(ROOT, file), ...extra }) },
+  ] };
+};
+
+// The header comment of each template: what it is and its data keys.
+function templates() {
+  const dir = join(ROOT, 'scenes', 'templates');
+  return readdirSync(dir).filter((f) => f.endsWith('.html')).sort().map((f) => {
+    const src = readFileSync(join(dir, f), 'utf8');
+    const body = src.split('<script>\n').pop();
+    const comment = body.split('\n').filter((l) => l.startsWith('//')).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
+    return { name: f.replace('.html', ''), file: `scenes/templates/${f}`, about: comment.trim() };
+  });
+}
+
+const server = new McpServer({ name: 'motion-factory', version: VERSION });
+
+server.registerTool('kit_overview', {
+  title: 'What the kit can do',
+  description: 'Start here. Lists the templates (with their data keys), blocks, caption styles, the footage-editor workflow and the docs to read. Read CLAUDE.md in the repo for the full rules.',
+  inputSchema: {},
+}, async () => text({
+  root: ROOT, version: VERSION,
+  workflow: {
+    footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
+    scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
+  },
+  templates: templates(),
+  blocks: { ugc: ['nativeText', 'commentReply', 'productCard', 'review', 'stars', 'ctaButton', 'tap', 'split', 'pip', 'sticker', 'emojiBurst', 'postCard', 'browser'],
+    street: ['questionCard', 'lowerThird', 'counter', 'tally'], creator: ['photoPanel', 'memeCard'],
+    explainer: ['notification', 'chat', 'checklist', 'stat', 'compare', 'steps', 'bars', 'phone', 'toast', 'endCard'] },
+  captionStyles: ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop', 'word'],
+  docs: ['CLAUDE.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
+  rules: ['Never invent quotes, names or poll numbers: use what people said and what the shoot counted.', 'All on-screen text is drawn in code.', 'Client footage and plans stay out of git.'],
+}));
+
+server.registerTool('footage_index', {
+  title: 'Index raw footage',
+  description: 'Transcribe and thumbnail every clip in a folder (default footage/raw). Returns each clip with numbered sentences (start/end seconds, speaker A/B when known), whether a face was found for auto-reframing, and its thumbnail strip path (use look_at to see it). Transcripts come from a .words.json/.srt next to the clip, ELEVENLABS_API_KEY, or local faster-whisper.',
+  inputSchema: { folder: z.string().optional().describe('Folder of clips, relative to the kit (default footage/raw)') },
+}, async ({ folder }) => text(await cli('footage.mjs', ['index', ...(folder ? [inRepo(folder)] : [])])));
+
+server.registerTool('footage_check_plan', {
+  title: 'Check an edit plan',
+  description: 'Validate an edit plan against the footage index without cutting anything: unknown clips, missing sentence numbers, overlaps, length outside 6-60 s, overlay fields. Returns problems and the estimated length.',
+  inputSchema: { plan: z.record(z.string(), z.any()).describe('The edit plan object (format: docs/EDITOR.md)') },
+}, async ({ plan }) => text(checkPlan(plan, loadIndex(FOOT()))));
+
+server.registerTool('footage_write_plan', {
+  title: 'Write an edit plan',
+  description: 'Check an edit plan and save it as <dir>/<name>.json (default edits/, git-ignored). Refuses plans with errors; warnings are returned.',
+  inputSchema: { plan: z.record(z.string(), z.any()), dir: z.string().optional().describe('Folder for plans (default edits)') },
+}, async ({ plan, dir }) => {
+  const res = checkPlan(plan, loadIndex(FOOT()));
+  if (!res.ok) return text({ ...res, written: null });
+  const folder = inRepo(dir || 'edits');
+  mkdirSync(folder, { recursive: true });
+  const file = join(folder, `${plan.name}.json`);
+  writeFileSync(file, JSON.stringify(plan, null, 2) + '\n');
+  return text({ ...res, written: relative(ROOT, file) });
+});
+
+server.registerTool('footage_build', {
+  title: 'Build ads from edit plans',
+  description: 'Cut and finish every plan in a folder: word-exact A-roll, street-audio cleanup, face-following reframe, overlays, captions, music, every requested size. Writes out/<batch>/ with the MP4s, DELIVERY.csv and review.html. Use only to rebuild named ads, or redo with a review.json path to re-cut just the ads the client flagged. Can take minutes.',
+  inputSchema: {
+    plans: z.string().optional().describe('Folder of plans or one plan file (default edits)'),
+    batch: z.string().optional().describe('Output folder name under out/'),
+    only: z.array(z.string()).optional(), redo: z.string().optional().describe('Path to an exported review.json'),
+    variants: z.boolean().optional().describe('One video per hook (default true)'),
+    formats: z.array(z.enum(['4:5', '1:1', '16:9'])).optional(), fast: z.boolean().optional().describe('Skip the picture score (drafts)'),
+  },
+}, async ({ plans, batch, only, redo, variants = true, formats, fast }) => text(await cli('footage.mjs', ['build', inRepo(plans || 'edits'),
+  ...(batch ? ['--batch', batch] : []), ...(only?.length ? ['--only', only.join(',')] : []), ...(redo ? ['--redo', inRepo(redo)] : []),
+  ...(variants ? ['--variants'] : []), ...(formats?.length ? ['--formats', formats.join(',')] : []), ...(fast ? ['--fast'] : [])])));
+
+server.registerTool('review_feedback', {
+  title: 'Apply client feedback',
+  description: 'Take the decisions a client exported from review.html (review.json, or the same object pasted in) and write FEEDBACK.md (what to change per ad), copy approved files to out/<batch>/approved/, and mark DELIVERY.csv. Returns the ads to re-cut; edit only those plans, then footage_build with redo.',
+  inputSchema: { batch: z.string(), feedback: z.record(z.string(), z.any()).optional().describe('The review.json object'), file: z.string().optional().describe('Or a path to review.json') },
+}, async ({ batch, feedback, file }) => {
+  let f = file ? inRepo(file) : null;
+  if (!f) {
+    if (!feedback) return text({ ok: false, error: 'give feedback or file' });
+    f = join(ROOT, 'out', batch, 'review.json');
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, JSON.stringify({ batch, ...feedback }, null, 1));
+  }
+  const res = await cli('footage.mjs', ['feedback', f]);
+  const md = join(ROOT, 'out', batch, 'FEEDBACK.md');
+  return text({ ...res, feedbackText: existsSync(md) ? readFileSync(md, 'utf8') : null });
+});
+
+server.registerTool('review_page', {
+  title: 'Write the review page',
+  description: 'Write or refresh out/<batch>/review.html: the client approval page for a batch (approve / needs changes / notes per ad and hook).',
+  inputSchema: { batch: z.string() },
+}, async ({ batch }) => text(await cli('footage.mjs', ['review', inRepo(join('out', batch))])));
+
+server.registerTool('make_video', {
+  title: 'Build a video from a scene',
+  description: 'Render a scene or template to a finished MP4 with narration, captions, music, effects and the self-check. Returns the files and every PASS/FIX check; look_at the cuts image before handing over. Can take minutes.',
+  inputSchema: {
+    scene: z.string().describe('Scene HTML, e.g. scenes/templates/rapid-list.html or scenes/mine/x.html'),
+    data: z.record(z.string(), z.any()).optional().describe('Content for M.data() (a template row)'),
+    name: z.string().optional(), outdir: z.string().optional(),
+    variants: z.boolean().optional(), formats: z.array(z.enum(['4:5', '1:1', '16:9'])).optional(), fast: z.boolean().optional(),
+  },
+}, async ({ scene, data, name, outdir, variants, formats, fast }) => {
+  let dataFile = null;
+  if (data) { mkdirSync(join(ROOT, 'out', '.mcp'), { recursive: true }); dataFile = join(ROOT, 'out', '.mcp', `${name || 'data'}-${process.pid}.json`); writeFileSync(dataFile, JSON.stringify(data)); }
+  return text(await cli('make.mjs', [inRepo(scene), ...(dataFile ? ['--data', dataFile] : []), ...(name ? ['--name', name] : []), ...(outdir ? ['--outdir', inRepo(outdir)] : []),
+    ...(variants ? ['--variants'] : []), ...(formats?.length ? ['--formats', formats.join(',')] : []), ...(fast ? ['--fast'] : [])]));
+});
+
+server.registerTool('render_still', {
+  title: 'Look at one frame',
+  description: 'Render one frame of a scene at time t (seconds) and return the picture. Quick, silent, no captions. Use it while writing a scene.',
+  inputSchema: { scene: z.string(), t: z.number(), data: z.record(z.string(), z.any()).optional() },
+}, async ({ scene, t, data }) => {
+  mkdirSync(join(ROOT, 'out', '.mcp'), { recursive: true });
+  const out = join(ROOT, 'out', '.mcp', `still-${process.pid}-${Date.now()}.png`);
+  let dataFile = null;
+  if (data) { dataFile = out.replace('.png', '.json'); writeFileSync(dataFile, JSON.stringify(data)); }
+  const res = await new Promise((done) => {
+    const c = spawn(process.execPath, [join(ROOT, 'render.mjs'), inRepo(scene), '--still', String(t), '--out', out, ...(dataFile ? ['--data', dataFile] : [])], { cwd: ROOT });
+    let err = ''; c.stderr.on('data', (d) => (err += d)); c.on('close', (code) => done({ code, err }));
+  });
+  return existsSync(out) ? picture(out, { t }) : text({ ok: false, error: res.err.slice(-1500) });
+});
+
+server.registerTool('look_at', {
+  title: 'See an image',
+  description: 'Return a PNG/JPG from the kit as a picture: a build\'s cuts image (out/<name>.cuts.png), a clip\'s thumbnail strip (footage/thumbs/<ID>.jpg), a cover.',
+  inputSchema: { file: z.string() },
+}, async ({ file }) => {
+  const f = inRepo(file);
+  if (!existsSync(f) || !/\.(png|jpe?g)$/i.test(f)) return text({ ok: false, error: 'not an image in the kit: ' + file });
+  return picture(f);
+});
+
+await server.connect(new StdioServerTransport());

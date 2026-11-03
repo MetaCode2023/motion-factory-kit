@@ -70,16 +70,13 @@ test('audio: cleaning lowers street noise and levelling evens a loud and a quiet
 
 const hasCv = spawnSync('python3', ['-c', 'import cv2, numpy']).status === 0;
 test('faces.py follows a face moving across a horizontal clip', { skip: !hasCv && 'OpenCV not installed' }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'mfk-face-'));
-  try {
-    const face = new URL('./fixtures/face.jpg', import.meta.url).pathname, clip = join(dir, 'c.mp4');
-    ff(['-f', 'lavfi', '-i', 'color=c=0x556070:s=1920x1080:d=3:r=15', '-loop', '1', '-i', face, '-filter_complex', "[1]scale=360:-1[f];[0][f]overlay=x='200+t*450':y=300:shortest=1", '-t', '3', '-pix_fmt', 'yuv420p', clip]);
-    const r = spawnSync('python3', [new URL('../tools/faces.py', import.meta.url).pathname, ffmpegPath, clip, '2'], { encoding: 'utf8' });
-    const { samples } = JSON.parse(r.stdout);
-    const xs = pickTrack(samples).map((p) => p.cx);
-    assert.ok(xs.length >= 4, 'found the face in most samples');
-    assert.ok(xs[xs.length - 1] - xs[0] > 0.4, 'and followed it left to right');
-  } finally { rmSync(dir, { recursive: true, force: true }); }
+  // the demo pack's walking interview: a drawn person crossing a 1280x720 frame
+  const clip = new URL('../examples/demo/footage/street-02.mp4', import.meta.url).pathname;
+  const r = spawnSync('python3', [new URL('../tools/faces.py', import.meta.url).pathname, ffmpegPath, clip, '2'], { encoding: 'utf8' });
+  const { samples } = JSON.parse(r.stdout);
+  const xs = pickTrack(samples).map((p) => p.cx);
+  assert.ok(xs.length >= samples.length * 0.8, 'found the face in most samples');
+  assert.ok(xs[xs.length - 1] - xs[0] > 0.4, 'and followed it left to right');
 });
 
 test('street-interview blocks draw, stay inside the frame and disappear when done', () => {

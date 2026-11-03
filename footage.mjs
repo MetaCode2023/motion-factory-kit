@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { writeDelivery } from './tools/delivery.mjs';
 import { applyFeedback, writeReview } from './tools/review.mjs';
 import { cropFilter, pickTrack } from './tools/reframe.mjs';
+import { readSidecar } from './tools/transcripts.mjs';
+import { checkPlan } from './tools/plans.mjs';
 import { audioOptions, cleanChain, loudness, speakerGains } from './tools/audio.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +30,8 @@ const opt = (n, d) => { const i = rest.indexOf('--' + n); return i >= 0 ? rest[i
 const VALUED = ['batch', 'formats', 'template', 'look', 'jobs', 'only', 'redo'];
 const positional = rest.filter((a, i) => !a.startsWith('--') && !VALUED.includes(rest[i - 1]?.slice(2)));
 
+// --json: the last line printed is one JSON object with the result (for agents, the MCP server, CI).
+const emit = (obj) => { if (flag('json')) console.log(JSON.stringify(obj)); };
 const FOOT = process.env.FOOTAGE_DIR ? resolve(process.env.FOOTAGE_DIR) : join(ROOT, 'footage');
 const INDEX = join(FOOT, 'index.json');
 const CACHE = join(ROOT, 'out', '.cache', 'footage');
@@ -56,7 +60,11 @@ const fileKey = (file) => { const st = statSync(file); return createHash('sha1')
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 
 // ---- transcription -------------------------------------------------------------------------------
+// Order: a transcript you already have next to the clip (clip.words.json / .srt / .vtt), ElevenLabs
+// (ELEVENLABS_API_KEY, with speakers), local faster-whisper, then the openai-whisper CLI.
 async function transcribe(file, key) {
+  const side = readSidecar(file);
+  if (side) return side;
   mkdirSync(CACHE, { recursive: true });
   const json = join(CACHE, key + '.words.json');
   if (existsSync(json)) return JSON.parse(readFileSync(json, 'utf8'));
@@ -73,7 +81,12 @@ async function transcribe(file, key) {
     const data = await res.json();
     words = (data.words || []).filter((w) => (w.type || 'word') === 'word' && String(w.text).trim()).map((w) => ({ w: String(w.text).trim(), s: w.start, e: w.end, ...(w.speaker_id != null ? { sp: String(w.speaker_id) } : {}) }));
     via = 'elevenlabs';
-  } else if (spawnSync('whisper', ['--help']).status === 0) {     // optional local fallback (openai-whisper)
+  }
+  if (!words && PY) {                                              // local, no key: faster-whisper
+    const r = spawnSync(PY, [join(ROOT, 'tools', 'transcribe.py'), wav], { encoding: 'utf8', maxBuffer: 1 << 27 });
+    try { const o = JSON.parse(r.stdout.trim().split('\n').pop()); if (o.words) { words = o.words; via = 'faster-whisper'; } } catch {}
+  }
+  if (!words && spawnSync('whisper', ['--help']).status === 0) {     // optional local fallback (openai-whisper)
     const dir = join(CACHE, key + '-whisper');
     mkdirSync(dir, { recursive: true });
     const r = spawnSync('whisper', [wav, '--model', process.env.WHISPER_MODEL || 'small', '--word_timestamps', 'True', '--output_format', 'json', '--output_dir', dir], { encoding: 'utf8' });
@@ -154,7 +167,7 @@ async function index(dir) {
   const ids = new Map(old.clips.map((c) => [c.path, c.id]));
   let next = Math.max(0, ...old.clips.map((c) => +c.id.slice(1))) + 1;
   mkdirSync(join(FOOT, 'thumbs'), { recursive: true });
-  if (!KEY) console.warn('  ! ELEVENLABS_API_KEY not set: clips get speech segments and thumbnails, but no transcripts.');
+  if (!KEY) console.warn('  ! ELEVENLABS_API_KEY not set: using transcripts next to the clips (.words.json/.srt/.vtt) or local faster-whisper if installed.');
   const clips = [];
   for (const file of files) {
     const path = relative(ROOT, file).split('\\').join('/');
@@ -182,7 +195,7 @@ async function index(dir) {
     'Write plans in `edits/` (see docs/EDITOR.md), then `node footage.mjs build edits/`.', '',
     ...clips.flatMap((c) => [
       `## ${c.id} · ${basename(c.path)}`,
-      `${fmt(c.duration)} · ${c.width}x${c.height} ${c.vertical ? 'vertical' : 'horizontal'} · ${c.fps ? c.fps + ' fps' : ''}${c.hasAudio ? '' : ' · no audio'}${c.faces ? ` · face found in ${Math.round(c.faceShare * 100)}% (auto-reframe)` : ''} · thumbs: \`${c.thumb}\``, '',
+      `${fmt(c.duration)} · ${c.width}x${c.height} ${c.vertical ? 'vertical' : 'horizontal'} · ${c.fps ? c.fps + ' fps' : ''}${c.hasAudio ? '' : ' · no audio'}${c.faces ? (c.faceShare ? ` · face found in ${Math.round(c.faceShare * 100)}% (auto-reframe)` : ' · no face (centre crop)') : ''} · thumbs: \`${c.thumb}\``, '',
       ...(c.sentences.length
         ? c.sentences.map((s) => `- s${s.n} [${s.s.toFixed(2)}–${s.e.toFixed(2)}]${s.speaker != null ? ` ${speakerName(c, s.speaker)}:` : ''} ${c.words.slice(s.from, s.to + 1).map((w) => (w.filler ? `(${w.w})` : w.w)).join(' ')}`)
         : c.speech.length ? [`- speech at: ${c.speech.map(([a, b]) => `${a.toFixed(1)}–${b.toFixed(1)}`).join(', ')} (no transcript)`] : ['- (no speech: B-roll)']),
@@ -191,12 +204,24 @@ async function index(dir) {
   ];
   writeFileSync(join(FOOT, 'INDEX.md'), md.join('\n'));
   console.log(`\n  -> ${relative(ROOT, join(FOOT, 'INDEX.md'))} (${clips.length} clips, ${fmt(total)})`);
+  emit({ ok: true, index: relative(ROOT, join(FOOT, 'INDEX.md')), clips: clips.map(clipSummary) });
 }
 
 // Speakers as A, B, C in order of first appearance in the clip (the host is usually A: they ask first).
+// Labels a transcript already gives (a sidecar's "A", "Host", "Sam") are shown as they are.
 function speakerName(clip, sp) {
+  if (!/^(speaker[_ ]?)?\d+$/i.test(String(sp))) return String(sp);
   const order = [...new Set(clip.words.filter((w) => w.sp != null).map((w) => w.sp))];
   return String.fromCharCode(65 + Math.max(0, order.indexOf(sp)));
+}
+
+// What an agent needs to plan edits for a clip, without the raw word list.
+export function clipSummary(c) {
+  return { id: c.id, file: c.path, duration: +c.duration.toFixed(2), width: c.width, height: c.height, vertical: c.vertical, audio: c.hasAudio,
+    transcript: c.transcript, thumbs: c.thumb, face: c.faces ? c.faceShare : null,
+    sentences: c.sentences.map((x) => ({ n: x.n, start: +x.s.toFixed(2), end: +x.e.toFixed(2), ...(x.speaker != null ? { speaker: speakerName(c, x.speaker) } : {}),
+      text: c.words.slice(x.from, x.to + 1).map((w) => (w.filler ? `(${w.w})` : w.w)).join(' ') })),
+    ...(c.speech.length ? { speech: c.speech } : {}) };
 }
 
 // ---- cut -----------------------------------------------------------------------------------------
@@ -235,7 +260,11 @@ function rangesFor(seg, clip, plan) {
 async function cut(planFile, { quiet = false } = {}) {
   const clips = loadIndex();
   const plan = JSON.parse(readFileSync(planFile, 'utf8'));
-  const name = plan.name || basename(planFile, '.json');
+  plan.name ||= basename(planFile, '.json');
+  const name = plan.name;
+  const chk = checkPlan(plan, clips);
+  if (!chk.ok) throw new Error(`${name}: ${chk.errors.join('; ')}`);
+  if (!quiet) for (const w of chk.warnings) console.warn(`  ! ${name}: ${w}`);
   const dir = join(ROOT, 'out', 'edits', name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, 'parts'), { recursive: true });
@@ -345,7 +374,7 @@ async function build(target) {
   if (only) {
     const nameOf = (pf) => { try { return JSON.parse(readFileSync(pf, 'utf8')).name || basename(pf, '.json'); } catch { return basename(pf, '.json'); } };
     plans = plans.filter((pf) => only.includes(nameOf(pf)));
-    if (!plans.length) { console.log('  nothing to rebuild.'); return; }
+    if (!plans.length) { console.log('  nothing to rebuild.'); emit({ ok: true, batch, outdir: relative(ROOT, outdir), built: [], failed: [] }); return; }
   }
   mkdirSync(outdir, { recursive: true });
   const template = resolve(opt('template', join(ROOT, 'scenes', 'templates', 'raw-edit.html')));
@@ -378,17 +407,37 @@ async function build(target) {
   }
   const page = writeReview(outdir);
   console.log(`\n${results.filter((r) => r.ok).length}/${results.length} ads built -> ${relative(ROOT, outdir)}  (sheet: ${relative(ROOT, sheet)}, review page: ${relative(ROOT, page)})`);
+  emit({ ok: results.every((r) => r.ok), batch, outdir: relative(ROOT, outdir), built: results.filter((r) => r.ok).map((r) => r.name),
+    failed: results.filter((r) => !r.ok).map((r) => ({ name: r.name, error: r.error || 'render failed' })),
+    delivery: relative(ROOT, sheet), review: relative(ROOT, page), files: readCSV(sheet) });
+}
+
+function readCSV(file) {
+  const rows = []; let row = [], cur = '', q = false; const text = readFileSync(file, 'utf8');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true; else if (c === ',') { row.push(cur); cur = ''; } else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; } else if (c !== '\r') cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  const [head, ...body] = rows;
+  return body.map((r) => Object.fromEntries(head.map((h, i) => [h, r[i] ?? ''])));
 }
 
 if (cmd === 'index') await index(positional[0]);
-else if (cmd === 'cut') { for (const p of positional) await cut(p); }
+else if (cmd === 'cut') {
+  const out = [];
+  for (const p of positional) { const c = await cut(p); out.push({ name: c.name, duration: c.data.duration, aroll: relative(ROOT, c.data.aroll), segments: c.data.segments }); }
+  emit({ ok: true, cuts: out });
+}
 else if (cmd === 'build') await build(positional[0] || join(ROOT, 'edits'));
-else if (cmd === 'review') { const d = resolve(positional[0] || join(ROOT, 'out', 'delivery')); console.log(`  -> ${relative(ROOT, writeReview(d))}`); }
+else if (cmd === 'review') { const d = resolve(positional[0] || join(ROOT, 'out', 'delivery')); const page = writeReview(d); console.log(`  -> ${relative(ROOT, page)}`); emit({ ok: true, review: relative(ROOT, page) }); }
 else if (cmd === 'feedback') {
   const f = resolve(positional[0] || ''), fb = JSON.parse(readFileSync(f, 'utf8'));
   const d = join(ROOT, 'out', fb.batch || basename(dirname(f)));
   const r = applyFeedback(d, fb);
   console.log(`  ${r.approved.length} approved (copied to ${relative(ROOT, join(d, 'approved'))}), ${r.redo.length} need changes -> ${relative(ROOT, join(d, 'FEEDBACK.md'))}`);
+  emit({ ok: true, batch: basename(d), approved: r.approved, redo: r.redo, feedback: relative(ROOT, join(d, 'FEEDBACK.md')), approvedDir: relative(ROOT, join(d, 'approved')) });
 }
 else {
   console.log('usage:\n  node footage.mjs index [footage/raw]\n  node footage.mjs cut edits/ad-01.json\n  node footage.mjs build edits/ [--variants] [--formats 4:5,1:1,16:9] [--batch name] [--fast] [--only a,b] [--redo out/<batch>/review.json]\n  node footage.mjs review out/<batch>          # (re)write the approval page\n  node footage.mjs feedback out/<batch>/review.json   # FEEDBACK.md + approved/ from the exported decisions');

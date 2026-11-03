@@ -7,6 +7,8 @@
 
 ## Start here
 - [CLAUDE.md](CLAUDE.md): the full workflow for a coding agent (works for any agent)
+- [docs/MCP.md](docs/MCP.md): MCP server (mcp/server.mjs) exposing every step as tools; .mcp.json wires it up
+- [examples/demo](examples/demo/README.md): `npm run demo`, the footage editor end to end with no API keys
 - [docs/MODULES.md](docs/MODULES.md): comparison checklist and the pieces that lift out on their own
 - [README.md](README.md): overview and setup
 
@@ -17,6 +19,8 @@
 - [tools/faces.py](tools/faces.py), [tools/reframe.mjs](tools/reframe.mjs): face track and 9:16 crop that follows it (standalone)
 - [tools/review.mjs](tools/review.mjs): client approval page and feedback -> re-cut list (standalone)
 - [tools/delivery.mjs](tools/delivery.mjs): delivery sheet for a media buyer (standalone)
+- [tools/transcripts.mjs](tools/transcripts.mjs), [tools/transcribe.py](tools/transcribe.py): transcripts from .words.json/.srt/.vtt or local faster-whisper (standalone)
+- [tools/plans.mjs](tools/plans.mjs): validate an edit plan against the footage index (standalone)
 
 ## Building videos
 - [docs/TEMPLATES.md](docs/TEMPLATES.md): 12 data-driven ad and organic formats

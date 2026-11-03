@@ -18,9 +18,26 @@ Ask of your current setup, and grab the matching piece where the answer is no:
 | Let a client approve / flag each ad and hook, then re-cut only the flagged ones? | `tools/review.mjs` + `footage.mjs feedback` / `build --redo` |
 | Hand a media buyer a sheet of every file, size, hook and check status? | `tools/delivery.mjs` |
 | Self-check every render (sound, captions, hook on frame 0, text under the app buttons)? | `make.mjs` report + `score.py` |
+| Let an agent drive the whole thing as tools (and see the frames it made)? | `mcp/server.mjs` ([MCP.md](MCP.md)) |
+| Use subtitles you already have (.srt/.vtt) or a local model instead of a paid speech-to-text key? | `tools/transcripts.mjs`, `tools/transcribe.py` |
+| Check an edit plan against the footage before spending a render on it? | `tools/plans.mjs` |
 | Make one ad per spreadsheet row with hook variants and every size? | `batch-ads.mjs` + any template |
 
 ## The pieces
+
+### MCP server and JSON output
+`mcp/server.mjs` (needs `@modelcontextprotocol/sdk`): ten tools covering index → plan → build → review,
+plus `render_still` / `look_at` that return pictures. It shells out to the CLIs with `--json`, so the
+same results are scriptable without MCP. See [MCP.md](MCP.md).
+
+### Transcripts without a key
+`tools/transcripts.mjs` (standalone): `readSidecar(clip)` reads `clip.words.json`, `.srt` or `.vtt`;
+`parseCues` / `wordsFromCues` turn any subtitles into word timings. `tools/transcribe.py`: faster-whisper
+with word timestamps as JSON.
+
+### Plan checker
+`tools/plans.mjs` (standalone): `checkPlan(plan, clips)` returns errors, warnings and the estimated
+length, so an agent can fix a plan before rendering.
 
 ### Word-exact cutting from a transcript
 `footage.mjs` → `transcribe()`, `sentencesOf()`, `rangesFor()`, `cut()`.
@@ -69,6 +86,6 @@ the kit's renderer (`make.mjs`); the layouts and timings are the part worth copy
 
 ## Trying it without your footage
 
-`npm install`, then `npm test` (needs `pip install opencv-python-headless` for the face test).
-`node make.mjs scenes/examples/street-interview.html` builds the overlay demo; any template builds with
-labelled placeholders until clips are added.
+`npm install && npm run demo`: bundled synthetic street-poll footage (`examples/demo`) → finished ads,
+`DELIVERY.csv` and `review.html` in `out/demo/`, no keys. `npm test` runs the checks (the face test
+needs `pip install opencv-python-headless`). Any template builds with labelled placeholders until clips are added.

@@ -37,7 +37,17 @@ With the key, the transcript also says **who is talking** (`A:` / `B:` per sente
 interview A is usually the host, since they speak first). Horizontal clips also get a **face track**
 (needs `pip install opencv-python-headless`; the index notes "face found in 92% (auto-reframe)").
 
-Without a key you still get thumbnails and "speech at 2.1–6.4s" ranges (or install the free
+**No key?** Transcripts also come from:
+- a file next to the clip with the same name: `clip.words.json` (exact word timings, optional speakers:
+  `[{ "w": "Hi", "s": 0.42, "e": 0.61, "sp": "A" }]`) or `clip.srt` / `clip.vtt` (subtitles from a camera app,
+  CapCut, Premiere, Descript...; word timing is estimated inside each line, `<v Name>` tags become speakers);
+- local **faster-whisper** (`pip install faster-whisper`; `WHISPER_MODEL=base|small|medium`), then the
+  openai-whisper CLI. Neither knows who is talking; add speakers with a sidecar if you need them.
+
+Every plan is checked against the index before it's cut (unknown clips, missing sentences, made-up
+tallies stop it; a bad length warns). Add `--json` to any command for a machine-readable last line.
+
+Without any transcript you still get thumbnails and "speech at 2.1–6.4s" ranges (or install the free
 `openai-whisper` and it's used automatically). Transcripts are cached; re-indexing only does new clips.
 
 ## 3. Plan the edits (Claude's job)

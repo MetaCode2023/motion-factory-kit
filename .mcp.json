@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "motion-factory": {
+      "command": "node",
+      "args": [
+        "mcp/server.mjs"
+      ]
+    }
+  }
+}

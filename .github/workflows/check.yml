@@ -28,6 +28,8 @@ jobs:
           node make.mjs scenes/examples/ugc-ad.html --variants --fast
           node render.mjs scenes/examples/blocks-gallery.html --sheet
           node make.mjs scenes/examples/street-interview.html --fast
+      - name: Footage editor demo (no keys)
+        run: npm run demo
       - name: Every template renders
         run: for f in scenes/templates/*.html; do node render.mjs "$f" --still 2 --out "out/templates/$(basename "$f" .html).mp4" || exit 1; done
       - name: Spreadsheet batch
@@ -43,4 +45,5 @@ jobs:
             out/*.mp4
             out/*.png
             out/*.report.md
+            out/demo/
           retention-days: 14

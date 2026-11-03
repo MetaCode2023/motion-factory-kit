@@ -24,6 +24,7 @@
 // Narration uses ElevenLabs when ELEVENLABS_API_KEY is set (voice: ELEVENLABS_VOICE_ID or --voice).
 // Each line is cached in out/.cache, so re-running after a visual change costs nothing.
 import ffmpegPath from 'ffmpeg-static';
+import { readSidecar } from './tools/transcripts.mjs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -82,13 +83,20 @@ let V = await readV();
 // --variants: run this script once per variant, then stop.
 if (flag('variants')) {
   const n = V.variants || 1;
-  const pass = args.filter((a, i) => a !== '--variants' && a !== scene && !(args[i - 1] === '--out') && a !== '--out');   // --formats etc. pass through
+  const pass = args.filter((a, i) => a !== '--variants' && a !== '--json' && a !== scene && !(args[i - 1] === '--out') && a !== '--out');   // --formats etc. pass through
   let failed = 0;
   for (let i = 0; i < n; i++) {
     if (n > 1) console.log(`\n=== variant ${i + 1}/${n} ===`);
     // A scene with a single version keeps its plain name (no -v1).
-    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), scene, ...(n > 1 ? ['--variant', String(i)] : []), ...pass], { stdio: 'inherit' });
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), scene, ...(n > 1 ? ['--variant', String(i)] : []), ...pass], { stdio: flag('json') ? ['inherit', 'pipe', 'inherit'] : 'inherit', encoding: 'utf8' });
+    if (flag('json')) process.stderr.write(r.stdout || '');
     if (r.status !== 0) failed++;
+  }
+  if (flag('json')) {   // one JSON line with every variant's result (the logs went to stderr)
+    const base = opt('name') || (DATA && DATA.name) || basename(scene, extname(scene));
+    const results = Array.from({ length: n }, (_, i) => join(resolve(opt('outdir', 'out')), `${base}${n > 1 ? `-v${i + 1}` : ''}.result.json`))
+      .map((f) => (existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : { file: f, error: 'not built' }));
+    console.log(JSON.stringify({ ok: !failed, variants: results }));
   }
   process.exit(failed ? 1 : 0);
 }
@@ -217,11 +225,11 @@ async function transcribe(m) {
 const mediaWords = [];
 for (const m of allMedia.filter((x) => x.captions)) {
   let ws = null;
-  const side = m.file.replace(/\.[^.\/]+$/, '.words.json');   // word timings written by footage.mjs
+  const side = m.missing ? null : readSidecar(m.file);   // word timings written by footage.mjs, or your .srt/.vtt
   if (m.missing) { if (m.transcript) ws = M_estimate(m.transcript); }
-  else if (existsSync(side)) {
-    ws = JSON.parse(readFileSync(side, 'utf8')).map((w) => ({ w: w.w, s: (w.s - (m.trim || 0)) / (m.speed || 1), e: (w.e - (m.trim || 0)) / (m.speed || 1) })).filter((w) => w.s >= 0);
-    console.log(`  captions: ${ws.length} words from ${basename(side)}`);
+  else if (side) {
+    ws = side.words.map((w) => ({ w: w.w, s: (w.s - (m.trim || 0)) / (m.speed || 1), e: (w.e - (m.trim || 0)) / (m.speed || 1) })).filter((w) => w.s >= 0);
+    console.log(`  captions: ${ws.length} words from ${side.via === 'sidecar' ? 'the .words.json next to the clip' : 'the subtitles next to the clip'}`);
   } else if (KEY && m.hasAudio) { ws = await transcribe(m); console.log(`  captions: transcribed ${m.src} (${ws.length} words)`); }
   else if (m.transcript) { ws = spreadWords(m.transcript, Math.max(0.5, (seconds(m.file) - (m.trim || 0)) / (m.speed || 1))); warn(`captions for ${m.src} use estimated timing (set ELEVENLABS_API_KEY for exact word timing).`); }
   else warn(`captions for ${m.src} need ELEVENLABS_API_KEY (or a transcript: '...' option on M.video).`);
@@ -434,6 +442,11 @@ const report = [
 ];
 const reportFile = final.replace(/\.mp4$/i, '.report.md');
 writeFileSync(reportFile, report.join('\n'));
+// Machine-readable result next to the video (agents, the MCP server, CI). --json also prints it.
+const result = { ok: !failed.length, name, video: rel(final), files: [...made, ...kit].map(rel), report: rel(reportFile), cuts: rel(cutsPng),
+  length: +D.toFixed(2), checks: checks.map(([ok, area, text]) => ({ ok, area, text })) };
+writeFileSync(final.replace(/\.mp4$/i, '.result.json'), JSON.stringify(result, null, 1));
 console.log(`\n${name}: done -> ${rel(final)}`);
 console.log(failed.length ? `Check: ${failed.length} to fix or confirm (see ${rel(reportFile)}):` : `Check: all passed (${rel(reportFile)})`);
 for (const [, area, text] of failed) console.log(`  - ${area}: ${text}`);
+if (flag('json')) console.log(JSON.stringify(result));

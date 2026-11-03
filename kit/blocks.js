@@ -603,10 +603,10 @@
     ctx.restore();
     let lx = x + 44;
     opts.forEach((o, i) => {
-      const pct = Math.round((100 * o.value) / sum * p);
+      const pct = Math.round((100 * o.value) / sum);   // the bar grows; the numbers are final from the start
       const seg = (w - 88) * (o.value / sum);
       if (seg > 150) M.text(ctx, `${pct}%`, lx + 26, barY + barH * 0.66, { font: font(800, 54, F.display), color: '#FFFFFF' });
-      M.text(ctx, `${o.label} · ${Math.round(o.value * p)}`, lx + (i ? 0 : 4), barY + barH + 66, { font: font(700, 38), color: i ? 'rgba(255,255,255,0.7)' : '#FFFFFF', maxWidth: Math.max(160, seg) });
+      M.text(ctx, `${o.label} · ${o.value}`, lx + (i ? 0 : 4), barY + barH + 66, { font: font(700, 38), color: i ? 'rgba(255,255,255,0.7)' : '#FFFFFF', maxWidth: Math.max(160, seg) });
       lx += seg;
     });
     ctx.restore();

@@ -1,0 +1,12 @@
+{
+  "name": "morning",
+  "angle": "habit: what people drink every morning (creator-native look)",
+  "hooks": ["What do strangers drink every morning?"],
+  "hookStyle": "dark",
+  "captions": "word",
+  "segments": [
+    { "clip": "C03", "sentence": 0, "question": true },
+    { "clip": "C03", "sentences": [1, 3] }
+  ],
+  "cta": "Find a store"
+}
