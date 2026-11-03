@@ -15,11 +15,17 @@ Exact timing, no timeline editor.
 
 **Make lots of ads**
 - **Raw-footage editor** (`footage.mjs`): drop a client's Drive folder of footage in, get dozens of finished ads out.
-  Clips are transcribed, Claude picks the best takes and writes an edit plan per ad, and the kit cuts them
-  word-exact (no "um"s, no dead air, punch-in jump cuts, reframed to vertical), adds hooks, captions, B-roll,
-  product cards and CTAs, and writes a delivery sheet for the media buyer. [docs/EDITOR.md](docs/EDITOR.md)
-- **9 proven ad templates**: 3 reasons, us vs them, before/after, testimonial stack, problem/solution,
-  listicle, unboxing, green screen, raw edit. [docs/TEMPLATES.md](docs/TEMPLATES.md)
+  Clips are transcribed (with who's talking), Claude picks the best takes and writes an edit plan per ad, and the
+  kit cuts them word-exact (no "um"s, no dead air, punch-in jump cuts), adds hooks, captions, B-roll, product cards
+  and CTAs, and writes a delivery sheet for the media buyer. [docs/EDITOR.md](docs/EDITOR.md)
+- **Street-interview ready**: the host's question as a card, name lower-thirds, "7/50" counters and a poll bar,
+  placed from the edit plan. Street audio cleaned (wind, traffic, harsh "s") and every speaker levelled.
+  Horizontal footage **follows the face** into vertical automatically.
+- **Client review loop**: every batch gets a review page (approve / needs changes / notes per ad and hook);
+  the exported feedback re-cuts **only** the flagged ads and sorts approved files for the media buyer.
+- **12 proven ad templates**: 3 reasons, us vs them, before/after, testimonial stack, problem/solution,
+  listicle, unboxing, green screen, raw edit, plus creator-native formats: rapid list (pictures swap on
+  every spoken item), title explainer (creator over the thing, title pill), meme caption. [docs/TEMPLATES.md](docs/TEMPLATES.md)
 - **Spreadsheet batches** (`batch-ads.mjs`): one template + one CSV = a folder of ads, with a delivery sheet.
 - **Hook variants**: write three hooks, get three MP4s. **Every size**: `--formats 4:5,1:1,16:9`.
 - **Other languages**: translated rows, multilingual narration, dubbed creator clips. [docs/LANGUAGES.md](docs/LANGUAGES.md)
@@ -29,10 +35,10 @@ Exact timing, no timeline editor.
   camera punches, zoom/whip/circle/wipe/glitch/flash transitions, colour grades, film grain, motion blur.
 - **Cuts on the beat**: the music's beats are detected and handed to the scene (`M.snap`, `M.onBeat`), and
   narrated pieces can time themselves from the real voiceover (`M.cues`).
-- **26 building blocks** (`kit/blocks.js`): comment-reply sticker, TikTok text, product card, reviews, CTA,
+- **32 building blocks** (`kit/blocks.js`): comment-reply sticker, TikTok text, product card, reviews, CTA,
   split screen, picture-in-picture, social post, browser window, emoji stickers and reactions, notifications,
-  chat, checklists, stats, charts, phone frame, end card. [docs/BLOCKS.md](docs/BLOCKS.md)
-- **Six caption styles** (pill, bold, box, minimal, karaoke, one-word pop) with keyword emoji.
+  chat, checklists, stats, charts, phone frame, end card, street-interview overlays, photo panel, meme card. [docs/BLOCKS.md](docs/BLOCKS.md)
+- **Seven caption styles** (pill, bold, box, minimal, karaoke, one-word pop, creator-native word) with keyword emoji.
 - **Green screen**: creators cut out of green/blue backgrounds and placed over posts, pages or photos.
 - **Higgsfield-ready** (`M.video`): any clip, any size or frame rate; its audio is mixed and its speech becomes
   captions. Or let Claude generate the footage through the Higgsfield connector. [docs/HIGGSFIELD.md](docs/HIGGSFIELD.md)
@@ -48,7 +54,8 @@ Exact timing, no timeline editor.
 ## Setup (5 minutes)
 
 You need [Node.js 18+](https://nodejs.org), Python 3 for the checker, and
-[Claude Code](https://claude.com/claude-code).
+[Claude Code](https://claude.com/claude-code). For automatic face-tracking on raw footage:
+`pip install opencv-python-headless`.
 
 ```bash
 git clone https://github.com/MetaCode2023/motion-factory-kit.git
@@ -92,7 +99,9 @@ node make.mjs scenes/mine/x.html --fast          # skip the picture score for qu
 node make.mjs scenes/mine/x.html --voice-only    # make narration first; prints each line's timing
 node render.mjs scenes/mine/x.html --still 6.5   # one frame as a PNG
 node footage.mjs index                           # raw footage -> transcripts + thumbnails (footage/INDEX.md)
-node footage.mjs build edits/ --variants         # every edit plan -> finished ads + DELIVERY.csv
+node footage.mjs build edits/ --variants         # every edit plan -> finished ads + DELIVERY.csv + review.html
+node footage.mjs feedback out/delivery/review.json   # client decisions -> FEEDBACK.md + approved/
+node footage.mjs build edits/ --redo out/delivery/review.json   # re-cut only the flagged ads
 node batch-ads.mjs scenes/templates/three-reasons.html data/example-ads.csv   # one ad per row
 python score.py out/x.mp4                        # quality check
 ```

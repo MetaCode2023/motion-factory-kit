@@ -398,9 +398,11 @@
   //   'minimal'  clean white text with a soft shadow, spoken word underlined
   //   'karaoke'  the whole chunk faint, words light up as they're spoken
   //   'pop'      one word at a time, huge, punching in
+  //   'word'     one word at a time as spoken (case and commas kept), small white with a soft shadow,
+  //              usually mid-frame (position: 0.5-0.62): the creator-native Reels look
   // Other options: uppercase, position (0-1 down the frame), size (scale), emoji: { word: '💰' } (adds a
   // sticker when that word is spoken; needs kit/blocks.js).
-  M.CAPTION_STYLES = ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop'];
+  M.CAPTION_STYLES = ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop', 'word'];
   M.drawCaptions = (ctx, t, chunks, { width, height }, opts = {}) => {
     const c = chunks.find((k) => t >= k.s && t < k.e);
     if (!c) return;
@@ -409,7 +411,7 @@
     const fam = (BR.fonts && BR.fonts.display) || '"Plus Jakarta Sans"';
     const accent = opts.accent || (BR.colors && BR.colors.accent) || '#FC5C2B';
     const upper = opts.uppercase ?? (style === 'bold' || style === 'pop');
-    const base = { pill: 0.062, bold: 0.082, box: 0.06, minimal: 0.058, karaoke: 0.066, pop: 0.12 }[style] || 0.062;
+    const base = { pill: 0.062, bold: 0.082, box: 0.06, minimal: 0.058, karaoke: 0.066, pop: 0.12, word: 0.05 }[style] || 0.062;
     let size = Math.round(width * base * (opts.size || 1));
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -430,7 +432,8 @@
     const cy = height * (opts.position ?? (height > width ? 0.705 : 0.86));
     const k = M.prog(t, c.s, 0.18, M.ease.outBack);
     ctx.translate(width / 2, cy);
-    if (style !== 'pop') ctx.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
+    if (style === 'word') ctx.globalAlpha = Math.min(1, M.prog(t, c.s, 0.06));
+    else if (style !== 'pop') ctx.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
     const padX = size * 0.45, padY = size * 0.32;
     if (style === 'pill') {
       M.roundRect(ctx, -total / 2 - padX, -size / 2 - padY, total + 2 * padX, size + 2 * padY, size * 0.3);
@@ -455,6 +458,9 @@
         ctx.fillStyle = style === 'pop' ? (chunks.indexOf(c) % 3 === 0 ? accent : '#FFFFFF') : active ? accent : '#FFFFFF';
       } else if (style === 'box') {
         ctx.fillStyle = active ? accent : '#111111';
+      } else if (style === 'word') {
+        ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = size * 0.4; ctx.shadowOffsetY = size * 0.05;
+        ctx.fillStyle = '#FFFFFF';
       } else if (style === 'minimal') {
         ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = size * 0.35; ctx.shadowOffsetY = size * 0.06;
         ctx.fillStyle = '#FFFFFF';
@@ -580,7 +586,7 @@
     // Captions sit in the band just above the TikTok caption area, so content stays above it.
     if (captions && height > width) M.safe.bottom = Math.min(M.safe.bottom, Math.round(height * 0.65));
     const capOpts = { ...((window.BRAND || {}).captions || {}), ...(typeof captions === 'object' && captions ? captions : {}) };
-    const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice), capOpts.style === 'pop' ? 1 : (capOpts.maxWords || 3)) : [];
+    const capChunks = captions ? M.captionChunks(window.CAPTIONS || M.estimateWords(voice), capOpts.style === 'pop' || capOpts.style === 'word' ? 1 : (capOpts.maxWords || 3)) : [];
 
     window.VIDEO = { width, height, fps, duration, cuts, preset, voice, sfx, music, captions: !!captions, look, motionBlur, shutter, post, cover, voiceId, media: M._media, variants: M._variants, variant: M.variant };
     window.draw = (t) => {

@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Street interview overlays</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// The street-interview overlays on a stand-in background (out-of-focus city lights). With real footage
+// these come from an edit plan: see docs/EDITOR.md "Street interviews". Names and numbers here are
+// examples, labelled as such.
+M.setup({
+  width: 1080, height: 1920, fps: 30, duration: 12, background: '#0b0c10',
+  look: 'punchy', music: { track: 'calm', volume: 0.18 },
+  sfx: [{ at: 0, name: 'pop', volume: 0.4 }, { at: 2.6, name: 'whoosh', volume: 0.3 }, { at: 5.2, name: 'whoosh', volume: 0.3 }, { at: 8.0, name: 'success', volume: 0.35 }, { at: 10.3, name: 'tap', volume: 0.45 }],
+  cuts: [2.6, 5.2, 8.0], post: { caption: 'Street interview overlays, drawn in code.', hashtags: ['streetinterview', 'ugc'] },
+  draw,
+});
+
+// Stand-in "footage": bokeh lights drifting, a slow push-in, a cut every few seconds.
+function street(ctx, t, seed) {
+  const g = ctx.createLinearGradient(0, 0, 0, 1920);
+  g.addColorStop(0, '#1a2233'); g.addColorStop(1, '#0d0f15'); ctx.fillStyle = g; ctx.fillRect(0, 0, 1080, 1920);
+  let r = seed * 977 + 13;
+  const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * 1300 - 110 + Math.sin(t * 0.4 + i) * 20, y = rnd() * 1500 + 100, rad = 30 + rnd() * 110;
+    const hue = [28, 40, 200, 340, 50][i % 5];
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    rg.addColorStop(0, `hsla(${hue},90%,65%,${0.22 + rnd() * 0.2})`); rg.addColorStop(1, `hsla(${hue},90%,55%,0)`);
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  // a soft silhouette where the person stands
+  ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.filter = 'blur(18px)';
+  ctx.beginPath(); ctx.ellipse(540, 760, 150, 185, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(540, 1420, 360, 520, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+
+function draw(ctx, t) {
+  const shot = t < 2.6 ? 0 : t < 5.2 ? 1 : t < 8 ? 2 : 3;
+  const end = FX.camera(ctx, t, { punch: [2.6, 5.2, 8.0] });
+  street(ctx, t, shot + 1);
+  end();
+  FX.vignette(ctx, { strength: 0.35 });
+
+  B.nativeText(ctx, t, { at: 0, until: 2.6, text: 'We asked 50 strangers one question', y: 300, style: 'dark' });
+  B.counter(ctx, t, { at: 0.3, until: 2.6, mode: 'big', total: 50, label: 'people asked', y: 980 });
+
+  const q = B.questionCard(ctx, t, { at: 2.6, until: 8.0, text: 'Would you pay $8 for a coffee?', label: 'We asked' });
+  B.counter(ctx, t, { at: 2.6, until: 5.2, n: 7, total: 50, y: q.bottom + 24 });
+  B.counter(ctx, t, { at: 5.2, until: 8.0, n: 23, total: 50, y: q.bottom + 24 });
+  B.lowerThird(ctx, t, { at: 2.9, until: 5.0, name: 'Jordan', detail: 'Example name' });
+  B.lowerThird(ctx, t, { at: 5.5, until: 7.8, name: 'Priya', detail: 'Example name' });
+
+  B.tally(ctx, t, { at: 8.0, until: 10.2, title: 'Would you pay $8?', options: [{ label: 'Yes', value: 31 }, { label: 'No', value: 19 }], y: 700 });
+  B.ctaButton(ctx, t, { at: 10.2, text: 'Try it', y: 1020, tapAt: 11.2 });
+  M.text(ctx, 'EXAMPLE OVERLAYS · STAND-IN FOOTAGE', 540, 1380, { font: '700 26px "JetBrains Mono"', color: 'rgba(255,255,255,0.45)', align: 'center' });
+}
+</script>
+</body>
+</html>

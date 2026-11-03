@@ -70,7 +70,9 @@
   // ===================================================================================== UGC / TikTok
 
   // TikTok-style text. style 'box' = each line on its own rounded label (the classic look),
-  // 'outline' = white text with a dark stroke, 'plain' = brand text. x is the centre.
+  // 'dark' / 'blue' = the same label in black or blue with white text (Reels title pills),
+  // 'outline' = white text with a dark stroke, 'shadow' = white text with a soft shadow (meme captions),
+  // 'plain' = brand text. x is the centre.
   //   B.nativeText(ctx, t, { at: 0, text: 'POV: you found the fix', y: 330 })
   B.nativeText = (ctx, t, { at = 0, until = Infinity, text, x = 540, y = 320, size = 64, w = 860, style = 'box', bg = '#FFFFFF', color, weight = 800 } = {}) => {
     const a = Math.min(appear(t, at, 0.12), clamp((until - t) / 0.12));
@@ -78,6 +80,7 @@
     const f = font(weight, size, F.display);
     const ls = balanced(ctx, text, w, f), lh = size * 1.22;
     const k = at <= 0 ? 1 : ease.outBack(appear(t, at, 0.3));
+    if (style === 'dark' || style === 'blue') { bg = style === 'dark' ? '#0E0E10' : '#1E8BF0'; color = color || '#FFFFFF'; style = 'box'; }
     ctx.save();
     ctx.globalAlpha *= a;
     around(ctx, x, y + (ls.length * lh) / 2, 0.85 + 0.15 * k);
@@ -87,6 +90,9 @@
       if (style === 'box') {
         ctx.fillStyle = bg; M.roundRect(ctx, x - tw / 2 - size * 0.32, cy - lh / 2 - 2, tw + size * 0.64, lh + 4, size * 0.22); ctx.fill();
         ctx.fillStyle = color || '#111111'; ctx.fillText(l, x, cy + size * 0.04);
+      } else if (style === 'shadow') {
+        ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = size * 0.35; ctx.shadowOffsetY = size * 0.05;
+        ctx.fillStyle = color || '#FFFFFF'; ctx.fillText(l, x, cy); ctx.shadowColor = 'transparent';
       } else if (style === 'outline') {
         ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.16; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.strokeText(l, x, cy);
         ctx.fillStyle = color || '#FFFFFF'; ctx.fillText(l, x, cy);
@@ -486,6 +492,166 @@
     if (cta) B.ctaButton(ctx, t, { at: at + 0.6, text: cta, x: w / 2, y: cy + 470 });
     if (url) M.text(ctx, url, w / 2, cy + (cta ? 720 : 520), { font: font(600, 44, F.mono), color: C.muted, align: 'center', alpha: appear(t, at + 0.8, 0.3) });
     ctx.restore();
+  };
+
+  // ===================================================================================== street interviews
+  // Overlays for "host stops strangers and asks them something" footage. footage.mjs places them from
+  // the edit plan (docs/EDITOR.md "Street interviews"); use them by hand in any scene too.
+
+  // The question the host asked, pinned at the top while people answer. label is the small chip above it.
+  //   B.questionCard(ctx, t, { at: 0.4, until: 9, text: 'What would you pay for this?', label: 'We asked' })
+  B.questionCard = (ctx, t, { at = 0, until = Infinity, text = '', label = 'We asked', x = 540, y = 250, w = 900, size = 56, light = true, accent = C.accent } = {}) => {
+    const a = Math.min(appear(t, at, 0.18), clamp((until - t) / 0.18));
+    if (a <= 0 || !text) return { bottom: y };
+    const f = font(800, size, F.display), lh = size * 1.18;
+    const tl = balanced(ctx, String(text), w - 96, f);
+    const chip = label ? 62 : 0, h = 44 + chip + tl.length * lh + 34;
+    const k = at <= 0 ? 1 : ease.outBack(appear(t, at, 0.4));
+    ctx.save();
+    ctx.globalAlpha *= a;
+    around(ctx, x, y + h / 2, 0.86 + 0.14 * k);
+    ctx.translate(0, (1 - k) * -30);
+    shadow(ctx, 34, 12, 0.32);
+    ctx.fillStyle = light ? '#FFFFFF' : C.surface; M.roundRect(ctx, x - w / 2, y, w, h, 30); ctx.fill();
+    noShadow(ctx);
+    if (label) {
+      const lf = font(800, 30), lw = (ctx.font = lf, ctx.measureText(label.toUpperCase()).width) + 44;
+      ctx.fillStyle = accent; M.roundRect(ctx, x - w / 2 + 40, y + 34, lw, 48, 24); ctx.fill();
+      M.text(ctx, label.toUpperCase(), x - w / 2 + 62, y + 69, { font: lf, color: '#FFFFFF' });
+    }
+    tl.forEach((l, i) => M.text(ctx, l, x - w / 2 + 48, y + 44 + chip + size * 0.92 + i * lh, { font: f, color: light ? '#111111' : C.ink }));
+    ctx.restore();
+    return { bottom: y + h };
+  };
+
+  // Name lower-third: an accent bar that wipes in, the name, and an optional detail line.
+  // Only put names and details people gave you (on camera or on their release); never make them up.
+  //   B.lowerThird(ctx, t, { at: 2.1, until: 4.6, name: 'Marcus', detail: 'Runs 40 miles a week' })
+  B.lowerThird = (ctx, t, { at = 0, until = at + 2.6, name = '', detail = '', x = 70, y = 1030, size = 58, accent = C.accent } = {}) => {
+    const a = Math.min(appear(t, at, 0.12), clamp((until - t) / 0.2));
+    if (a <= 0 || !name) return { bottom: y };
+    const nf = font(800, size, F.display), df = font(600, Math.round(size * 0.58));
+    ctx.save(); ctx.font = nf; const nw = ctx.measureText(name).width; ctx.font = df; const dw = detail ? ctx.measureText(detail).width : 0; ctx.restore();
+    const w = Math.min(940, Math.max(nw, dw) + 84), h = detail ? size * 2.25 : size * 1.5;
+    const k = ease.outCubic(appear(t, at, 0.4)), reveal = ease.outCubic(appear(t, at + 0.08, 0.45));
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.fillStyle = accent; ctx.fillRect(x, y, 14, h * k);
+    ctx.beginPath(); ctx.rect(x + 14, y - 10, (w + 20) * reveal, h + 20); ctx.clip();
+    shadow(ctx, 24, 8, 0.3);
+    ctx.fillStyle = 'rgba(12,12,14,0.86)'; ctx.fillRect(x + 14, y, w, h);
+    noShadow(ctx);
+    M.text(ctx, name, x + 50, y + size * 1.08, { font: nf, color: '#FFFFFF' });
+    if (detail) M.text(ctx, detail, x + 52, y + size * 1.86, { font: df, color: 'rgba(255,255,255,0.78)' });
+    ctx.restore();
+    return { bottom: y + h };
+  };
+
+  // "Asked 50 people" counter. mode 'chip' = a small "7/50" badge per person (top right);
+  // mode 'big' = the total counting up with a label, for an opener.
+  //   B.counter(ctx, t, { at: 3, n: 7, total: 50 })
+  //   B.counter(ctx, t, { at: 0, mode: 'big', total: 50, label: 'people asked' })
+  B.counter = (ctx, t, { at = 0, until = Infinity, n = 1, total = 0, label = 'people asked', mode = 'chip', x, y, accent = C.accent } = {}) => {
+    const a = Math.min(appear(t, at, 0.12), clamp((until - t) / 0.18));
+    if (a <= 0) return { bottom: y ?? 0 };
+    ctx.save();
+    ctx.globalAlpha *= a;
+    if (mode === 'big') {
+      const cx = x ?? 540, cy = y ?? 760, p = at <= 0 ? 1 : ease.outCubic(clamp((t - at) / 1.1));
+      const big = font(800, 300, F.display);
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.45)'; ctx.shadowBlur = 40;
+      M.text(ctx, String(Math.round(total * p)), cx, cy, { font: big, color: '#FFFFFF', align: 'center' });
+      ctx.restore();
+      ctx.save(); ctx.font = font(800, 52); const lw = ctx.measureText(label.toUpperCase()).width + 64; ctx.restore();
+      ctx.fillStyle = accent; M.roundRect(ctx, cx - lw / 2, cy + 50, lw, 84, 42); ctx.fill();
+      M.text(ctx, label.toUpperCase(), cx, cy + 108, { font: font(800, 52), color: '#FFFFFF', align: 'center' });
+      ctx.restore();
+      return { bottom: cy + 134 };
+    }
+    const str = total ? `${n}/${total}` : `#${n}`, f = font(800, 44, F.display);
+    ctx.font = f; const w = ctx.measureText(str).width + 56, h = 76;
+    const bx = (x ?? 1010) - w, by = y ?? 250, k = at <= 0 ? 1 : ease.outBack(appear(t, at, 0.35));
+    around(ctx, bx + w / 2, by + h / 2, 0.7 + 0.3 * k);
+    shadow(ctx, 20, 6, 0.3);
+    ctx.fillStyle = accent; M.roundRect(ctx, bx, by, w, h, h / 2); ctx.fill();
+    noShadow(ctx);
+    M.text(ctx, str, bx + w / 2, by + 53, { font: f, color: '#FFFFFF', align: 'center' });
+    ctx.restore();
+    return { bottom: by + h };
+  };
+
+  // Poll result bar: how the answers split. Use real counts from the shoot, never estimates.
+  //   B.tally(ctx, t, { at: 12, title: 'Would you switch?', options: [{ label: 'Yes', value: 32 }, { label: 'No', value: 18 }] })
+  B.tally = (ctx, t, { at = 0, until = Infinity, title = '', options = [], x = 90, y = 820, w = 900, accent = C.accent, other = '#3A3F4B' } = {}) => {
+    const a = Math.min(appear(t, at, 0.2), clamp((until - t) / 0.2));
+    const opts = options.filter((o) => +o.value >= 0).slice(0, 4);
+    const sum = opts.reduce((s, o) => s + +o.value, 0);
+    if (a <= 0 || !sum) return { bottom: y };
+    const p = at <= 0 ? 1 : ease.outCubic(clamp((t - at - 0.2) / 1.0));
+    const th = title ? 90 : 0, barY = y + th + 40, barH = 120, h = th + 40 + barH + 130;
+    const cols = [accent, other, '#8A93A6', '#C9CED8'];
+    ctx.save();
+    ctx.globalAlpha *= a;
+    shadow(ctx, 34, 12, 0.32);
+    ctx.fillStyle = 'rgba(12,12,14,0.86)'; M.roundRect(ctx, x, y, w, h, 30); ctx.fill();
+    noShadow(ctx);
+    if (title) M.text(ctx, title, x + 44, y + 84, { font: font(800, 50, F.display), color: '#FFFFFF', maxWidth: w - 88 });
+    ctx.save(); M.roundRect(ctx, x + 44, barY, w - 88, barH, 24); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 44, barY, w - 88, barH);
+    let bx = x + 44;
+    opts.forEach((o, i) => { const bw = (w - 88) * (o.value / sum) * p; ctx.fillStyle = cols[i]; ctx.fillRect(bx, barY, bw, barH); bx += bw; });
+    ctx.restore();
+    let lx = x + 44;
+    opts.forEach((o, i) => {
+      const pct = Math.round((100 * o.value) / sum * p);
+      const seg = (w - 88) * (o.value / sum);
+      if (seg > 150) M.text(ctx, `${pct}%`, lx + 26, barY + barH * 0.66, { font: font(800, 54, F.display), color: '#FFFFFF' });
+      M.text(ctx, `${o.label} · ${Math.round(o.value * p)}`, lx + (i ? 0 : 4), barY + barH + 66, { font: font(700, 38), color: i ? 'rgba(255,255,255,0.7)' : '#FFFFFF', maxWidth: Math.max(160, seg) });
+      lx += seg;
+    });
+    ctx.restore();
+    return { bottom: y + h };
+  };
+
+  // ===================================================================================== creator formats
+
+  // A framed picture over the top of the frame that swaps on every item of a spoken list ("posters,
+  // mascots, billboards..."). items: [{ at, image?, video?, draw?(ctx, x, y, w, h, t) }]; the newest
+  // started item shows. image/video come from M.image / M.video.
+  //   B.photoPanel(ctx, t, { items: [{ at: 0.4, image: M.image('a.jpg') }, { at: 1.1, image: M.image('b.jpg') }] })
+  B.photoPanel = (ctx, t, { items = [], x = 90, y = 240, w = 900, h = 860, border = 14, until = Infinity, pop = true } = {}) => {
+    if (t >= until) return { bottom: y };
+    let cur = -1;
+    items.forEach((it, i) => { if (t >= (it.at ?? 0)) cur = i; });
+    if (cur < 0) return { bottom: y };
+    const it = items[cur], k = pop && (it.at ?? 0) > 0 ? ease.outCubic(appear(t, it.at, 0.14)) : 1;
+    ctx.save();
+    around(ctx, x + w / 2, y + h / 2, 0.96 + 0.04 * k);
+    shadow(ctx, 36, 14, 0.35);
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(x - border, y - border, w + 2 * border, h + 2 * border);
+    noShadow(ctx);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.fillStyle = '#1A1C22'; ctx.fillRect(x, y, w, h);
+    if (it.video) it.video.draw(ctx, t, x, y, w, h);
+    else if (it.image && it.image.width) M.cover(ctx, it.image, x, y, w, h, { zoom: 1.02 + 0.03 * clamp((t - (it.at ?? 0)) / 2) });
+    else if (it.draw) it.draw(ctx, x, y, w, h, t);
+    ctx.restore();
+    ctx.restore();
+    return { bottom: y + h + border, index: cur };
+  };
+
+  // Meme card: a white band across the top with black bold text, footage below it. Returns the band's
+  // bottom so you can draw the footage from there.
+  //   const top = B.memeCard(ctx, t, { text: 'Me pitching a stunt to a CMO who wants a product photo' }).bottom;
+  B.memeCard = (ctx, t, { at = 0, until = Infinity, text = '', y = 220, w = 1080, size = 52, pad = 44, bg = '#FFFFFF', color = '#0E0E10' } = {}) => {
+    if (t < at || t >= until) return { bottom: y };
+    const f = font(800, size, F.display), lh = size * 1.2;
+    const ls = lines(ctx, text, w - pad * 2, f), h = ls.length * lh + pad * 1.6;
+    ctx.save();
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, y + h);
+    ls.forEach((l, i) => M.text(ctx, l, pad, y + pad * 0.8 + size * 0.95 + i * lh, { font: f, color }));
+    ctx.restore();
+    return { bottom: y + h };
   };
 
   // ===================================================================================== backgrounds for green screen

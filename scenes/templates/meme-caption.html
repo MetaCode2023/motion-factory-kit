@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Meme caption</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// Relatable meme post: one clip and one line of text that makes the joke. mode 'overlay' = white text
+// with a soft shadow over the top third of the clip; mode 'card' = a white band with black text and the
+// clip underneath. No captions, no CTA by default: these are for reach, the account is the CTA.
+//
+// Data keys (spreadsheet columns / M.data):
+//   name, hooks (hook1..hook3: the meme line), mode ('overlay' | 'card'), clip (path), audio (keep the
+//   clip's sound, default true), duration, music, cta
+const D = M.data({
+  name: 'meme-caption', duration: 7, hooks: ['Staring at the blank doc when it\'s actually time to execute my ideas'],
+  mode: 'overlay', clip: '../../assets/higgsfield/reaction.mp4', audio: true, music: '', cta: '', caption: '', hashtags: [],
+});
+const HOOK = M.pick(D.hooks);
+const DUR = Number(D.duration);
+M.setup({
+  post: { caption: D.caption || HOOK, hashtags: [].concat(D.hashtags || []) },
+  width: 1080, height: 1920, fps: 30, duration: DUR, background: D.mode === 'card' ? '#FFFFFF' : '#000',
+  captions: false, look: 'clean', music: D.music ? { track: D.music, volume: 0.12 } : null, draw,
+});
+const clip = M.video(D.clip, { at: 0, audio: D.audio !== false });
+
+function draw(ctx, t) {
+  if (D.mode === 'card') {
+    const top = B.memeCard(ctx, t, { text: HOOK, y: 240 }).bottom;
+    clip.draw(ctx, t, 0, top, 1080, 1920 - top - 380);
+  } else {
+    clip.draw(ctx, t, 0, 0, 1080, 1920);
+    B.nativeText(ctx, t, { at: 0, text: HOOK, style: 'shadow', y: 420, size: 62, w: 900 });
+  }
+  if (D.cta) B.ctaButton(ctx, t, { at: DUR - 2.4, text: D.cta, y: 1150, tapAt: DUR - 1.2 });
+}
+</script>
+</body>
+</html>

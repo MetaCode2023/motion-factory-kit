@@ -4,7 +4,9 @@
 //   node footage.mjs index [footage/raw]       # transcribe + thumbnail every clip -> footage/INDEX.md
 //   node footage.mjs cut edits/ad-01.json      # one edit plan -> an A-roll with exact word timings
 //   node footage.mjs build edits/ [--variants] [--formats 4:5,1:1,16:9] [--batch client-oct]
-//                                              # every plan -> finished ads + DELIVERY.csv
+//                                              # every plan -> finished ads + DELIVERY.csv + review.html
+//   node footage.mjs feedback out/client-oct/review.json   # client decisions -> FEEDBACK.md, approved/
+//   node footage.mjs build edits/ --redo out/client-oct/review.json   # re-cut only the flagged ads
 //
 // The editing decisions live in edit plans (edits/*.json) that Claude writes after reading
 // footage/INDEX.md and looking at the thumbnail strips. See docs/EDITOR.md for the plan format.
@@ -15,15 +17,18 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeDelivery } from './tools/delivery.mjs';
+import { applyFeedback, writeReview } from './tools/review.mjs';
+import { cropFilter, pickTrack } from './tools/reframe.mjs';
+import { audioOptions, cleanChain, loudness, speakerGains } from './tools/audio.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
 const flag = (n) => rest.includes('--' + n);
 const opt = (n, d) => { const i = rest.indexOf('--' + n); return i >= 0 ? rest[i + 1] : d; };
-const VALUED = ['batch', 'formats', 'template', 'look', 'jobs'];
+const VALUED = ['batch', 'formats', 'template', 'look', 'jobs', 'only', 'redo'];
 const positional = rest.filter((a, i) => !a.startsWith('--') && !VALUED.includes(rest[i - 1]?.slice(2)));
 
-const FOOT = join(ROOT, 'footage');
+const FOOT = process.env.FOOTAGE_DIR ? resolve(process.env.FOOTAGE_DIR) : join(ROOT, 'footage');
 const INDEX = join(FOOT, 'index.json');
 const CACHE = join(ROOT, 'out', '.cache', 'footage');
 const KEY = process.env.ELEVENLABS_API_KEY;
@@ -61,11 +66,12 @@ async function transcribe(file, key) {
   if (KEY) {
     const form = new FormData();
     form.append('model_id', 'scribe_v1');
+    form.append('diarize', 'true');          // who is talking: host vs. the person being interviewed
     form.append('file', new Blob([readFileSync(wav)], { type: 'audio/wav' }), 'audio.wav');
     const res = await fetch('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': KEY }, body: form });
     if (!res.ok) throw new Error(`ElevenLabs speech-to-text ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
-    words = (data.words || []).filter((w) => (w.type || 'word') === 'word' && String(w.text).trim()).map((w) => ({ w: String(w.text).trim(), s: w.start, e: w.end }));
+    words = (data.words || []).filter((w) => (w.type || 'word') === 'word' && String(w.text).trim()).map((w) => ({ w: String(w.text).trim(), s: w.start, e: w.end, ...(w.speaker_id != null ? { sp: String(w.speaker_id) } : {}) }));
     via = 'elevenlabs';
   } else if (spawnSync('whisper', ['--help']).status === 0) {     // optional local fallback (openai-whisper)
     const dir = join(CACHE, key + '-whisper');
@@ -99,11 +105,42 @@ function sentencesOf(words) {
   let cur = null;
   words.forEach((w, i) => {
     const prev = words[i - 1];
-    if (!cur || /[.?!]$/.test(prev?.w || '') || w.s - (prev?.e ?? 0) > 0.7 || cur.words.length >= 28) out.push(cur = { words: [] });
+    if (!cur || /[.?!]$/.test(prev?.w || '') || w.s - (prev?.e ?? 0) > 0.7 || cur.words.length >= 28 || (w.sp != null && w.sp !== prev?.sp)) out.push(cur = { words: [] });
     cur.words.push({ ...w, i });
   });
-  return out.map((s, n) => ({ n, s: s.words[0].s, e: s.words[s.words.length - 1].e, from: s.words[0].i, to: s.words[s.words.length - 1].i, text: s.words.map((w) => w.w).join(' ') }));
+  return out.map((s, n) => ({ n, s: s.words[0].s, e: s.words[s.words.length - 1].e, from: s.words[0].i, to: s.words[s.words.length - 1].i, text: s.words.map((w) => w.w).join(' '), ...(majority(s.words) != null ? { speaker: majority(s.words) } : {}) }));
 }
+function majority(words) {
+  const n = {};
+  for (const w of words) if (w.sp != null) n[w.sp] = (n[w.sp] || 0) + (w.e - w.s);
+  const best = Object.entries(n).sort((a, b) => b[1] - a[1])[0];
+  return best ? best[0] : null;
+}
+
+// ---- faces (automatic reframing) -----------------------------------------------------------------
+const PY = ['python3', 'python'].find((p) => spawnSync(p, ['--version']).status === 0);
+let facesWarned = false;
+function findFaces(file, key) {
+  mkdirSync(CACHE, { recursive: true });
+  const json = join(CACHE, key + '.faces.json');
+  if (existsSync(json)) return JSON.parse(readFileSync(json, 'utf8'));
+  if (!PY) return null;
+  const r = spawnSync(PY, [join(ROOT, 'tools', 'faces.py'), ffmpegPath, file, '3'], { encoding: 'utf8', maxBuffer: 1 << 27 });
+  let out = null;
+  try { out = JSON.parse(r.stdout); } catch { return null; }
+  if (out.error) { if (!facesWarned) console.warn(`\n  ! face tracking off: ${out.error}`); facesWarned = true; return null; }
+  writeFileSync(json, JSON.stringify(out));
+  return out;
+}
+const tracks = new Map();
+function trackOf(clip, pick = 'largest') {
+  if (pick === false || !clip.faces) return null;
+  const k = clip.id + ':' + pick;
+  if (!tracks.has(k)) tracks.set(k, pickTrack(clip.faces, pick));
+  return tracks.get(k);
+}
+// Needs reframing (and so a face track) when its shape isn't already close to 9:16.
+const needsReframe = (p) => p.width && p.height && Math.abs(p.width / p.height - W / H) > 0.04;
 
 // ---- index ---------------------------------------------------------------------------------------
 async function index(dir) {
@@ -129,8 +166,9 @@ async function index(dir) {
       ff(['-i', file, '-vf', `fps=${n}/${Math.max(0.5, p.duration).toFixed(3)},scale=-2:300,tile=${n}x1:padding=4:color=black`, '-frames:v', '1', '-q:v', '4', thumb], 'thumbnails');
     }
     const t = p.hasAudio ? await transcribe(file, key) : { via: 'none', words: [] };
+    const faces = needsReframe(p) && !flag('no-faces') ? findFaces(file, key) : null;
     const words = t.words.map((w) => ({ ...w, ...(FILLERS.has(bare(w.w)) ? { filler: true } : {}) }));
-    clips.push({ id, path, ...p, vertical: p.height > p.width, transcript: t.via, words, sentences: sentencesOf(words), speech: words.length ? [] : (p.hasAudio ? speechSegments(file) : []), thumb: relative(ROOT, thumb).split('\\').join('/') });
+    clips.push({ id, path, ...p, vertical: p.height > p.width, transcript: t.via, words, sentences: sentencesOf(words), speech: words.length ? [] : (p.hasAudio ? speechSegments(file) : []), ...(faces ? { faces: faces.samples, faceShare: +(faces.samples.filter((x) => x[1].length).length / Math.max(1, faces.samples.length)).toFixed(2) } : {}), thumb: relative(ROOT, thumb).split('\\').join('/') });
     process.stdout.write(`\r  indexed ${clips.length}/${files.length}`);
   }
   writeFileSync(INDEX, JSON.stringify({ indexed: new Date().toISOString(), folder: relative(ROOT, dir), clips }, null, 1));
@@ -140,18 +178,25 @@ async function index(dir) {
     `${clips.length} clips, ${fmt(total)} total, from \`${relative(ROOT, dir)}\`. Transcripts: ${[...new Set(clips.map((c) => c.transcript))].join(', ')}.`, '',
     'Each clip: its ID (use it in edit plans), length, shape, a thumbnail strip (6 frames across the clip),',
     'and every sentence with its sentence number and start-end seconds. `(um)` marks fillers the cutter removes.',
+    '`A:` / `B:` mark who is talking (from speech-to-text); in street interviews A is usually the host.',
     'Write plans in `edits/` (see docs/EDITOR.md), then `node footage.mjs build edits/`.', '',
     ...clips.flatMap((c) => [
       `## ${c.id} · ${basename(c.path)}`,
-      `${fmt(c.duration)} · ${c.width}x${c.height} ${c.vertical ? 'vertical' : 'horizontal'} · ${c.fps ? c.fps + ' fps' : ''}${c.hasAudio ? '' : ' · no audio'} · thumbs: \`${c.thumb}\``, '',
+      `${fmt(c.duration)} · ${c.width}x${c.height} ${c.vertical ? 'vertical' : 'horizontal'} · ${c.fps ? c.fps + ' fps' : ''}${c.hasAudio ? '' : ' · no audio'}${c.faces ? ` · face found in ${Math.round(c.faceShare * 100)}% (auto-reframe)` : ''} · thumbs: \`${c.thumb}\``, '',
       ...(c.sentences.length
-        ? c.sentences.map((s) => `- s${s.n} [${s.s.toFixed(2)}–${s.e.toFixed(2)}] ${c.words.slice(s.from, s.to + 1).map((w) => (w.filler ? `(${w.w})` : w.w)).join(' ')}`)
+        ? c.sentences.map((s) => `- s${s.n} [${s.s.toFixed(2)}–${s.e.toFixed(2)}]${s.speaker != null ? ` ${speakerName(c, s.speaker)}:` : ''} ${c.words.slice(s.from, s.to + 1).map((w) => (w.filler ? `(${w.w})` : w.w)).join(' ')}`)
         : c.speech.length ? [`- speech at: ${c.speech.map(([a, b]) => `${a.toFixed(1)}–${b.toFixed(1)}`).join(', ')} (no transcript)`] : ['- (no speech: B-roll)']),
       '',
     ]),
   ];
   writeFileSync(join(FOOT, 'INDEX.md'), md.join('\n'));
-  console.log(`\n  -> footage/INDEX.md (${clips.length} clips, ${fmt(total)})`);
+  console.log(`\n  -> ${relative(ROOT, join(FOOT, 'INDEX.md'))} (${clips.length} clips, ${fmt(total)})`);
+}
+
+// Speakers as A, B, C in order of first appearance in the clip (the host is usually A: they ask first).
+function speakerName(clip, sp) {
+  const order = [...new Set(clip.words.filter((w) => w.sp != null).map((w) => w.sp))];
+  return String.fromCharCode(65 + Math.max(0, order.indexOf(sp)));
 }
 
 // ---- cut -----------------------------------------------------------------------------------------
@@ -187,13 +232,6 @@ function rangesFor(seg, clip, plan) {
   return runs.map((r) => [Math.max(0, r.s - 0.06), Math.min(clip.duration, r.e + 0.12)]);
 }
 
-function cropFilter(clip, { zoom = 1, focus = 0.5, focusY = 0.42 } = {}) {
-  const s = Math.max(W / clip.width, H / clip.height) * zoom;
-  const sw = Math.ceil((clip.width * s) / 2) * 2, sh = Math.ceil((clip.height * s) / 2) * 2;
-  const x = Math.round((sw - W) * Math.min(1, Math.max(0, focus))), y = Math.round((sh - H) * Math.min(1, Math.max(0, focusY)));
-  return `scale=${sw}:${sh}:flags=lanczos,crop=${W}:${H}:${x}:${y},setsar=1,fps=${FPS}`;
-}
-
 async function cut(planFile, { quiet = false } = {}) {
   const clips = loadIndex();
   const plan = JSON.parse(readFileSync(planFile, 'utf8'));
@@ -205,32 +243,46 @@ async function cut(planFile, { quiet = false } = {}) {
   (plan.segments || []).forEach((seg, si) => {
     const clip = clips.get(seg.clip);
     if (!clip) throw new Error(`${name}: unknown clip ${seg.clip}`);
-    for (const [a, b] of rangesFor(seg, clip, plan)) pieces.push({ clip, a, b, seg, si });
+    for (const [a, b] of rangesFor(seg, clip, plan)) pieces.push({ clip, a, b, seg, si, speaker: majority(clip.words.filter((w) => w.s >= a - 0.01 && w.e <= b + 0.05)) });
   });
   if (!pieces.length) throw new Error(`${name}: the plan has no segments`);
+  // Audio clean-up: measure each piece after cleaning, then level speakers to the same loudness.
+  for (const p of pieces) {
+    p.audio = p.clip.hasAudio ? audioOptions(plan, p.seg) : null;
+    p.chain = cleanChain(p.audio);
+    p.lufs = p.audio?.level ? loudness(resolve(ROOT, p.clip.path), { from: p.a, dur: p.b - p.a, chain: p.chain }) : -70;
+    Object.assign(p, { dur: p.b - p.a, target: p.audio?.target, maxGain: p.audio?.maxGain });
+  }
+  const gains = speakerGains(pieces.map((p) => ({ clip: p.clip.id, speaker: p.speaker, lufs: p.audio?.level ? p.lufs : -70, dur: p.dur, target: p.target, maxGain: p.maxGain })));
+  pieces.forEach((p, k) => (p.gain = gains[k]));
   // Jump cuts alternate between a normal and a punched-in frame, which hides the cut (classic UGC).
   const punch = plan.punch ?? 1.1;
-  const words = [], segStarts = [];
+  const words = [], segStarts = [], segEnds = [], segWords = [];
   let t = 0, prevSeg = -1, toggle = false;
   const files = [];
   for (const [k, p] of pieces.entries()) {
     if (k > 0) toggle = !toggle;
     const zoom = p.seg.zoom ?? (punch && toggle ? punch : 1);
     const file = join(dir, 'parts', `${String(k).padStart(3, '0')}.mp4`);
+    p.crop = cropFilter(p.clip, { zoom, focus: p.seg.focus ?? plan.focus, focusY: p.seg.focusY ?? plan.focusY, track: trackOf(p.clip, p.seg.face ?? plan.face), a: p.a, b: p.b });
     const src = resolve(ROOT, p.clip.path), dur = p.b - p.a;
     const audio = p.clip.hasAudio
-      ? ['-map', '0:a:0', '-af', `aresample=44100,aformat=channel_layouts=stereo,afade=t=in:d=0.012,afade=t=out:st=${Math.max(0, dur - 0.018).toFixed(3)}:d=0.018`]
+      ? ['-map', '0:a:0', '-af', ['aresample=44100', p.chain, p.gain ? `volume=${p.gain}dB` : '', 'aformat=channel_layouts=stereo', `afade=t=in:d=0.012,afade=t=out:st=${Math.max(0, dur - 0.018).toFixed(3)}:d=0.018`].filter(Boolean).join(',')]
       : [];
     ff(['-ss', p.a.toFixed(3), '-t', dur.toFixed(3), '-i', src,
       ...(p.clip.hasAudio ? [] : ['-f', 'lavfi', '-t', dur.toFixed(3), '-i', 'anullsrc=r=44100:cl=stereo']),
       '-map', '0:v:0', ...(p.clip.hasAudio ? audio : ['-map', '1:a:0']),
-      '-vf', cropFilter(p.clip, { zoom, focus: p.seg.focus ?? plan.focus ?? 0.5, focusY: p.seg.focusY ?? plan.focusY ?? 0.42 }),
+      '-vf', p.crop.filter,
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '16', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-ac', '2',
       '-t', dur.toFixed(3), file], `cut ${p.clip.id} ${p.a.toFixed(2)}-${p.b.toFixed(2)}`);
     files.push(file);
     if (p.si !== prevSeg) { segStarts[p.si] = t; prevSeg = p.si; }
-    for (const w of p.clip.words) if (w.s >= p.a - 0.01 && w.e <= p.b + 0.05 && !(w.filler && !(p.seg.keepFillers ?? plan.keepFillers))) words.push({ w: w.w, s: +(t + w.s - p.a).toFixed(3), e: +(t + Math.min(w.e, p.b) - p.a).toFixed(3) });
+    for (const w of p.clip.words) if (w.s >= p.a - 0.01 && w.e <= p.b + 0.05 && !(w.filler && !(p.seg.keepFillers ?? plan.keepFillers))) {
+      words.push({ w: w.w, s: +(t + w.s - p.a).toFixed(3), e: +(t + Math.min(w.e, p.b) - p.a).toFixed(3) });
+      (segWords[p.si] ||= []).push(w.w);
+    }
     t += dur;
+    segEnds[p.si] = t;
   }
   const aroll = join(dir, 'aroll.mp4');
   writeFileSync(join(dir, 'parts.txt'), files.map((f) => `file '${f}'`).join('\n'));
@@ -245,7 +297,7 @@ async function cut(planFile, { quiet = false } = {}) {
     const from = b.from ?? 0, len = Math.min((b.to ?? clip.duration) - from, b.dur ?? 99);
     const at = b.at ?? ((segStarts[b.over ?? 0] ?? 0) + (b.offset ?? 0.3));
     const file = join(dir, `broll-${i}.mp4`);
-    ff(['-ss', from.toFixed(3), '-t', len.toFixed(3), '-i', resolve(ROOT, clip.path), '-an', '-vf', cropFilter(clip, { zoom: b.zoom ?? 1.04, focus: b.focus ?? 0.5, focusY: b.focusY ?? 0.5 }),
+    ff(['-ss', from.toFixed(3), '-t', len.toFixed(3), '-i', resolve(ROOT, clip.path), '-an', '-vf', cropFilter(clip, { zoom: b.zoom ?? 1.04, focus: b.focus, focusY: b.focusY ?? (b.focus != null ? 0.5 : undefined), track: trackOf(clip, b.face), a: from, b: from + len }).filter,
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '17', '-pix_fmt', 'yuv420p', file], `B-roll ${b.clip}`);
     return { src: file, at: +Math.min(at, Math.max(0, duration - 1)).toFixed(3), dur: +Math.min(len, duration - at).toFixed(3) };
   });
@@ -256,19 +308,45 @@ async function cut(planFile, { quiet = false } = {}) {
     name, angle: plan.angle || '', aroll, duration,
     hooks: plan.hooks || (plan.hook ? [plan.hook] : []), comment: plan.comment || null, cta: plan.cta || '',
     product: plan.product || null, productAt: plan.productAt ?? null, broll, music: plan.music ?? 'pulse', look: plan.look ?? 'punchy',
-    endCard: plan.endCard || null, caption: plan.caption || '', hashtags: plan.hashtags || [], segments: segStarts.map((s, i) => ({ i, start: +s.toFixed(3) })),
+    endCard: plan.endCard || null, caption: plan.caption || '', hashtags: plan.hashtags || [],
+    segments: segStarts.map((s, i) => segmentInfo(plan.segments[i], i, s, segEnds[i], segWords[i])),
+    street: plan.street || null, tally: plan.tally || null, captionStyle: plan.captions || null, hookStyle: plan.hookStyle || 'box',
   };
   writeFileSync(join(dir, 'data.json'), JSON.stringify(data, null, 1));
-  if (!quiet) console.log(`  ${name}: ${pieces.length} cuts, ${duration.toFixed(1)}s (removed ${Math.max(0, removed).toFixed(1)}s of fillers and pauses) -> ${relative(ROOT, aroll)}`);
+  const cleaned = pieces.filter((p) => p.audio).length, lv = pieces.filter((p) => p.gain).map((p) => Math.abs(p.gain));
+  if (!quiet) console.log(`  ${name}: ${pieces.length} cuts, ${duration.toFixed(1)}s (removed ${Math.max(0, removed).toFixed(1)}s of fillers and pauses)${cleaned ? `, audio cleaned${lv.length ? `, levels evened (up to ${Math.max(...lv).toFixed(1)} dB)` : ''}` : ''} -> ${relative(ROOT, aroll)}`);
   return { name, dir, data, dataFile: join(dir, 'data.json'), plan };
+}
+
+// What the polish layer needs to know about one segment: where it sits and its street-interview
+// overlays. A question card shows the words actually spoken (question: true) unless the plan gives text.
+function segmentInfo(seg, i, start, end, spoken = []) {
+  const said = spoken.join(' ').replace(/\s+([,.?!])/g, '$1').trim();
+  const q = seg.question === true ? said : (typeof seg.question === 'string' ? seg.question : null);
+  return {
+    i, start: +start.toFixed(3), end: +(end ?? start).toFixed(3),
+    ...(q ? { question: q } : {}),
+    ...(seg.person ? { person: typeof seg.person === 'string' ? { name: seg.person } : seg.person } : {}),
+    ...(seg.n != null ? { n: seg.n } : {}),
+    ...(seg.answer != null ? { answer: String(seg.answer) } : {}),
+  };
 }
 
 // ---- build ---------------------------------------------------------------------------------------
 async function build(target) {
-  const plans = (statSync(target).isDirectory() ? readdirSync(target).filter((f) => f.endsWith('.json')).sort().map((f) => join(target, f)) : [target]);
+  let plans = (statSync(target).isDirectory() ? readdirSync(target).filter((f) => f.endsWith('.json')).sort().map((f) => join(target, f)) : [target]);
   if (!plans.length) { console.error('No edit plans (.json) found.'); process.exit(2); }
-  const batch = opt('batch', basename(resolve(target)) === 'edits' ? 'delivery' : basename(target, '.json'));
+  const redo = opt('redo') ? JSON.parse(readFileSync(opt('redo'), 'utf8')) : null;
+  const batch = opt('batch', redo?.batch || (basename(resolve(target)) === 'edits' ? 'delivery' : basename(target, '.json')));
   const outdir = join(ROOT, 'out', batch);
+  // --only a,b or --redo review.json: rebuild just those ads; the rest of the batch stays as it is.
+  let only = opt('only') ? opt('only').split(',').map((s) => s.trim()).filter(Boolean) : null;
+  if (redo) { mkdirSync(outdir, { recursive: true }); only = applyFeedback(outdir, redo).redo; console.log(`  feedback: ${only.length} ad(s) need changes${only.length ? ': ' + only.join(', ') : ''}`); }
+  if (only) {
+    const nameOf = (pf) => { try { return JSON.parse(readFileSync(pf, 'utf8')).name || basename(pf, '.json'); } catch { return basename(pf, '.json'); } };
+    plans = plans.filter((pf) => only.includes(nameOf(pf)));
+    if (!plans.length) { console.log('  nothing to rebuild.'); return; }
+  }
   mkdirSync(outdir, { recursive: true });
   const template = resolve(opt('template', join(ROOT, 'scenes', 'templates', 'raw-edit.html')));
   const pass = [...(flag('variants') ? ['--variants'] : []), ...(opt('formats') ? ['--formats', opt('formats')] : []), ...(flag('fast') ? ['--fast'] : []), ...(opt('look') ? ['--look', opt('look')] : [])];
@@ -284,14 +362,35 @@ async function build(target) {
       results.push({ name: basename(pf, '.json'), ok: false, error: e.message });
     }
   }
-  const sheet = writeDelivery(outdir, results);
-  console.log(`\n${results.filter((r) => r.ok).length}/${results.length} ads built -> ${relative(ROOT, outdir)}  (sheet: ${relative(ROOT, sheet)})`);
+  // Keep earlier results for ads not rebuilt this time, so the sheet and review page cover the batch.
+  const keep = join(outdir, '.results.json');
+  const prev = existsSync(keep) ? JSON.parse(readFileSync(keep, 'utf8')) : [];
+  const all = [...prev.filter((p) => !results.some((r) => r.name === p.name)), ...results];
+  writeFileSync(keep, JSON.stringify(all));
+  const sheet = writeDelivery(outdir, all);
+  if (redo) {
+    // Re-cut ads are new versions: their old decisions and approved copies no longer apply.
+    const rebuilt = new Set(results.map((r) => r.name));
+    const ofAd = (f) => rebuilt.has(f.replace(/(-v\d+)?(\.(4x5|1x1|16x9))?\.mp4$/, ''));
+    const apd = join(outdir, 'approved');
+    if (existsSync(apd)) for (const f of readdirSync(apd)) if (ofAd(f)) rmSync(join(apd, f));
+    applyFeedback(outdir, { ...redo, decisions: Object.fromEntries(Object.entries(redo.decisions || {}).filter(([f]) => !ofAd(f))) });
+  }
+  const page = writeReview(outdir);
+  console.log(`\n${results.filter((r) => r.ok).length}/${results.length} ads built -> ${relative(ROOT, outdir)}  (sheet: ${relative(ROOT, sheet)}, review page: ${relative(ROOT, page)})`);
 }
 
 if (cmd === 'index') await index(positional[0]);
 else if (cmd === 'cut') { for (const p of positional) await cut(p); }
 else if (cmd === 'build') await build(positional[0] || join(ROOT, 'edits'));
+else if (cmd === 'review') { const d = resolve(positional[0] || join(ROOT, 'out', 'delivery')); console.log(`  -> ${relative(ROOT, writeReview(d))}`); }
+else if (cmd === 'feedback') {
+  const f = resolve(positional[0] || ''), fb = JSON.parse(readFileSync(f, 'utf8'));
+  const d = join(ROOT, 'out', fb.batch || basename(dirname(f)));
+  const r = applyFeedback(d, fb);
+  console.log(`  ${r.approved.length} approved (copied to ${relative(ROOT, join(d, 'approved'))}), ${r.redo.length} need changes -> ${relative(ROOT, join(d, 'FEEDBACK.md'))}`);
+}
 else {
-  console.log('usage:\n  node footage.mjs index [footage/raw]\n  node footage.mjs cut edits/ad-01.json\n  node footage.mjs build edits/ [--variants] [--formats 4:5,1:1,16:9] [--batch name] [--fast]');
+  console.log('usage:\n  node footage.mjs index [footage/raw]\n  node footage.mjs cut edits/ad-01.json\n  node footage.mjs build edits/ [--variants] [--formats 4:5,1:1,16:9] [--batch name] [--fast] [--only a,b] [--redo out/<batch>/review.json]\n  node footage.mjs review out/<batch>          # (re)write the approval page\n  node footage.mjs feedback out/<batch>/review.json   # FEEDBACK.md + approved/ from the exported decisions');
   process.exit(cmd ? 2 : 0);
 }

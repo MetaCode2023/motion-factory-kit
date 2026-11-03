@@ -21,7 +21,7 @@ See them all moving: `node render.mjs scenes/examples/blocks-gallery.html`
 
 | Block | Key options |
 |---|---|
-| `B.nativeText` | `text, x (centre), y, size=64, style: 'box' \| 'outline' \| 'plain', bg, color, until` |
+| `B.nativeText` | `text, x (centre), y, size=64, style: 'box' \| 'dark' \| 'blue' \| 'outline' \| 'shadow' \| 'plain', bg, color, until` — `dark`/`blue` are Reels title pills, `shadow` is the meme-caption look |
 | `B.commentReply` | `user, text, x, y, w` — the "Reply to @user's comment" sticker |
 | `B.productCard` | `image (M.image), name, price, oldPrice, rating, reviews, badge, y` — slides up |
 | `B.review` | `name, text, rating, verified, light` |
@@ -34,6 +34,22 @@ See them all moving: `node render.mjs scenes/examples/blocks-gallery.html`
 | `B.emojiBurst` | `emoji: [...], at, x, y, count, height, spread` — reactions floating up |
 | `B.postCard` | `name, handle, text, image, likes, comments, reposts` — a social post (generic, no logos) |
 | `B.browser` | `url, image or drawPage(ctx, x, y, w, h), scroll` — a browser window |
+
+## Street interviews
+
+| Block | Key options |
+|---|---|
+| `B.questionCard` | `text, label='We asked', y, until, light` — the host's question, pinned while people answer. Returns `{ bottom }` |
+| `B.lowerThird` | `name, detail, y, until` — accent bar + name. Only names/details people actually gave |
+| `B.counter` | `n, total, mode: 'chip' \| 'big', label, x, y` — "7/50" badge, or the total counting up for an opener |
+| `B.tally` | `title, options: [{ label, value }], y` — poll result bar. Real counts only |
+
+## Creator formats
+
+| Block | Key options |
+|---|---|
+| `B.photoPanel` | `items: [{ at, image \| video \| draw }], x, y, w, h, until` — framed picture over the top that swaps on each item of a spoken list |
+| `B.memeCard` | `text, y, size` — white band with black text across the top; returns `{ bottom }` to draw the clip under it |
 
 ## Explainer UI
 

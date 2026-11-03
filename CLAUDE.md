@@ -14,6 +14,9 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    - *Many ads from a list/spreadsheet* → a template + `batch-ads.mjs` (below).
    - *A proven ad format* (3 reasons, us vs them, before/after, testimonials, problem/solution, listicle,
      unboxing, green screen) → copy the matching file in `scenes/templates/` (`docs/TEMPLATES.md`).
+   - *Creator-native organic posts* (a spoken list over pictures, an idea explained over the thing itself,
+     a meme line over a clip) → `rapid-list`, `title-explainer`, `meme-caption`: plain look, one-word captions,
+     title pill, quiet music, no effects.
    - Read `design/DESIGN.md` either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
 2. **Plan beats before code.** 4–6 beats, one short line each (≤ 7 words on screen), cut times,
    15–30 s total. For ads: hook (0–3 s), problem, show it, proof, CTA. Write 2–3 hook options with
@@ -50,24 +53,36 @@ Default to this for explainers and motion graphics; flat backgrounds look cheap.
    sentences with timings, `(um)` fillers) and `footage/thumbs/<ID>.jpg`.
 2. **You are the editor.** Read INDEX.md and look at the thumbnail images. Pick the strongest hooks and the
    cleanest, most convincing takes; vary angles across ads (results, price, social proof, objections, curiosity).
-   Write one plan per ad to `edits/<name>.json` (format in docs/EDITOR.md). For horizontal clips set `focus`
-   to where the face is. Keep ads 12–25 s; open on the strongest line.
+   Write one plan per ad to `edits/<name>.json` (format in docs/EDITOR.md). Keep ads 12–25 s; open on the strongest line.
+   - Horizontal clips follow the face automatically (index says "auto-reframe"); set `focus` only to fix a bad crop,
+     `face: 'left' | 'right'` when two people are in frame and it picks the wrong one.
+   - Street audio is cleaned and speakers levelled by default; `audio: { denoise: 'strong', wind: true }` for rough clips.
+   - **Street interviews:** `A:`/`B:` in the index mark speakers (A is usually the host). Put the host's question in
+     its own segment with `question: true` (the card shows their real words), `person: { name, detail }` only when the
+     person gave it, `street: { total: 50 }` for "n/50" chips, `tally` only with real counts. Vary which respondents
+     open each ad; a strong reaction beats a long answer.
 3. `node footage.mjs cut edits/<one>.json` to sanity-check a plan, then
    `node footage.mjs build edits/ --variants --formats 4:5,16:9 --batch <client>`.
-4. Read `out/<batch>/DELIVERY.md` and the reports; fix plans with FIXes and rebuild those.
+4. Read `out/<batch>/DELIVERY.md` and the reports; fix plans with FIXes and rebuild those (`--only a,b`).
+5. **Review loop:** the build writes `out/<batch>/review.html` for the client. When feedback comes back:
+   `node footage.mjs feedback out/<batch>/review.json`, read `FEEDBACK.md`, edit only the flagged plans to do what
+   the notes ask, then `node footage.mjs build edits/ --redo out/<batch>/review.json --batch <batch>`. If a note asks
+   for something the footage can't give (a line nobody said), say so instead of faking it.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
 
 ## Templates (`scenes/templates/`, see `docs/TEMPLATES.md`)
 
 `three-reasons`, `us-vs-them`, `before-after`, `testimonial-stack`, `problem-solution`, `listicle`, `unboxing`,
-`green-screen`, `raw-edit`. Each reads its content from `M.data({...})` (keys listed at the top of the file), so it
+`green-screen`, `raw-edit`, `rapid-list`, `title-explainer`, `meme-caption`. Each reads its content from `M.data({...})` (keys listed at the top of the file), so it
 works for one ad (`node make.mjs scenes/templates/x.html`) or a spreadsheet of them. Shared pieces live in
 `kit/ad.js` (`AD.hook`, `AD.number`, `AD.cta`, `AD.background`, `AD.voice`, `AD.sfx`, `AD.post`).
 
 ## Captions, emoji, green screen
 
-- Caption look: `brand.js` → `captions: { style: 'pill' | 'bold' | 'box' | 'minimal' | 'karaoke' | 'pop', emoji: { money: '💰' } }`,
-  or per scene `M.setup({ captions: { style: 'bold' } })`. `bold`/`pop` suit UGC; `pill`/`minimal` suit explainers.
+- Caption look: `brand.js` → `captions: { style: 'pill' | 'bold' | 'box' | 'minimal' | 'karaoke' | 'pop' | 'word', emoji: { money: '💰' } }`,
+  or per scene `M.setup({ captions: { style: 'bold' } })`. `bold`/`pop` suit UGC ads; `pill`/`minimal` suit explainers;
+  `word` (one word as spoken, small, mid-frame with `position: 0.5`) is the creator-native organic look.
+- Titles: `B.nativeText(..., { style: 'dark' | 'blue' })` = the Reels title pill; `'shadow'` = meme caption over footage.
 - Emoji are images (`assets/emoji`, Twemoji): `B.sticker(ctx, t, { emoji: '🔥', at, x, y })`, `B.emojiBurst(...)`.
   Never type emoji into text; the fonts can't draw them. Unbundled emoji are skipped with a warning.
 - Green screen: `M.video(path, { key: 'green' | 'blue' | '#hex' })` cuts the background out; draw the clip over a
@@ -135,6 +150,7 @@ M.setup({ ...,
 
 UGC: `nativeText`, `commentReply`, `productCard`, `review`, `stars`, `ctaButton`, `tap`, `split`, `pip`,
 `sticker`, `emojiBurst`, `postCard`, `browser`.
+Street interviews: `questionCard`, `lowerThird`, `counter`, `tally`. Creator formats: `photoPanel`, `memeCard`.
 Explainer: `notification`, `chat`, `checklist`, `stat`, `compare`, `steps`, `bars`, `phone`, `toast`, `endCard`.
 All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.brand`).
 

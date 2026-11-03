@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rapid list</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// Rapid list over a talking head: the creator fills the frame, a framed picture over the top swaps on
+// every item they say ("posters, mascots, billboards, murals..."), one word of caption at a time just
+// under the picture. ~1 picture a second; the list is the hook and the payoff is the last line.
+//
+// Data keys (spreadsheet columns / M.data):
+//   name, hooks (optional title pill over the first second), creator (talking-head clip),
+//   items: [{ word, image | video, emoji }]   word = the spoken word the picture lands on. With real
+//          word timings (ELEVENLABS_API_KEY, or an A-roll from footage.mjs) each picture cuts exactly
+//          when its word is said; otherwise they're spread evenly over listStart..listEnd.
+//   listStart, listEnd (seconds, fallback timing), duration, transcript (estimated captions), music
+const D = M.data({
+  name: 'rapid-list', duration: 9, hooks: [''],
+  creator: '../../assets/higgsfield/talking-head.mp4',
+  transcript: 'There are a lot of ways to get it done. Posters, mascots, drone shows, coasters, murals, trucks, pop-ups. Pick one.',
+  items: [
+    { word: 'posters', emoji: '📣' }, { word: 'mascots', emoji: '🐶' }, { word: 'drone', emoji: '🚀' },
+    { word: 'coasters', emoji: '☕' }, { word: 'murals', emoji: '✨' }, { word: 'trucks', emoji: '🚚' }, { word: 'pop-ups', emoji: '🛍' },
+  ],
+  listStart: 2.2, listEnd: 7.2, music: 'calm', caption: '', hashtags: [],
+});
+const HOOK = M.pick(D.hooks.length ? D.hooks : ['']);
+const DUR = Number(D.duration);
+
+M.setup({
+  post: { caption: D.caption || HOOK || D.transcript.split('.')[0], hashtags: [].concat(D.hashtags || []) },
+  width: 1080, height: 1920, fps: 30, duration: DUR, background: '#000',
+  captions: { style: 'word', position: 0.6 }, look: 'clean', music: D.music ? { track: D.music, volume: 0.1 } : null,
+  draw,
+});
+const creator = M.video(D.creator, { at: 0, captions: true, transcript: D.transcript });
+
+// When each picture lands: on its spoken word if we have word timings, else evenly spaced.
+const norm = (w) => String(w).toLowerCase().replace(/[^a-z0-9]/g, '');
+const spoken = (window.CAPTIONS || []).filter((w) => w.w);
+let from = 0;
+const ITEMS = D.items.map((it, i) => {
+  let at = null;
+  for (let j = from; j < spoken.length; j++) {
+    const a = norm(spoken[j].w), b = norm(it.word || '');
+    if (b && (a === b || a.startsWith(b) || b.startsWith(a) && a.length > 2)) { at = spoken[j].s; from = j + 1; break; }
+  }
+  if (at == null) at = D.listStart + ((D.listEnd - D.listStart) * i) / Math.max(1, D.items.length);
+  const pic = { at: Math.max(0, at - 0.05) };
+  if (it.video) pic.video = M.video(it.video, { at: pic.at, audio: false });
+  else if (it.image) pic.image = M.image(it.image);
+  else pic.draw = (c, x, y, w, h) => {          // stand-in until real pictures are supplied
+    const g = c.createLinearGradient(x, y, x + w, y + h);
+    const hue = (i * 47) % 360;
+    g.addColorStop(0, `hsl(${hue},70%,55%)`); g.addColorStop(1, `hsl(${(hue + 40) % 360},75%,35%)`);
+    c.fillStyle = g; c.fillRect(x, y, w, h);
+    const img = it.emoji && B.emoji(it.emoji);
+    if (img && img.width) c.drawImage(img, x + w / 2 - 190, y + h / 2 - 190, 380, 380);
+  };
+  return pic;
+});
+const LAST = ITEMS.length ? ITEMS[ITEMS.length - 1].at + 1.1 : 0;
+
+function draw(ctx, t) {
+  creator.draw(ctx, t, 0, 0, 1080, 1920);
+  B.photoPanel(ctx, t, { items: ITEMS, until: LAST, y: 250, h: 820 });
+  if (HOOK) B.nativeText(ctx, t, { at: 0, until: Math.min(2, ITEMS[0]?.at ?? 2), text: HOOK, style: 'dark', y: 300, size: 56 });
+}
+</script>
+</body>
+</html>

@@ -33,6 +33,10 @@ the clip), and, with `ELEVENLABS_API_KEY` set, a word-timed transcript split int
 - s1 [3.60–6.85] And honestly my skin has never looked this good.
 ```
 
+With the key, the transcript also says **who is talking** (`A:` / `B:` per sentence; in a street
+interview A is usually the host, since they speak first). Horizontal clips also get a **face track**
+(needs `pip install opencv-python-headless`; the index notes "face found in 92% (auto-reframe)").
+
 Without a key you still get thumbnails and "speech at 2.1–6.4s" ranges (or install the free
 `openai-whisper` and it's used automatically). Transcripts are cached; re-indexing only does new clips.
 
@@ -65,7 +69,12 @@ One plan per ad, `edits/<name>.json`:
 | Field | Meaning |
 |---|---|
 | `segments` | The A-roll, in order. Pick by `sentence` / `sentences: [from, to]` (from the index), or `from`/`to` seconds. |
-| `focus`, `focusY` | Where to crop when reframing (0 = left/top, 1 = right/bottom). Horizontal footage → vertical: set `focus` to where the face is in the thumbnails. |
+| `focus`, `focusY` | Manual crop when reframing (0 = left/top, 1 = right/bottom). Usually leave them out: horizontal clips follow the face automatically (below). |
+| `face` | Which face to follow: `largest` (default), `left`, `right`, `center`, or `false` for the centre crop. |
+| `audio` | Street-audio clean-up (below). `false` turns it off. |
+| `question`, `person`, `n`, `answer` | Street-interview overlays on a segment (below). |
+| `street`, `tally` | Plan-level street-interview settings (below). |
+| `captions`, `hookStyle` | Caption look (`word` for one word at a time mid-frame, or any caption style) and hook look (`box`, `dark`, `blue`). |
 | `zoom` | Force a zoom for a segment. Otherwise jump cuts alternate normal / punched-in (`"punch": 1.1` on the plan; `false` to turn off). |
 | `keepFillers`, `maxPause`, `tight` | Cleanup: fillers ("um", "uh") and pauses over 0.4 s are cut by default; `tight: false` keeps the raw range. |
 | `broll` | Cutaways over the A-roll (voice continues): `clip`, `from`/`to`, and `over: <segment index>` (or `at` seconds). |
@@ -90,3 +99,71 @@ ad, file, size, hook, angle, length and check status: hand it to the media buyer
 
 Check one plan quickly: `node footage.mjs cut edits/glow-07-results.json` (just the A-roll, in seconds).
 Use your own polish layer: `--template scenes/mine/my-edit.html` (read the plan with `M.data`).
+
+## Street interviews
+
+Mark the host's question and the people answering in the plan; the overlays place themselves.
+
+```json
+{
+  "name": "coffee-08-price",
+  "hooks": ["We asked 50 people what this coffee is worth"],
+  "street": { "total": 50, "label": "We asked" },
+  "segments": [
+    { "clip": "C04", "sentence": 0, "question": true },
+    { "clip": "C04", "sentence": 1, "person": { "name": "Marcus", "detail": "Runs every morning" } },
+    { "clip": "C09", "sentences": [0, 1], "n": 23 },
+    { "clip": "C11", "sentence": 2, "answer": "yes" }
+  ],
+  "tally": { "title": "Would you pay $8?", "options": [{ "label": "Yes", "value": 31 }, { "label": "No", "value": 19 }] },
+  "cta": "Try a bag"
+}
+```
+
+- `question: true` shows the words the host actually said as a card at the top, and keeps it up
+  through the answers that follow (until the next question or the tally). `question: "text"` overrides
+  it; keep it to what was asked.
+- `person` adds a name lower-third as that person starts talking. **Only names and details people
+  gave on camera or on their release.** Leave it out otherwise.
+- With `street.total`, every answer gets an "n/total" chip, numbered in order (`n` to set it, e.g. when
+  the same person appears twice). `street.intro: true` opens on the total counting up.
+- `tally` is the poll result. **Use the real counts from the shoot**, never estimates.
+
+## Street audio
+
+On by default for every cut piece: a high-pass for rumble, an FFT denoiser that tracks the street noise,
+a de-esser, a gentle compressor, then each speaker is levelled to the same loudness (per speaker when the
+transcript knows who is talking, so the host and a quiet stranger match, and one person's jump cuts
+don't jump in volume). Tune it per plan or per segment:
+
+```json
+"audio": { "denoise": "strong", "wind": true, "deess": true, "level": true, "target": -16 }
+```
+
+`denoise`: `light` | `medium` (default) | `strong` | `false`. `wind: true` cuts harder below 120 Hz.
+`"audio": false` passes the sound through untouched (music videos, ambience you want to keep).
+
+## Automatic reframing
+
+Horizontal (or square) clips are cropped to 9:16 around the face found by `tools/faces.py` (OpenCV's
+YuNet detector, bundled in `tools/models`). A face that stays put gets one crop per piece; one that
+moves gets a smooth pan that follows it. With two people in frame it sticks with the one it's following
+(the biggest at the start) instead of flipping; `"face": "left"` / `"right"` picks one. `focus` /
+`focusY` still override. Check the cuts image after a build: if a crop is wrong, set `focus` on that
+segment.
+
+## Review and re-cut
+
+Every `build` also writes **`out/<batch>/review.html`**: each ad's player, its hook variants, Approve /
+Needs changes buttons and a notes box. Zip the batch folder (or put it on Drive) for the client; the
+page works opened straight from the folder, and decisions save in their browser.
+
+1. They click **Export feedback** and send you `review.json` (or **Copy notes** into a message).
+2. `node footage.mjs feedback out/<batch>/review.json` writes `FEEDBACK.md` (per ad: what to change),
+   copies approved files to `out/<batch>/approved/` for the media buyer, and adds a `review` column to
+   `DELIVERY.csv`.
+3. Claude edits only the flagged plans to address the notes, then
+   `node footage.mjs build edits/ --redo out/<batch>/review.json --batch <batch>` rebuilds just those.
+   The sheet and the review page keep every other ad; re-cut ads come back as "to review", approved
+   ones stay approved. `--only a,b` rebuilds named ads without a review file.
+

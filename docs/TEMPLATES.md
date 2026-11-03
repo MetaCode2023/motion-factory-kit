@@ -23,9 +23,20 @@ and `a | b | c` makes a list. `data/example-ads.csv` is a working example for `t
 | `listicle` | "5 things ___" countdown, a different transition per item | optional clip per item |
 | `unboxing` | Product shots with drawn-on callouts, price reveal, CTA | 2-4 product clips |
 | `green-screen` | Creator cut out over a post, web page or photo | creator on green/blue |
+| `rapid-list` | Talking head with a framed picture that swaps on every spoken item, one-word captions | talking head + a picture or clip per item |
+| `title-explainer` | Creator in the corner over the thing itself, title pill pinned, one-word captions mid-frame | background clip/photo + creator (green screen or plain) |
+| `meme-caption` | One clip, one relatable line: shadow text over it, or a white meme card above it | one clip |
 
 All of them: kinetic type, camera punches on cuts, a different transition into each beat, music +
 effects, the cinematic grade, hook variants, and narration if you give them `voice` lines.
+
+## Creator-native formats
+
+`rapid-list`, `title-explainer` and `meme-caption` follow the look of creator-led brand content on Reels:
+no grade, no effects, a quiet music bed, captions one word at a time as spoken (`captions: { style: 'word' }`),
+and the hook as a title pill (`B.nativeText` with `style: 'dark'` or `'blue'`). In `rapid-list`, each
+picture lands on the word that names it when real word timings exist (ElevenLabs key, or an A-roll from
+`footage.mjs`). Edit plans can use the same look: `"captions": "word", "hookStyle": "dark"`.
 
 ## Ground rules baked in
 

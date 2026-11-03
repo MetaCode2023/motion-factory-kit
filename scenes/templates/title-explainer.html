@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Title explainer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@600&display=block">
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// Creator explains an idea over the thing itself: a background clip or photo fills the frame, the
+// creator sits in the bottom corner (green screen keyed out, or a plain clip in a frame), a title pill
+// is pinned near the top the whole time, and captions run one word at a time mid-frame.
+// ("Mega ping pong for brands?", "Stunt / prop campaign ideas for cool brands".)
+//
+// Data keys (spreadsheet columns / M.data):
+//   name, hooks (hook1..hook3: the title pill), titleStyle ('dark' | 'blue' | 'box'),
+//   background (clip or image path; a list of { src, at } to change it), creator (clip path),
+//   key ('green' | 'blue' | '#hex' | '' = no keying: the creator shows in a rounded frame),
+//   corner ('right' | 'left'), duration, transcript (estimated captions), music, cta
+const D = M.data({
+  name: 'title-explainer', duration: 10, hooks: ['Stunt ideas for brands that want to be talked about'], titleStyle: 'blue',
+  background: '', creator: '../../assets/higgsfield/greenscreen.mp4', key: 'green', corner: 'right',
+  transcript: 'Okay picture this. A ping pong table the size of a parking lot, and your logo on the net. People film it for you.',
+  music: 'calm', cta: '', caption: '', hashtags: [],
+});
+const HOOK = M.pick(D.hooks);
+const DUR = Number(D.duration);
+
+M.setup({
+  post: { caption: D.caption || [HOOK, D.cta].filter(Boolean).join('\n\n'), hashtags: [].concat(D.hashtags || []) },
+  width: 1080, height: 1920, fps: 30, duration: DUR, background: '#111',
+  captions: { style: 'word', position: 0.5 }, look: 'clean', music: D.music ? { track: D.music, volume: 0.1 } : null,
+  draw,
+});
+const isVideo = (p) => /\.(mp4|mov|m4v|webm)$/i.test(p);
+const BGS = [].concat(D.background || []).map((b) => (typeof b === 'string' ? { src: b, at: 0 } : b)).filter((b) => b.src)
+  .map((b) => ({ ...b, media: isVideo(b.src) ? M.video(b.src, { at: b.at || 0, audio: false, loop: true }) : M.image(b.src) }));
+const creator = M.video(D.creator, { at: 0, captions: true, transcript: D.transcript, ...(D.key ? { key: D.key } : {}) });
+
+function draw(ctx, t) {
+  const bg = BGS.filter((b) => t >= (b.at || 0)).pop();
+  if (bg && bg.media.draw) bg.media.draw(ctx, t, 0, 0, 1080, 1920);
+  else if (bg && bg.media.width) M.cover(ctx, bg.media, 0, 0, 1080, 1920, { zoom: 1 + 0.04 * t / DUR });
+  else FX.aurora(ctx, t, { intensity: 0.5 });
+
+  const right = D.corner !== 'left';
+  if (D.key) creator.draw(ctx, t, right ? 380 : 0, 1060, 700, 860, { fy: 0.2 });
+  else {
+    const x = right ? 470 : 70, y = 1080, w = 540, h = 720;
+    ctx.save(); M.roundRect(ctx, x, y, w, h, 36); ctx.clip(); creator.draw(ctx, t, x, y, w, h, { fy: 0.3 }); ctx.restore();
+  }
+  B.nativeText(ctx, t, { at: 0, text: HOOK, style: D.titleStyle, y: 520, size: 54, w: 820 });
+  if (D.cta) B.ctaButton(ctx, t, { at: DUR - 2.6, text: D.cta, y: 760, tapAt: DUR - 1.4 });
+}
+</script>
+</body>
+</html>
