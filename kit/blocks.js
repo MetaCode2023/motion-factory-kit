@@ -615,8 +615,8 @@
 
   // ===================================================================================== creator formats
 
-  // A framed picture over the top of the frame that swaps on every item of a spoken list ("posters,
-  // mascots, billboards..."). items: [{ at, image?, video?, draw?(ctx, x, y, w, h, t) }]; the newest
+  // A framed picture over the top of the frame that swaps on every item of a spoken list ("walk,
+  // stretch, journal..."). items: [{ at, image?, video?, draw?(ctx, x, y, w, h, t) }]; the newest
   // started item shows. image/video come from M.image / M.video.
   //   B.photoPanel(ctx, t, { items: [{ at: 0.4, image: M.image('a.jpg') }, { at: 1.1, image: M.image('b.jpg') }] })
   B.photoPanel = (ctx, t, { items = [], x = 90, y = 240, w = 900, h = 860, border = 14, until = Infinity, pop = true } = {}) => {
@@ -642,7 +642,7 @@
 
   // Meme card: a white band across the top with black bold text, footage below it. Returns the band's
   // bottom so you can draw the footage from there.
-  //   const top = B.memeCard(ctx, t, { text: 'Me pitching a stunt to a CMO who wants a product photo' }).bottom;
+  //   const top = B.memeCard(ctx, t, { text: 'Me opening the fridge for the fifth time' }).bottom;
   B.memeCard = (ctx, t, { at = 0, until = Infinity, text = '', y = 220, w = 1080, size = 52, pad = 44, bg = '#FFFFFF', color = '#0E0E10' } = {}) => {
     if (t < at || t >= until) return { bottom: y };
     const f = font(800, size, F.display), lh = size * 1.2;

@@ -14,7 +14,6 @@
 // Creator explains an idea over the thing itself: a background clip or photo fills the frame, the
 // creator sits in the bottom corner (green screen keyed out, or a plain clip in a frame), a title pill
 // is pinned near the top the whole time, and captions run one word at a time mid-frame.
-// ("Mega ping pong for brands?", "Stunt / prop campaign ideas for cool brands".)
 //
 // Data keys (spreadsheet columns / M.data):
 //   name, hooks (hook1..hook3: the title pill), titleStyle ('dark' | 'blue' | 'box'),
@@ -22,9 +21,9 @@
 //   key ('green' | 'blue' | '#hex' | '' = no keying: the creator shows in a rounded frame),
 //   corner ('right' | 'left'), duration, transcript (estimated captions), music, cta
 const D = M.data({
-  name: 'title-explainer', duration: 10, hooks: ['Stunt ideas for brands that want to be talked about'], titleStyle: 'blue',
+  name: 'title-explainer', duration: 10, hooks: ['The 2-minute rule for a messy kitchen'], titleStyle: 'blue',
   background: '', creator: '../../assets/higgsfield/greenscreen.mp4', key: 'green', corner: 'right',
-  transcript: 'Okay picture this. A ping pong table the size of a parking lot, and your logo on the net. People film it for you.',
+  transcript: 'If it takes under two minutes, do it now. Rinse the pan, wipe the counter, load the cup. The mess never piles up.',
   music: 'calm', cta: '', caption: '', hashtags: [],
 });
 const HOOK = M.pick(D.hooks);

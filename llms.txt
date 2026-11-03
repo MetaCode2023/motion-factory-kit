@@ -1,0 +1,26 @@
+# Motion Factory Kit
+
+> Code-to-video toolkit for short-form social video. A scene is one HTML file with a draw(ctx, t)
+> function; make.mjs renders it frame-exact and adds narration, word-by-word captions, music, sound
+> effects and a self-check report. footage.mjs turns a folder of raw footage (UGC, street interviews,
+> testimonials) into many finished vertical ads. MIT licensed. Every module can be used on its own.
+
+## Start here
+- [CLAUDE.md](CLAUDE.md): the full workflow for a coding agent (works for any agent)
+- [docs/MODULES.md](docs/MODULES.md): comparison checklist and the pieces that lift out on their own
+- [README.md](README.md): overview and setup
+
+## Raw footage to ads
+- [docs/EDITOR.md](docs/EDITOR.md): index, edit plans, word-exact cuts, street interviews, street audio, face-following reframe, client review loop
+- [footage.mjs](footage.mjs): index / cut / build / review / feedback
+- [tools/audio.mjs](tools/audio.mjs): street-audio cleanup and per-speaker levelling (standalone)
+- [tools/faces.py](tools/faces.py), [tools/reframe.mjs](tools/reframe.mjs): face track and 9:16 crop that follows it (standalone)
+- [tools/review.mjs](tools/review.mjs): client approval page and feedback -> re-cut list (standalone)
+- [tools/delivery.mjs](tools/delivery.mjs): delivery sheet for a media buyer (standalone)
+
+## Building videos
+- [docs/TEMPLATES.md](docs/TEMPLATES.md): 12 data-driven ad and organic formats
+- [docs/BLOCKS.md](docs/BLOCKS.md): 32 canvas blocks (UGC, street-interview overlays, explainer UI)
+- [docs/HIGGSFIELD.md](docs/HIGGSFIELD.md): AI-generated clips
+- [docs/LANGUAGES.md](docs/LANGUAGES.md): translated and dubbed versions
+- [design/DESIGN.md](design/DESIGN.md): the visual rules

@@ -51,3 +51,11 @@ test('bundled tracks report their tempo; the estimate matches it', () => {
   assert.equal(meta.source, 'meta');
   assert.deepEqual(meta.beats.slice(0, 3), [0, 0.5, 1]);
 });
+
+test('a caption ends when the next one starts (no overlap that holds the old word on screen)', () => {
+  const M = kit();
+  const ch = M.captionChunks([{ w: 'Walk,', s: 2.07, e: 2.41 }, { w: 'stretch,', s: 2.47, e: 2.95 }, { w: 'journal.', s: 3.01, e: 3.49 }], 1);
+  assert.equal(ch[0].e, 2.47);
+  assert.equal(ch[1].e, 3.01);
+  assert.ok(Math.abs(ch[2].e - 3.84) < 1e-9);
+});

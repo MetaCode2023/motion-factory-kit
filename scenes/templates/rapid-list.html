@@ -12,7 +12,7 @@
 <body>
 <script>
 // Rapid list over a talking head: the creator fills the frame, a framed picture over the top swaps on
-// every item they say ("posters, mascots, billboards, murals..."), one word of caption at a time just
+// every item they say ("walk, stretch, journal, coffee..."), one word of caption at a time just
 // under the picture. ~1 picture a second; the list is the hook and the payoff is the last line.
 //
 // Data keys (spreadsheet columns / M.data):
@@ -24,12 +24,12 @@
 const D = M.data({
   name: 'rapid-list', duration: 9, hooks: [''],
   creator: '../../assets/higgsfield/talking-head.mp4',
-  transcript: 'There are a lot of ways to get it done. Posters, mascots, drone shows, coasters, murals, trucks, pop-ups. Pick one.',
+  transcript: 'My whole morning before seven. Walk, stretch, journal, coffee, plan the day. Then work.',
   items: [
-    { word: 'posters', emoji: '📣' }, { word: 'mascots', emoji: '🐶' }, { word: 'drone', emoji: '🚀' },
-    { word: 'coasters', emoji: '☕' }, { word: 'murals', emoji: '✨' }, { word: 'trucks', emoji: '🚚' }, { word: 'pop-ups', emoji: '🛍' },
+    { word: 'walk', emoji: '🐶' }, { word: 'stretch', emoji: '🧘' }, { word: 'journal', emoji: '📝' },
+    { word: 'coffee', emoji: '☕' }, { word: 'plan', emoji: '🗓️' },
   ],
-  listStart: 2.2, listEnd: 7.2, music: 'calm', caption: '', hashtags: [],
+  listStart: 2.0, listEnd: 7.0, music: 'calm', caption: '', hashtags: [],
 });
 const HOOK = M.pick(D.hooks.length ? D.hooks : ['']);
 const DUR = Number(D.duration);

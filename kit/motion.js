@@ -382,8 +382,8 @@
       if (brk) chunks.push(cur = { words: [] });
       cur.words.push(wd);
     });
+    chunks.forEach((c) => (c.s = c.words[0].s));     // all starts first: each end looks at the next start
     chunks.forEach((c, i) => {
-      c.s = c.words[0].s;
       const next = chunks[i + 1];
       const end = c.words[c.words.length - 1].e;
       c.e = next && next.s - end < 0.6 ? next.s : end + 0.35;

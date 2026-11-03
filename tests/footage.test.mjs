@@ -106,7 +106,7 @@ test('street-interview blocks draw, stay inside the frame and disappear when don
   assert.equal(B.photoPanel(ctx, 1.5, { items }).index, 1);
   assert.deepEqual(seen, [1]);
   assert.equal(B.photoPanel(ctx, 9, { items, until: 5 }).index, undefined);
-  B.nativeText(ctx, 0.5, { text: 'Mega ping pong for brands?', style: 'dark' });
-  assert.ok(B.memeCard(ctx, 1, { text: 'Me pitching a stunt' }).bottom > 300);
+  B.nativeText(ctx, 0.5, { text: 'The 2-minute rule', style: 'dark' });
+  assert.ok(B.memeCard(ctx, 1, { text: 'Me opening the fridge' }).bottom > 300);
   assert.ok(window.M.CAPTION_STYLES.includes('word'));
 });

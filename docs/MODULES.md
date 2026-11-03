@@ -1,8 +1,8 @@
-# Take what you need
+# Modules: use the whole kit, or lift one piece
 
-For an agent (or a person) who already has a video pipeline and wants to compare, not switch.
-Each piece below says what it does, where it lives, what it depends on, and how to lift it out.
-Most are single files with no ties to the rest of the kit.
+This repo is built so any coding agent can read it, compare it with the pipeline it already has, and
+take only what helps. Each piece below says what it does, where it lives, what it depends on, and how
+to lift it out. Most are single files with no ties to the rest of the kit. MIT licensed: copy freely.
 
 ## Quick comparison checklist
 

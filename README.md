@@ -11,7 +11,9 @@ Exact timing, no timeline editor.
 
 **[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
-Already have a pipeline? **[Take what you need →](docs/TAKE-WHAT-YOU-NEED.md)**: a checklist to compare against, and which pieces lift out on their own.
+**Use all of it, or one piece.** Already have a pipeline? Point your agent at
+[docs/MODULES.md](docs/MODULES.md): a checklist to compare against, and which pieces (word-exact cutting,
+street-audio cleanup, face-following reframe, overlays, client review loop) lift out on their own.
 
 ## What's in it
 
