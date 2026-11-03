@@ -1,0 +1,74 @@
+# Take what you need
+
+For an agent (or a person) who already has a video pipeline and wants to compare, not switch.
+Each piece below says what it does, where it lives, what it depends on, and how to lift it out.
+Most are single files with no ties to the rest of the kit.
+
+## Quick comparison checklist
+
+Ask of your current setup, and grab the matching piece where the answer is no:
+
+| Does your pipeline... | Piece here |
+|---|---|
+| Cut raw footage on word boundaries, dropping "um"s and dead air, from a transcript? | `footage.mjs` (`rangesFor`, `cut`) |
+| Know which speaker is the host and which is the person interviewed? | `footage.mjs` (`transcribe` asks ElevenLabs to diarize; `A:`/`B:` in INDEX.md) |
+| Clean street audio (wind, traffic, harsh "s") and level a loud host against a quiet stranger? | `tools/audio.mjs` |
+| Reframe horizontal footage to 9:16 around the face, panning when the person moves? | `tools/faces.py` + `tools/reframe.mjs` |
+| Put the interviewer's question, names, "7/50" counters and a poll bar on screen from data? | `kit/blocks.js` street-interview blocks + `scenes/templates/raw-edit.html` |
+| Let a client approve / flag each ad and hook, then re-cut only the flagged ones? | `tools/review.mjs` + `footage.mjs feedback` / `build --redo` |
+| Hand a media buyer a sheet of every file, size, hook and check status? | `tools/delivery.mjs` |
+| Self-check every render (sound, captions, hook on frame 0, text under the app buttons)? | `make.mjs` report + `score.py` |
+| Make one ad per spreadsheet row with hook variants and every size? | `batch-ads.mjs` + any template |
+
+## The pieces
+
+### Word-exact cutting from a transcript
+`footage.mjs` → `transcribe()`, `sentencesOf()`, `rangesFor()`, `cut()`.
+Input: clips + word timings (ElevenLabs speech-to-text, or local `openai-whisper`). Output: one A-roll per
+plan with fillers and pauses over 0.4 s removed, alternating punch-ins to hide jump cuts, and a
+`*.words.json` of the kept words for captions. Needs: `ffmpeg-static`. The plan format is in `docs/EDITOR.md`.
+
+### Street-audio clean-up and speaker levelling
+`tools/audio.mjs` (no other kit dependencies). `cleanChain(options)` returns an ffmpeg `-af` chain
+(high-pass, FFT denoise, de-ess, compressor); `loudness(file, { from, dur, chain })` measures LUFS;
+`speakerGains(pieces)` gives one gain per speaker so everyone lands at the same loudness.
+To lift it: copy the file, call `cleanChain` + `volume=<gain>dB` wherever you cut audio.
+
+### Face-following reframe
+`tools/faces.py` (OpenCV + the bundled YuNet model in `tools/models/`) prints a face track for any
+clip ffmpeg can read. `tools/reframe.mjs` turns that track into an ffmpeg `scale,crop` filter: a fixed
+crop when the face stays put, a piecewise-linear pan when it moves, and it sticks with one person when
+two are in frame. Both are standalone: `python tools/faces.py <ffmpeg> clip.mp4 3` then
+`cropFilter({ width, height }, { track: pickTrack(samples), a, b }).filter`.
+
+### Street-interview overlays
+`kit/blocks.js`: `B.questionCard`, `B.lowerThird`, `B.counter`, `B.tally` (plus `B.photoPanel`,
+`B.memeCard`, and `B.nativeText` styles `dark` / `blue` / `shadow` for creator-native posts). They are
+plain canvas-2D functions of time `(ctx, t, { at, ... })`, so they port to any canvas renderer
+(node-canvas, skia-canvas, a browser). See `docs/BLOCKS.md`; `scenes/examples/street-interview.html` shows them together.
+
+### Client review loop
+`tools/review.mjs` (no other kit dependencies). `writeReview(folder)` writes one self-contained
+`review.html` next to the MP4s (player, hook tabs, Approve / Needs changes, notes; saves in the browser;
+exports `review.json`). `applyFeedback(folder, reviewJson)` writes `FEEDBACK.md`, copies approved files to
+`approved/` and adds a `review` column to `DELIVERY.csv`. It only reads file names, so it works on any
+folder of MP4s named `<ad>[-v<n>][.4x5|.1x1|.16x9].mp4`.
+
+### Creator-native templates
+`scenes/templates/rapid-list.html` (a picture over the top that swaps on every spoken item, landing on
+the word), `title-explainer.html` (creator in the corner over the thing itself, title pill), and
+`meme-caption.html`. Caption style `word` in `kit/motion.js` (one word as spoken, mid-frame). These need
+the kit's renderer (`make.mjs`); the layouts and timings are the part worth copying.
+
+## Rules the kit keeps (worth keeping wherever these pieces go)
+
+- Never invent quotes, names, or poll numbers. Question cards use the words the host actually said;
+  names and counts come from the shoot.
+- Client footage, edit plans and spreadsheets stay out of git (`.gitignore`).
+- All on-screen text is drawn in code, never baked into generated footage.
+
+## Trying it without your footage
+
+`npm install`, then `npm test` (needs `pip install opencv-python-headless` for the face test).
+`node make.mjs scenes/examples/street-interview.html` builds the overlay demo; any template builds with
+labelled placeholders until clips are added.

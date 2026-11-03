@@ -11,6 +11,8 @@ Exact timing, no timeline editor.
 
 **[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
+Already have a pipeline? **[Take what you need →](docs/TAKE-WHAT-YOU-NEED.md)**: a checklist to compare against, and which pieces lift out on their own.
+
 ## What's in it
 
 **Make lots of ads**
