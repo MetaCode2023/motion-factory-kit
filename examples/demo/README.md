@@ -1,4 +1,7 @@
-# Demo: raw footage to finished ads, no keys
+# Test footage: the editor end to end, no keys
+
+These clips are deliberately simple drawn stand-ins for checking the pipeline (cuts, reframing,
+audio, overlays, review loop), not an example of how finished ads look.
 
 `npm run demo` runs the whole footage editor on this folder:
 

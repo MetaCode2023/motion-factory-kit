@@ -11,8 +11,8 @@ Exact timing, no timeline editor.
 
 **[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
-**Try it in one command, no API keys:** `npm install && npm run demo` cuts a bundled synthetic street-poll
-shoot into finished vertical ads with a client review page ([examples/demo](examples/demo)).
+**Check the editor in one command, no API keys:** `npm install && npm run demo` runs the full footage pipeline
+on bundled test clips (simple drawn stand-ins, not showcase footage) and writes ads plus a review page ([examples/demo](examples/demo)).
 
 **Plug it into your agent:** an MCP server exposes every step as a tool (index footage, check and write
 edit plans, build, apply client feedback, render and *look at* frames). [docs/MCP.md](docs/MCP.md)
