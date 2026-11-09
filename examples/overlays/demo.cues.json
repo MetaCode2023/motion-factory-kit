@@ -1,0 +1,16 @@
+{
+  "position": "top",
+  "chapters": [
+    {"at": 0, "label": "The idea"},
+    {"at": 14, "label": "How it works"},
+    {"at": 28, "label": "Where it goes"}
+  ],
+  "cards": [
+    {"at": 1.0, "dur": 4.5, "kind": "list", "kicker": "The plan", "title": "3 steps", "items": ["Tax the windfall", "Make essentials cheap", "Share the land"]},
+    {"at": 7.0, "dur": 6.0, "kind": "split", "kicker": "Example", "total": 1000, "basis": 100, "rate": 0.10},
+    {"at": 14.5, "dur": 5.0, "kind": "curve", "kicker": "Local vs global", "left": "LOCAL MAX", "right": "GLOBAL MAX"},
+    {"at": 21.0, "dur": 6.0, "kind": "pricedrop", "kicker": "Prices fall", "anchor": "Music file", "items": ["Energy", "Housing", "Food", "Healthcare"]},
+    {"at": 28.5, "dur": 5.0, "kind": "map", "kicker": "Federal land", "highlight": ["AK", "WA", "OR", "CA", "ID", "NV", "UT", "AZ", "MT", "WY", "CO", "NM"], "value": "245M", "unit": "acres", "label": "managed by the Bureau of Land Management"},
+    {"at": 34.5, "dur": 4.5, "kind": "term", "kicker": "Definition", "title": "Unrealized gains", "body": "growth in value that hasn't been sold, so it hasn't been taxed"}
+  ]
+}

@@ -31,6 +31,11 @@ other than `footage/`) in the server's environment if you want them.
 | `make_video` | Build any scene or template (with `data` for a template row). Returns files and every PASS/FIX check. |
 | `render_still` | One frame of a scene, returned as a picture. |
 | `look_at` | Any PNG/JPG in the kit (cut stills, thumbnails, covers) returned as a picture. |
+| `overlay_transcribe` | One finished clip → timestamped lines (local faster-whisper), for writing overlay cues. |
+| `overlay_write_cues` | Check and save `<clip>.cues.json`: chapters for the progress bar, explainer cards. |
+| `overlay_render` | Burn the progress bar, cards and SFX onto the clip; returns the contact sheet as a picture. |
+| `hook_alert` | A 3-second cold-open hook from a JSON spec (plus SFX/drone stems). |
+| `overlay_join` | Put a hook in front of a clip. |
 
 Every tool returns JSON. The same JSON is available from the command line with `--json`
 (`node footage.mjs build edits/ --json`, `node make.mjs scene.html --json`): the last line printed is

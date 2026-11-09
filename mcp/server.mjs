@@ -14,6 +14,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPlan, loadIndex } from '../tools/plans.mjs';
+import ffmpegPath from 'ffmpeg-static';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
@@ -39,6 +41,49 @@ function cli(script, args, { timeoutMs = 60 * 60 * 1000 } = {}) {
     });
   });
 }
+// Run a Python tool (tools/overlay.py, tools/hook_alert.py) with --json; same contract as cli().
+const PY = ['python3', 'python'].find((p) => spawnSync(p, ['--version']).status === 0);
+function py(script, args, { timeoutMs = 60 * 60 * 1000 } = {}) {
+  if (!PY) return Promise.resolve({ ok: false, error: 'Python 3 not found. Install it, then: pip install pillow numpy fonttools brotli faster-whisper' });
+  return new Promise((done) => {
+    const child = spawn(PY, [join(ROOT, script), ...args, '--json'], { cwd: ROOT, env: { ...process.env, FFMPEG: process.env.FFMPEG || ffmpegPath } });
+    let out = '', err = '';
+    const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      const line = out.trim().split('\n').reverse().find((l) => l.startsWith('{'));
+      let json = null;
+      try { json = line ? JSON.parse(line) : null; } catch {}
+      done(json ? { ...json, exit: code } : { ok: false, exit: code, error: 'no result', log: (out + '\n' + err).trim().split('\n').slice(-25).join('\n') });
+    });
+  });
+}
+
+// Overlay cue sanity checks (docs/OVERLAYS.md): known kinds, required fields, order, spacing.
+const CARD_KINDS = { stat: ['value'], list: ['items'], compare: ['left', 'right'], term: ['title'], split: ['total'], curve: [], pricedrop: ['items'], map: ['highlight', 'value'] };
+function checkCues(cues, duration) {
+  const errors = [], warnings = [];
+  const cards = [...(cues.cards || [])].sort((a, b) => a.at - b.at);
+  cards.forEach((c, i) => {
+    const tag = `card ${i + 1} (${c.kind} @ ${c.at}s)`;
+    if (!(c.kind in CARD_KINDS)) errors.push(`${tag}: unknown kind; use ${Object.keys(CARD_KINDS).join(', ')}`);
+    else for (const f of CARD_KINDS[c.kind]) if (c[f] == null) errors.push(`${tag}: missing "${f}"`);
+    if (typeof c.at !== 'number') errors.push(`${tag}: "at" must be seconds`);
+    const dur = c.dur ?? 4.5;
+    if (dur < 2.5 || dur > 9) warnings.push(`${tag}: ${dur}s on screen; 3.5-6 s reads best`);
+    if (duration && c.at + dur > duration) errors.push(`${tag}: ends after the clip (${duration}s)`);
+    const next = cards[i + 1];
+    if (next && c.at + dur > next.at) errors.push(`${tag}: overlaps the next card`);
+    else if (next && next.at - (c.at + dur) < 1.0) warnings.push(`${tag}: under 1 s before the next card`);
+    for (const k of ['kicker', 'title', 'value']) if (typeof c[k] === 'string' && c[k].split(/\s+/).length > 7) warnings.push(`${tag}: "${k}" has more than 7 words`);
+  });
+  const ch = cues.chapters || [];
+  if (ch.length && ch[0].at !== 0) warnings.push('first chapter should start at 0');
+  return { ok: errors.length === 0, errors, warnings, cards: cards.length, chapters: ch.length };
+}
+
 const text = (obj) => ({ content: [{ type: 'text', text: JSON.stringify(obj, null, 1) }] });
 const picture = (file, extra = {}) => {
   const ext = extname(file).toLowerCase();
@@ -70,13 +115,15 @@ server.registerTool('kit_overview', {
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
+    overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
   },
   templates: templates(),
   blocks: { ugc: ['nativeText', 'commentReply', 'productCard', 'review', 'stars', 'ctaButton', 'tap', 'split', 'pip', 'sticker', 'emojiBurst', 'postCard', 'browser'],
     street: ['questionCard', 'lowerThird', 'counter', 'tally'], creator: ['photoPanel', 'memeCard'],
     explainer: ['notification', 'chat', 'checklist', 'stat', 'compare', 'steps', 'bars', 'phone', 'toast', 'endCard'] },
   captionStyles: ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop', 'word'],
-  docs: ['CLAUDE.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
+  overlayCards: Object.keys(CARD_KINDS),
+  docs: ['CLAUDE.md', 'docs/OVERLAYS.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
   rules: ['Never invent quotes, names or poll numbers: use what people said and what the shoot counted.', 'All on-screen text is drawn in code.', 'Client footage and plans stay out of git.'],
 }));
 
@@ -184,5 +231,53 @@ server.registerTool('look_at', {
   if (!existsSync(f) || !/\.(png|jpe?g)$/i.test(f)) return text({ ok: false, error: 'not an image in the kit: ' + file });
   return picture(f);
 });
+
+server.registerTool('overlay_transcribe', {
+  title: 'Transcribe one clip (for overlays)',
+  description: 'Transcribe a finished clip (talking head, podcast cut, lesson) with local faster-whisper. Writes <clip>.words.json and returns timestamped lines: read them, pick the moments a graphic would explain faster (a number said out loud, a sequence of steps, a contrast, a term most viewers would not know), then overlay_write_cues. If faster-whisper is missing, the clip has burned-in captions, or the words are on a whiteboard, read frames with look_at instead.',
+  inputSchema: { clip: z.string().describe('Clip inside the kit, e.g. footage/clips/talk.mp4'), model: z.string().optional().describe('Whisper model: base | small (default) | medium') },
+}, async ({ clip, model }) => text(await py('tools/overlay.py', ['transcribe', inRepo(clip), ...(model ? ['--model', model] : [])])));
+
+server.registerTool('overlay_write_cues', {
+  title: 'Check and save overlay cues',
+  description: 'Check a cue object (chapters for the progress bar + explainer cards) and save it as <clip>.cues.json. Card kinds: stat, list, compare, term (static) and split, curve, pricedrop, map (animated); fields in docs/OVERLAYS.md. Rules: cards start ~0.3 s after the speaker starts that idea, 3.5-6 s each, never overlapping, at most 7 words a line, and only figures the speaker says or shows. Refuses cues with errors; returns warnings.',
+  inputSchema: { clip: z.string(), cues: z.record(z.string(), z.any()), duration: z.number().optional().describe('Clip length in seconds, to catch cards that run past the end') },
+}, async ({ clip, cues, duration }) => {
+  const res = checkCues(cues, duration);
+  if (!res.ok) return text({ ...res, written: null });
+  const f = inRepo(clip).replace(/\.[^.]+$/, '.cues.json');
+  writeFileSync(f, JSON.stringify(cues, null, 2) + '\n');
+  return text({ ...res, written: relative(ROOT, f) });
+});
+
+server.registerTool('overlay_render', {
+  title: 'Render overlays onto a clip',
+  description: 'Burn a chaptered progress bar (chapter name, playhead, elapsed/total) and the explainer cards from <clip>.cues.json onto the clip, keeping its audio. sfx mixes a quiet whoosh/beat stem under the voice. bar_y lifts the bar off the bottom (fraction of height, e.g. 0.63 to sit under a framed video window, 0.78 to clear burned-in captions). start cuts a weak opener first. Returns the result and the contact sheet as a picture: look at it, fix cues, re-render.',
+  inputSchema: {
+    clip: z.string(), cues: z.string().optional().describe('Cue file (default <clip>.cues.json)'), out: z.string().optional(),
+    bar_y: z.number().min(0.2).max(1).optional(), sfx: z.boolean().optional().describe('Default true'), start: z.number().optional(),
+  },
+}, async ({ clip, cues, out, bar_y, sfx = true, start }) => {
+  const res = await py('tools/overlay.py', ['render', inRepo(clip), ...(cues ? ['--cues', inRepo(cues)] : []), ...(out ? ['--out', inRepo(out)] : []),
+    ...(bar_y ? ['--bar-y', String(bar_y)] : []), ...(sfx ? ['--sfx'] : []), ...(start ? ['--start', String(start)] : []), '--sheet']);
+  return res.sheet && existsSync(res.sheet) ? picture(res.sheet, res) : text(res);
+});
+
+server.registerTool('hook_alert', {
+  title: 'Build a 3-second alert hook',
+  description: 'A cold open that plays before the speaker: headline on screen at frame 0, a heart monitor that flatlines, an alert panel that slams in and counts up a total, a stamp, then a punchline bar. Every text field comes from spec (docs/OVERLAYS.md; example examples/overlays/hook.json). Writes out/hooks/<name>/hook.mp4 plus SFX and drone stems. Use figures from the clip only. Then overlay_join it in front of the overlaid clip.',
+  inputSchema: { name: z.string(), spec: z.record(z.string(), z.any()), fps: z.number().optional() },
+}, async ({ name, spec, fps }) => {
+  const dir = join(ROOT, 'out', 'hooks', name.replace(/[^\w-]/g, '-'));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'spec.json'), JSON.stringify(spec, null, 1));
+  return text(await py('tools/hook_alert.py', [join(dir, 'spec.json'), dir, ...(fps ? ['--fps', String(fps)] : [])]));
+});
+
+server.registerTool('overlay_join', {
+  title: 'Put a hook in front of a clip',
+  description: 'Join a hook (or any intro) and a clip into one MP4 at the clip\'s size and frame rate. hook_gain (dB, default -3) keeps the hook\'s effects from jumping out over the voice.',
+  inputSchema: { hook: z.string(), clip: z.string(), out: z.string(), hook_gain: z.number().optional() },
+}, async ({ hook, clip, out, hook_gain }) => text(await py('tools/overlay.py', ['join', inRepo(hook), inRepo(clip), inRepo(out), ...(hook_gain != null ? ['--hook-gain', String(hook_gain)] : [])])));
 
 await server.connect(new StdioServerTransport());

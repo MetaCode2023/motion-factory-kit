@@ -12,6 +12,8 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    - *Explainer / motion graphics / no footage* → start from `scenes/examples/showreel.html` (high-end look) or `showcase.html` (simpler).
    - *A folder of raw client footage → many ads* → the **editor** (`docs/EDITOR.md`, below).
    - *Many ads from a list/spreadsheet* → a template + `batch-ads.mjs` (below).
+   - *A finished clip that needs a progress bar, explainer graphics or a hook* (talking head, podcast cut,
+     whiteboard lesson, a series episode) → **overlays** (`docs/OVERLAYS.md`, below).
    - *A proven ad format* (3 reasons, us vs them, before/after, testimonials, problem/solution, listicle,
      unboxing, green screen) → copy the matching file in `scenes/templates/` (`docs/TEMPLATES.md`).
    - *Creator-native organic posts* (a spoken list over pictures, an idea explained over the thing itself,
@@ -76,6 +78,18 @@ Transcripts come from, in order: a `<clip>.words.json` / `.srt` / `.vtt` next to
    the notes ask, then `node footage.mjs build edits/ --redo out/<batch>/review.json --batch <batch>`. If a note asks
    for something the footage can't give (a line nobody said), say so instead of faking it.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
+
+## Finished clip → progress bar, explainer graphics, hook (`tools/overlay.py`, details in `docs/OVERLAYS.md`)
+
+MCP tools: `overlay_transcribe` → `overlay_write_cues` → `overlay_render` (returns the contact sheet; look at it)
+→ optional `hook_alert` + `overlay_join`. The clip goes in `footage/clips/` (git-ignored).
+1. Look at a frame first. Put cards in the empty area (`position`, `card_scale`) and the bar where a scrubber
+   belongs (`bar_y`). Set `accent` to the series' own colour.
+2. Cards explain: the number, the steps, the contrast, the definition. Animated kinds (`split`, `curve`, `pricedrop`,
+   `map`) beat static text when the idea moves. Time each card about 0.3 s after its words, 3.5-6 s, no overlaps.
+3. Only figures the speaker says or writes. Name any background fact you added in the handover.
+4. Hooks: 3 s, headline on screen at frame 0, the clip's own numbers. Start the clip on the line that continues
+   the hook (`--start` cuts a weak opener).
 
 ## Templates (`scenes/templates/`, see `docs/TEMPLATES.md`)
 

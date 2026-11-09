@@ -19,7 +19,11 @@ test('MCP server lists its tools and answers kit_overview, check_plan and render
   try {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name);
-    for (const n of ['kit_overview', 'footage_index', 'footage_check_plan', 'footage_write_plan', 'footage_build', 'review_feedback', 'review_page', 'make_video', 'render_still', 'look_at']) assert.ok(names.includes(n), n);
+    for (const n of ['kit_overview', 'footage_index', 'footage_check_plan', 'footage_write_plan', 'footage_build', 'review_feedback', 'review_page', 'make_video', 'render_still', 'look_at', 'overlay_transcribe', 'overlay_write_cues', 'overlay_render', 'hook_alert', 'overlay_join']) assert.ok(names.includes(n), n);
+    const cues = JSON.parse((await client.callTool({ name: 'overlay_write_cues', arguments: { clip: 'footage/clips/x.mp4', cues: { cards: [{ kind: 'stat', at: 1, dur: 5 }, { kind: 'wiggle', at: 3 }] } } })).content[0].text);
+    assert.equal(cues.ok, false);
+    assert.ok(cues.errors.some((e) => /missing "value"/.test(e)) && cues.errors.some((e) => /overlaps/.test(e)) && cues.errors.some((e) => /unknown kind/.test(e)));
+    assert.equal(cues.written, null);
     const ov = JSON.parse((await client.callTool({ name: 'kit_overview', arguments: {} })).content[0].text);
     assert.ok(ov.templates.some((t) => t.name === 'rapid-list' && /Data keys/.test(t.about)));
     assert.ok(ov.blocks.street.includes('questionCard'));

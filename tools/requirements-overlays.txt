@@ -1,0 +1,6 @@
+# tools/overlay.py, tools/anim.py, tools/hook_alert.py
+pillow>=10
+numpy>=1.24
+fonttools>=4.40
+brotli>=1.0
+faster-whisper>=1.0   # only for `overlay.py transcribe`

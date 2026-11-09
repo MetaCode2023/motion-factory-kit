@@ -23,6 +23,13 @@ street-audio cleanup, face-following reframe, overlays, client review loop) lift
 
 ## What's in it
 
+**Upgrade a clip you already have** ([docs/OVERLAYS.md](docs/OVERLAYS.md))
+- **Chaptered progress bar**: chapter name, playhead, "0:58 / 1:33", so viewers see where they are.
+- **Explainer graphics timed to the words**: number, steps, comparison and definition cards, plus animated ones
+  (a sum splitting into its parts, a ball rolling from a local to a global peak, prices dropping to $0, a US map
+  filling in). Each gets a quiet sound effect under the voice.
+- **3-second cold-open hooks** built before the speaker comes in, then joined on. `npm run overlays-demo` shows all of it.
+
 **Make lots of ads**
 - **Raw-footage editor** (`footage.mjs`): drop a client's Drive folder of footage in, get dozens of finished ads out.
   Clips are transcribed (with who's talking), Claude picks the best takes and writes an edit plan per ad, and the

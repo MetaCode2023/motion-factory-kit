@@ -22,8 +22,17 @@ Ask of your current setup, and grab the matching piece where the answer is no:
 | Use subtitles you already have (.srt/.vtt) or a local model instead of a paid speech-to-text key? | `tools/transcripts.mjs`, `tools/transcribe.py` |
 | Check an edit plan against the footage before spending a render on it? | `tools/plans.mjs` |
 | Make one ad per spreadsheet row with hook variants and every size? | `batch-ads.mjs` + any template |
+| Add a chaptered progress bar, timed explainer graphics (static and animated) and an SFX stem to a finished clip? | `tools/overlay.py` + `tools/anim.py` ([OVERLAYS.md](OVERLAYS.md)) |
+| Put a 3-second cold-open hook in front of a talking head? | `tools/hook_alert.py` + `overlay.py join` |
 
 ## The pieces
+
+### Overlays on finished clips
+`tools/overlay.py` (Python: pillow, numpy, fonttools, brotli; ffmpeg) adds a chaptered progress bar, explainer cards and
+a quiet SFX stem from a JSON cue file, keeping the clip's audio. `tools/anim.py` has the animated cards (`split`,
+`curve`, `pricedrop`, `map`): each is one function `(t, card, size, accent) -> RGBA`, so adding one is easy.
+`tools/hook_alert.py` builds a 3 s alert hook from a JSON spec. The three files and `fonts/` lift out together.
+See [OVERLAYS.md](OVERLAYS.md).
 
 ### MCP server and JSON output
 `mcp/server.mjs` (needs `@modelcontextprotocol/sdk`): ten tools covering index → plan → build → review,

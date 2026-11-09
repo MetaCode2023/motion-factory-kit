@@ -1,0 +1,10 @@
+{
+  "headline": ["A BILLIONAIRE", "JUST DIED."],
+  "monitor": "BILLIONAIRE · AGE 84",
+  "panel": "AI AGENT · ESTATE EVENT",
+  "detect": ["ESTATE DETECTED", "$1,000,000,000"],
+  "rows": [["UNREALIZED GAINS", "$900,000,000"], ["RATE", "FLAT 10%"]],
+  "total": ["TAX DUE", 90000000, "$"],
+  "stamp": "SENT",
+  "punchline": "AN AI SENT THE BILL."
+}

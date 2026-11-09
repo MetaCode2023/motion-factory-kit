@@ -12,7 +12,8 @@
     "render": "node render.mjs",
     "examples": "node batch.mjs scenes/examples --sheet",
     "test": "node --test tests/kit.test.mjs tests/sound.test.mjs tests/batch.test.mjs tests/footage.test.mjs tests/review.test.mjs tests/mcp.test.mjs",
-    "mcp": "node mcp/server.mjs"
+    "mcp": "node mcp/server.mjs",
+    "overlays-demo": "python3 tools/overlay.py demo"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
