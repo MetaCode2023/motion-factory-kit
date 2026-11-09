@@ -201,7 +201,7 @@ def render_card(card, W, scale=1.0):
 
 
 # ---------------------------------------------------------------- progress strip
-def strip_frames(W, H, fps, dur, chapters, floating=False):
+def strip_frames(W, H, fps, dur, chapters, floating=False, hide=()):
     """Yield RGBA bytes for the bottom strip: chapter-segmented bar, playhead, elapsed/total and chapter name."""
     s = W / 1080
     SH = int(120 * s)
@@ -257,8 +257,15 @@ def strip_frames(W, H, fps, dur, chapters, floating=False):
         names = [""] + names
     total = fmt(dur)
     frames = int(round(dur * fps))
+    empty = np.zeros((SH, W, 4), np.uint8).tobytes()
     for f in range(frames):
         t = f / fps
+        vis = 1.0
+        for a0, b0 in hide:   # e.g. while a full-frame insert plays; fades over 0.2 s
+            vis = min(vis, max(0.0, min(1.0, max((a0 - t) / 0.2, (t - b0) / 0.2))))
+        if vis <= 0:
+            yield empty, SH
+            continue
         fr = base.copy()
         cur = 0
         for i, (a, b, ta, tb) in enumerate(segs):
@@ -281,6 +288,8 @@ def strip_frames(W, H, fps, dur, chapters, floating=False):
         blit(fr, label(f"{fmt(t)} / {total}", label_f, PAPER + (235,)), x1 - label_f.getlength(f"{fmt(t)} / {total}"), bar_y - int(46 * s))
         if names[cur]:
             blit(fr, label(names[cur].upper(), chap_f, PAPER + (235,)), x0, bar_y - int(46 * s))
+        if vis < 1:
+            fr[..., 3] = (fr[..., 3] * vis).astype(np.uint8)
         yield fr.tobytes(), SH
 
 
@@ -356,7 +365,7 @@ def cmd_render(a):
            "-pix_fmt", "yuv420p", *acodec, "-movflags", "+faststart", str(out)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     try:
-        for buf, _ in strip_frames(W, H, fps, dur, chapters, floating=a.bar_y < 0.99):
+        for buf, _ in strip_frames(W, H, fps, dur, chapters, floating=a.bar_y < 0.99, hide=cues.get("bar_hide", [])):
             proc.stdin.write(buf)
     except BrokenPipeError:
         pass

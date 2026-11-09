@@ -78,6 +78,7 @@ the speaker's plan, not as fact.
 ```jsonc
 {
   "accent": "#00D7FE", "position": 0.76, "card_scale": 0.78,
+  "bar_hide": [[32.8, 40.0]],          // hide the progress bar while a full-frame insert plays
   "chapters": [{ "at": 0, "label": "1 · The tax" }, { "at": 22, "label": "2 · Deflation" }],
   "cards": [
     { "at": 0.6, "dur": 4.6, "kind": "list", "kicker": "The plan", "title": "3 steps", "items": ["...", "...", "..."] },
