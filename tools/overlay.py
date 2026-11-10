@@ -201,11 +201,11 @@ def render_card(card, W, scale=1.0):
 
 
 # ---------------------------------------------------------------- progress strip
-def strip_frames(W, H, fps, dur, chapters, floating=False, hide=()):
+def strip_frames(W, H, fps, dur, chapters, floating=False, hide=(), margin=(70, 70)):
     """Yield RGBA bytes for the bottom strip: chapter-segmented bar, playhead, elapsed/total and chapter name."""
     s = W / 1080
     SH = int(120 * s)
-    x0, x1 = int(70 * s), W - int(70 * s)
+    x0, x1 = int(margin[0] * s), W - int(margin[1] * s)   # cue "bar_margin": [left, right] keeps the bar clear of platform buttons
     bar_y, bar_h = SH - int(34 * s), max(6, int(10 * s))
     gap = int(10 * s) if len(chapters) > 1 else 0
     starts = [c["at"] for c in chapters] or [0]
@@ -345,9 +345,11 @@ def cmd_render(a):
             p = tmp / f"card{i}.png"; img.save(p)
             inputs += ["-loop", "1", "-t", f"{d:.3f}", "-i", str(p)]
         idx = i + 2
-        ox = (W - img.width) // 2
+        af = float(cues.get("anim_scale", 1.0)) if c.get("kind") in ANIM else 1.0   # shrink animated cards to fit a safe zone
+        ox = (W - int(img.width * af)) // 2
+        pre = f"scale=iw*{af}:ih*{af}:flags=lanczos," if af != 1.0 else ""
         # rise 40px with an ease-out over 0.45 s; fade in 0.35 s, out 0.22 s (exits ~half of entrances)
-        chains.append(f"[{idx}:v]format=rgba,fade=t=in:st=0:d=0.35:alpha=1,"
+        chains.append(f"[{idx}:v]{pre}format=rgba,fade=t=in:st=0:d=0.35:alpha=1,"
                       f"fade=t=out:st={max(0, d - 0.22):.3f}:d=0.22:alpha=1,setpts=PTS+{at:.3f}/TB[c{i}]")
         rise = f"{int(40 * s)}*pow(1-min(1\\,max(0\\,(t-{at:.3f})/0.45))\\,3)"
         chains.append(f"[v{i}][c{i}]overlay=x={ox}:y={top}+{rise}:eof_action=pass:"
@@ -365,7 +367,7 @@ def cmd_render(a):
            "-pix_fmt", "yuv420p", *acodec, "-movflags", "+faststart", str(out)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     try:
-        for buf, _ in strip_frames(W, H, fps, dur, chapters, floating=a.bar_y < 0.99, hide=cues.get("bar_hide", [])):
+        for buf, _ in strip_frames(W, H, fps, dur, chapters, floating=a.bar_y < 0.99, hide=cues.get("bar_hide", []), margin=tuple(cues.get("bar_margin", (70, 70)))):
             proc.stdin.write(buf)
     except BrokenPipeError:
         pass

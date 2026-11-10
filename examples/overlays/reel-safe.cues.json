@@ -1,0 +1,128 @@
+{
+ "position": 0.13020833333333334,
+ "card_scale": 0.65,
+ "chapters": [
+  {
+   "at": 0,
+   "label": "1 \u00b7 Inheritance tax"
+  },
+  {
+   "at": 22.0,
+   "label": "2 \u00b7 Supply-side deflation"
+  },
+  {
+   "at": 56.4,
+   "label": "3 \u00b7 2nd Homestead Act"
+  }
+ ],
+ "cards": [
+  {
+   "at": 0.6,
+   "dur": 4.6,
+   "kind": "list",
+   "kicker": "The plan",
+   "title": "3 steps",
+   "items": [
+    "Regenerative inheritance tax",
+    "Supply-side deflation",
+    "2nd Homestead Act"
+   ]
+  },
+  {
+   "at": 8.6,
+   "dur": 7.6,
+   "kind": "split",
+   "kicker": "His example",
+   "total": 1000,
+   "basis": 100,
+   "rate": 0.1,
+   "t_split": 0.4,
+   "t_tax": 1.4,
+   "t_keep": 5.6
+  },
+  {
+   "at": 22.2,
+   "dur": 4.6,
+   "kind": "term",
+   "kicker": "Definition",
+   "title": "Kardashev scale",
+   "body": "Type I harnesses all of a planet's energy. Type II, all of its star's."
+  },
+  {
+   "at": 28.2,
+   "dur": 3.6,
+   "kind": "list",
+   "kicker": "Where it goes",
+   "items": [
+    "Regenerative energy",
+    "Homes, water, healthcare",
+    "Food + intelligent infrastructure"
+   ]
+  },
+  {
+   "at": 40.73,
+   "dur": 5.6,
+   "kind": "pricedrop",
+   "kicker": "Supply-side deflation",
+   "anchor": "Music file",
+   "items": [
+    "Energy",
+    "Housing",
+    "Water",
+    "Food",
+    "Healthcare"
+   ]
+  },
+  {
+   "at": 52.4,
+   "dur": 3.9,
+   "kind": "stat",
+   "kicker": "The model",
+   "value": "~$0",
+   "body": "what it costs to copy one more music file"
+  },
+  {
+   "at": 57.4,
+   "dur": 6.0,
+   "kind": "map",
+   "kicker": "Federal land",
+   "highlight": [
+    "AK",
+    "WA",
+    "OR",
+    "CA",
+    "ID",
+    "NV",
+    "UT",
+    "AZ",
+    "MT",
+    "WY",
+    "CO",
+    "NM"
+   ],
+   "value": "245M",
+   "unit": "acres",
+   "label": "managed by the Bureau of Land Management, mostly in the West"
+  },
+  {
+   "at": 66.2,
+   "dur": 6.5,
+   "kind": "stat",
+   "kicker": "Step 3",
+   "value": "1 acre",
+   "body": "of healed land, offered to Indigenous and Black Americans, then everyone"
+  }
+ ],
+ "accent": "#00D7FE",
+ "bar_hide": [
+  [
+   32.76,
+   39.98
+  ]
+ ],
+ "bar_margin": [
+  90,
+  200
+ ],
+ "anim_scale": 0.78
+}

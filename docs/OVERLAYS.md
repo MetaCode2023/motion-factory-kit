@@ -97,3 +97,13 @@ the speaker's plan, not as fact.
 The renderer is `tools/overlay.py`, and the animated cards are in `tools/anim.py`. Each animated kind is one
 function `(t, card, size, accent) -> RGBA image`. Its SFX beats are listed in `BEATS`, so a new kind is one
 function plus one line.
+
+## Reel-safe layout
+
+Instagram and TikTok draw their own buttons and caption over the video. On a 1080x1920 frame keep overlays out of:
+the top 240 px (header), the bottom 300 px (username and caption), the right 175 px below y=1040 (like/comment/share),
+and the outer 51 px on each side (cropped on tall phones). Cue-file settings for that:
+
+- `"position": 0.13`: cards start just under the header instead of at the bottom.
+- `"card_scale": 0.65` and `"anim_scale": 0.78`: shrink static and animated cards to fit the band above the subject.
+- `"bar_margin": [90, 200]`: left/right margins of the progress bar, so the time label clears the like button.
