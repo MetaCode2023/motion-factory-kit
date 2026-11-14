@@ -1,7 +1,7 @@
 """tools/make-longform-demo.py: build stand-in podcast footage for the long-form demo (examples/longform).
 
     python tools/make-longform-demo.py            # needs espeak-ng, numpy, opencv-python-headless
-    python tools/make-longform-demo.py script     # a voice-only take of examples/longform/physics-of-poker.script.md
+    python tools/make-longform-demo.py script [x.read.txt]   # a synthetic voice-only take of a reading copy (default: the example)
 
 Two horizontal 1920x1080 "talking into a mic" clips: a drawn host (no real person), a synthetic espeak-ng
 voice, real-sounding problems to fix (ums, false starts, long pauses), and an exact transcript next to
@@ -136,10 +136,10 @@ def build(name, spec, tmp):
     print(f"wrote {out}  ({dur:.1f}s, {len(words)} words)")
 
 
-def script_take(tmp):
+def script_take(tmp, read_file=None, out_name="poker-take1"):
     """A voice-only 'recording' of examples/longform/physics-of-poker.read.txt, read the way people really
     read: one restarted line (a retake the aligner should cut), one ad-lib, a couple of ums."""
-    read = (ROOT / "examples/longform/physics-of-poker.read.txt").read_text()
+    read = Path(read_file or ROOT / "examples/longform/physics-of-poker.read.txt").read_text()
     lines = [l.strip() for l in read.splitlines() if l.strip() and not l.startswith("\u2014") and not l.isupper()]
     text = " | ".join(lines)
     text = text.replace("Here's the part most players miss.", "Here's the part most uh most | Here's the part most players miss.")
@@ -150,9 +150,9 @@ def script_take(tmp):
     with wave.open(str(wav), "wb") as f:
         f.setnchannels(1); f.setsampwidth(2); f.setframerate(SR)
         f.writeframes((np.clip(audio, -1, 1) * 32767).astype(np.int16).tobytes())
-    out = OUT / "poker-take1.m4a"
+    out = (Path(read_file).parent if read_file else OUT) / f"{out_name}.m4a"
     subprocess.run([FF, "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "aac", "-b:a", "64k", str(out)], check=True)
-    (OUT / "poker-take1.words.json").write_text(json.dumps({"words": words}, indent=0))
+    out.with_suffix(".words.json").write_text(json.dumps({"words": words}, indent=0))
     print(f"wrote {out}  ({len(audio) / SR:.1f}s, {len(words)} words, voice only)")
 
 
@@ -162,7 +162,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     tmp = Path(tempfile.mkdtemp(prefix="mf-lf-"))
     if "script" in sys.argv[1:]:
-        script_take(tmp)
+        rest = [a for a in sys.argv[1:] if a != "script"]
+        script_take(tmp, rest[0] if rest else None, Path(rest[0]).name.replace(".read.txt", "-take") if rest else "poker-take1")
     else:
         for name, spec in CLIPS.items():
             build(name, spec, tmp)

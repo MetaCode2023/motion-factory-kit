@@ -23,7 +23,7 @@ import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
 import { build, check } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
-import { lintScript, planFromScript, readingCopy } from './tools/longform/script.mjs';
+import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
 const json = rest.includes('--json');
@@ -69,6 +69,7 @@ try {
     // Check a script and write the reading copy (cues stripped) for the teleprompter.
     const file = args[0], text = readFileSync(file, 'utf8');
     const r = lintScript(text, { wpm: opt('wpm') ? Number(opt('wpm')) : undefined });
+    if (r.ok && !rest.includes('--fast')) { const errs = await tryScenes(text); r.errors.push(...errs); r.ok = !errs.length; }
     const read = file.replace(/\.script\.md$|\.md$/, '') + '.read.txt';
     writeFileSync(read, readingCopy(text));
     r.readingCopy = read;

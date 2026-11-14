@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Share: part of a whole</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. How much of something goes where: a ring that fills slice by slice, the biggest lit.
+// Data: dur, kicker, headline, accent, slices: "Income tax=50; Payroll=35; Corporate=9; Other=6" (or [{label,value}]),
+//       unit (default %), center (big text in the middle, default the first slice), source
+const D = M.data({ dur: 6.5, kicker: 'WHERE IT GOES', headline: 'Who actually pays', accent: '', unit: '%',
+  slices: 'Example A=50; Example B=30; Example C=12; Other=8', center: '', source: 'Example figures' });
+const th = LF.theme(D);
+const S = (Array.isArray(D.slices) ? D.slices : String(D.slices).split(';').filter((p) => p.trim()).map((p) => { const [l, v] = p.split('='); return { label: l.trim(), value: Number(v) }; }));
+const total = S.reduce((a, s) => a + s.value, 0);
+const COLS = [th.color, FX.alpha(th.color, 0.65), FX.alpha(th.color, 0.4), FX.alpha(th.color, 0.22), 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.08)'];
+const AT = S.map((_, i) => 0.7 + i * 0.45);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', sfx: AT.map((at, i) => ({ at, name: i ? 'tick' : 'pop', volume: 0.5 })) });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  LF.title(c, t, D, th);
+  const cx = 620, cy = 640, R = 270, w = 92;
+  c.lineWidth = w; c.strokeStyle = 'rgba(255,255,255,0.05)'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke();
+  let a0 = -Math.PI / 2;
+  S.forEach((s, i) => {
+    const k = M.ease.outCubic(M.clamp((t - AT[i]) / 0.6)), span = (s.value / total) * Math.PI * 2;
+    if (k > 0) {
+      const d = () => { c.beginPath(); c.arc(cx, cy, R, a0, a0 + span * k - 0.015); c.strokeStyle = COLS[i % COLS.length]; c.lineWidth = w; c.stroke(); };
+      i === 0 ? FX.glow(c, d, { color: th.color, blur: 30, strength: 0.6 }) : d();
+    }
+    a0 += span;
+    const y = 400 + i * 104, a = M.prog(t, AT[i], 0.35);
+    c.save(); c.globalAlpha = a; c.translate((1 - a) * 30, 0);
+    c.fillStyle = COLS[i % COLS.length]; M.roundRect(c, 1060, y - 34, 34, 34, 8); c.fill();
+    M.text(c, s.label, 1120, y - 4, { font: `700 44px ${LF.F.display}`, color: i ? th.ink : th.color });
+    M.text(c, `${s.value}${D.unit === "none" ? "" : D.unit}`, 1780, y - 4, { font: `700 40px ${LF.F.mono}`, color: th.ink, align: 'right' });
+    c.restore();
+  });
+  const ck = M.ease.outBack(M.clamp((t - AT[0] - 0.3) / 0.5));
+  if (ck > 0) { c.save(); c.translate(cx, cy); c.scale(ck, ck); M.text(c, D.center || `${S[0].value}${D.unit === "none" ? "" : D.unit}`, 0, 28, { font: `800 96px ${LF.F.display}`, color: th.ink, align: 'center' }); if (!D.center) M.text(c, S[0].label, 0, 82, { font: `600 30px ${LF.F.display}`, color: th.muted, align: 'center' }); c.restore(); }
+  if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

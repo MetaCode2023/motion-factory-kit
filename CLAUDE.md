@@ -93,7 +93,7 @@ the goal is a 10-minute video they can post without touching it.
 2. **Outline, then draft the script** in `scripts/<name>.script.md` (git-ignored; format in docs/LONGFORM.md).
    Hook in the first 10 s, 4-6 chapters (`##`), ~1,400-1,600 words for 10 min, written to be said out loud.
    **Put a visual cue every ~15 s** (every ~35-40 words): animations for ideas (`stat`, `term`, `compare`,
-   `steps`, `bars`, `quote`, or a new scene), `stock` for scenes, `clip` for outside proof, `[[face]]` when the
+   `steps`, `bars`, `quote`, `line`, `share`, `flow`, `timeline`, or a new scene that declares its own `sfx`), `stock` for scenes, `clip` for outside proof, `[[face]]` when the
    speaker should be seen. Vary them; never two of the same template in a row. Figures only from your research,
    with `source:`. Run `node longform.mjs script` and fix every error and cadence warning.
 3. **Revise with the creator** until they approve. Then they record from the `.read.txt` (re-reading a flubbed

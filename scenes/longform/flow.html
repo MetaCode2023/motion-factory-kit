@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Flow: how a system connects</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. Cause and effect as boxes joined by moving arrows: how money is created, how a vote is
+// counted, where your data goes. 3-5 nodes in a row; "loop: true" draws the last back to the first.
+// Data: dur, kicker, headline, accent, nodes: "Bank - makes a loan; Borrower - spends it; Seller - deposits it" (or [{title, body}]),
+//       labels: "lends; pays; " (text on each arrow), loop
+const D = M.data({ dur: 7, kicker: 'HOW IT FLOWS', headline: 'Where new money comes from', accent: 'new money',
+  nodes: 'Bank - writes a loan; You - spend it; Store - deposits it; Bank - lends it again', labels: 'credit; pays; deposit', loop: true });
+const th = LF.theme(D);
+const N = Array.isArray(D.nodes) ? D.nodes : String(D.nodes).split(';').filter((p) => p.trim()).map((p) => { const [a, ...b] = p.split(/\s+[-–—]\s+/); return { title: a.trim(), body: b.join(' - ').trim() }; });
+const LB = Array.isArray(D.labels) ? D.labels : String(D.labels || '').split(';').map((s) => s.trim());
+const n = N.length, BW = Math.min(330, 1500 / n - 50), BH = 210, GAP = (1680 - n * BW) / Math.max(1, n - 1), Y = 470;
+const bx = (i) => 120 + i * (BW + GAP);
+const AT = N.map((_, i) => 0.6 + i * Math.max(0.55, (D.dur - 2.6) / n));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [...AT.map((at) => ({ at, name: 'pop', volume: 0.5 })), ...(D.loop ? [{ at: AT[n - 1] + 0.6, name: 'whoosh', volume: 0.4 }] : [])] });
+function arrow(c, t, x1, y1, x2, y2, k, label) {
+  if (k <= 0) return;
+  const x = x1 + (x2 - x1) * k, y = y1 + (y2 - y1) * k;
+  FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 4; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x, y); c.stroke();
+    const ang = Math.atan2(y2 - y1, x2 - x1); c.beginPath(); c.moveTo(x, y); c.lineTo(x - 18 * Math.cos(ang - 0.45), y - 18 * Math.sin(ang - 0.45)); c.lineTo(x - 18 * Math.cos(ang + 0.45), y - 18 * Math.sin(ang + 0.45)); c.closePath(); c.fillStyle = th.color; c.fill(); }, { color: th.color, blur: 18, strength: 0.6 });
+  // a pulse travelling along the arrow, forever (the flow keeps going)
+  const p = ((t * 0.7) % 1) * k; c.beginPath(); c.arc(x1 + (x2 - x1) * p, y1 + (y2 - y1) * p, 6, 0, Math.PI * 2); c.fillStyle = '#fff'; c.globalAlpha = 0.8 * k; c.fill(); c.globalAlpha = 1;
+  if (label) M.text(c, label, (x1 + x2) / 2, Math.min(y1, y2) - 22, { font: `600 26px ${LF.F.mono}`, color: th.color, align: 'center', alpha: k });
+}
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  LF.title(c, t, D, th);
+  N.forEach((node, i) => {
+    const a = M.ease.outBack(M.clamp((t - AT[i]) / 0.45));
+    if (i > 0) arrow(c, t, bx(i - 1) + BW + 10, Y + BH / 2, bx(i) - 10, Y + BH / 2, M.ease.outCubic(M.clamp((t - AT[i] + 0.3) / 0.35)), LB[i - 1]);
+    if (a <= 0) return;
+    c.save(); c.translate(bx(i) + BW / 2, Y + BH / 2); c.scale(a, a); c.translate(-(bx(i) + BW / 2), -(Y + BH / 2));
+    LF.card(c, bx(i), Y, BW, BH, th, { glow: i === n - 1 ? 0.5 : 0 });
+    M.text(c, node.title, bx(i) + BW / 2, Y + 78, { font: `800 ${BW < 300 ? 40 : 46}px ${LF.F.display}`, color: th.ink, align: 'center' });
+    if (node.body) LF.para(c, node.body, bx(i) + BW / 2, Y + 96, { font: `600 28px ${LF.F.display}`, color: th.muted, width: BW - 40, align: 'center' });
+    c.restore();
+  });
+  if (D.loop && n > 1) {
+    const k = M.ease.inOutCubic(M.clamp((t - AT[n - 1] - 0.6) / 0.8));
+    if (k > 0) {
+      const x1 = bx(n - 1) + BW / 2, x2 = bx(0) + BW / 2, y = Y + BH + 30, depth = 150;
+      FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 4; c.setLineDash([14, 10]); c.lineDashOffset = -t * 40; c.beginPath();
+        for (let s = 0; s <= 60 * k; s++) { const u = s / 60, x = x1 + (x2 - x1) * u, yy = y + Math.sin(Math.PI * u) * depth; s ? c.lineTo(x, yy) : c.moveTo(x, yy); } c.stroke(); c.setLineDash([]); }, { color: th.color, blur: 16, strength: 0.5 });
+      if (LB[n - 1]) M.text(c, LB[n - 1], (x1 + x2) / 2, y + depth + 50, { font: `600 26px ${LF.F.mono}`, color: th.color, align: 'center', alpha: k });
+    }
+  }
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

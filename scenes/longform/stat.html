@@ -15,14 +15,17 @@
 // source (small print, when the number comes from somewhere), color, tint
 const D = M.data({ dur: 5, kicker: 'THE NUMBER', value: '1,326', label: 'possible starting hands', sub: '', source: '' });
 const th = LF.theme(D);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
 const N = LF.parseNumber(D.value);
+const COUNT = Math.min(1.6, D.dur * 0.4);
+// Sound: a pop as the number lands, ticks while it counts, a chime (or coins for money) when it settles.
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [{ at: 0.2, name: 'pop' }, ...(N ? [0.45, 0.75, 1.05].filter((x) => x < 0.25 + COUNT).map((at) => ({ at, name: 'tick', volume: 0.5 })) : []), { at: 0.25 + COUNT, name: /[$\u20ac\u00a3]/.test(D.value) ? 'coin' : 'chime' }] });
 const SIZE = Math.min(240, Math.floor(1500 / Math.max(3, String(D.value).length) * 1.7));
 function draw(c, t) {
   LF.backdrop(c, t, th);
   const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });
   FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 32px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
-  const k = M.ease.outCubic(M.clamp((t - 0.25) / Math.min(1.6, D.dur * 0.4)));
+  const k = M.ease.outCubic(M.clamp((t - 0.25) / COUNT));
   const shown = N ? LF.formatNumber(N, N.num * k) : D.value;
   const pop = M.ease.outBack(M.clamp((t - 0.2) / 0.5));
   c.save(); c.translate(960, 540); c.scale(pop, pop);

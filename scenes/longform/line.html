@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Line: a trend over time</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A trend drawn left to right, with a few labelled moments on it. Real figures only;
+// put the source in "source". Good for: prices over decades, money supply, emissions, turnout.
+// Data: dur, kicker, headline, accent, unit, points: [{ x: '1971', y: 35 }...] (or "1971=35; 1980=82"),
+//       notes: [{ x: '1971', text: 'Gold standard ends' }] (or "1971=Gold standard ends"), source, log (bool)
+const D = M.data({ dur: 7, kicker: 'OVER TIME', headline: 'A line that only goes one way', accent: 'one way', unit: '',
+  points: 'Year 1=10; Year 2=14; Year 3=13; Year 4=22; Year 5=31; Year 6=48', notes: 'Year 4=Example note', source: 'Example figures', log: false });
+const th = LF.theme(D);
+const pairs = (v) => (Array.isArray(v) ? v : String(v).split(';').map((p) => p.trim()).filter(Boolean).map((p) => { const [x, y] = p.split('='); return { x: x.trim(), y: y.trim() }; }));
+const PTS = pairs(D.points).map((p) => ({ x: String(p.x), y: Number(p.y) }));
+const NOTES = pairs(D.notes || []).map((p) => ({ x: String(p.x), text: p.text ?? p.y }));
+const X0 = 220, X1 = 1700, Y0 = 900, Y1 = 330;
+const f = (v) => (D.log ? Math.log10(Math.max(1e-9, v)) : v);
+const lo = Math.min(0, ...PTS.map((p) => f(p.y))), hi = Math.max(...PTS.map((p) => f(p.y)));
+const px = (i) => X0 + (X1 - X0) * (PTS.length === 1 ? 0.5 : i / (PTS.length - 1));
+const py = (v) => Y0 - (Y0 - Y1) * ((f(v) - lo) / (hi - lo || 1));
+const DRAW = Math.max(1.5, D.dur * 0.55), noteAt = (n) => 0.6 + DRAW * (PTS.findIndex((p) => p.x === n.x) / Math.max(1, PTS.length - 1));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [{ at: 0.6, name: 'riser', volume: 0.3 }, ...NOTES.map((n) => ({ at: noteAt(n), name: 'pop', volume: 0.5 })), { at: 0.6 + DRAW, name: 'chime', volume: 0.5 }] });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  LF.title(c, t, D, th);
+  const k = M.ease.inOutCubic(M.clamp((t - 0.6) / DRAW)), u = k * (PTS.length - 1);
+  c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X0, Y0); c.lineTo(X1, Y0); c.stroke();
+  PTS.forEach((p, i) => { if (PTS.length <= 12 || i % Math.ceil(PTS.length / 10) === 0 || i === PTS.length - 1) M.text(c, p.x, px(i), Y0 + 44, { font: `600 26px ${LF.F.mono}`, color: th.muted, align: 'center', alpha: M.prog(t, 0.3, 0.4) }); });
+  if (k > 0) {
+    const head = Math.floor(u), frac = u - head;
+    const pt = (i) => [px(i), py(PTS[i].y)];
+    const path = () => { c.beginPath(); for (let i = 0; i <= head; i++) { const [x, y] = pt(i); i ? c.lineTo(x, y) : c.moveTo(x, y); } if (head < PTS.length - 1) { const [a, b] = pt(head), [x2, y2] = pt(head + 1); c.lineTo(a + (x2 - a) * frac, b + (y2 - b) * frac); } };
+    c.save(); path(); const [ex, ey] = head < PTS.length - 1 ? [px(head) + (px(head + 1) - px(head)) * frac, py(PTS[head].y) + (py(PTS[head + 1].y) - py(PTS[head].y)) * frac] : pt(PTS.length - 1);
+    c.lineTo(ex, Y0); c.lineTo(X0, Y0); c.closePath(); const g = c.createLinearGradient(0, Y1, 0, Y0); g.addColorStop(0, FX.alpha(th.color, 0.35)); g.addColorStop(1, FX.alpha(th.color, 0)); c.fillStyle = g; c.fill(); c.restore();
+    FX.glow(c, () => { path(); c.strokeStyle = th.color; c.lineWidth = 6; c.lineJoin = 'round'; c.stroke(); c.beginPath(); c.arc(ex, ey, 10, 0, Math.PI * 2); c.fillStyle = th.color; c.fill(); }, { color: th.color, blur: 26, strength: 0.8 });
+    const shown = PTS[Math.min(PTS.length - 1, Math.round(u))];
+    M.text(c, `${shown.y.toLocaleString('en-US')}${D.unit === "none" ? "" : D.unit}`, Math.min(ex + 20, X1 - 40), ey - 26, { font: `700 40px ${LF.F.mono}`, color: th.ink });
+  }
+  NOTES.forEach((n, j) => {
+    const i = PTS.findIndex((p) => p.x === n.x); if (i < 0) return;
+    const a = M.prog(t, noteAt(n), 0.4); if (a <= 0) return;
+    const x = px(i), y = py(PTS[i].y), up = j % 2 === 0, ty = up ? y - 130 : y + 70;
+    c.save(); c.globalAlpha = a;
+    c.strokeStyle = FX.alpha(th.color, 0.6); c.setLineDash([6, 6]); c.beginPath(); c.moveTo(x, y); c.lineTo(x, ty + (up ? 40 : -10)); c.stroke(); c.setLineDash([]);
+    LF.para(c, n.text, x, ty - 34, { font: `700 32px ${LF.F.display}`, color: th.ink, width: 360, align: 'center' });
+    c.restore();
+  });
+  if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

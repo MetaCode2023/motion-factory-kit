@@ -15,7 +15,8 @@
 const D = M.data({ dur: 6, kicker: 'DEFINITION', term: 'Superposition', pronounce: 'soo-per-puh-ZISH-un',
   definition: 'A system existing in several possible states at once, until it is measured.', plain: 'In poker: your opponent holds every hand in their range until the cards are shown.' });
 const th = LF.theme(D);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [{ at: 0.2, name: 'type', volume: 0.6 }, { at: 0.6, name: 'tick', volume: 0.5 }, ...(D.plain ? [{ at: Math.min(D.dur - 1.6, 2.2), name: 'pop', volume: 0.6 }] : [])] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
   const end = FX.camera(c, t, { zoom: 1 + 0.025 * M.clamp(t / D.dur) });

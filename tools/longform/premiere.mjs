@@ -105,7 +105,7 @@ export function premiereXML(R, plan, { accent } = {}) {
       t += len;
     }
   }
-  const a3 = R.sfx.map((s) => {
+  const a3 = (R.allSfx || R.sfx).map((s) => {
     const path = resolve(ROOT, 'sounds', 'sfx', `${s.name}.mp3`);
     const info = infoOf(path);
     return item({ name: s.name, path, start: F(s.at), end: F(s.at + Math.max(0.2, info.duration)), srcIn: 0, kind: 'audio', filters: level(s.volume) }).xml;

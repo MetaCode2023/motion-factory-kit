@@ -16,7 +16,9 @@ const D = M.data({ dur: 6, kicker: 'COMPARE', headline: 'What you see vs what is
   left: { title: 'What you see', items: ['One hand', 'A sure thing', 'A tell'], tone: 'neutral' },
   right: { title: 'What is there', items: ['Every possible hand', 'Probabilities', 'Information'], tone: 'good' }, verdict: '' });
 const th = LF.theme(D);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+const items = (s, at) => (s.items || []).map((_, i) => ({ at: at + 0.35 + i * 0.22, name: 'pop', volume: 0.45 }));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [...items(D.left, 0.6), { at: 1.0, name: 'hit', volume: 0.5 }, ...items(D.right, 1.1), ...(D.verdict ? [{ at: Math.min(D.dur - 1.5, 2.6), name: 'chime', volume: 0.6 }] : [])] });
 const toneCol = (tone) => (tone === 'bad' ? th.bad : tone === 'good' ? th.good : tone === 'warm' ? th.warm : th.color);
 function side(c, t, s, x, at) {
   const w = 780, y = 330, h = 520, a = M.prog(t, at, 0.5);

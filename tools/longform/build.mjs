@@ -85,6 +85,7 @@ async function buildInsert(ins, plan, dir, accent, log) {
   const fit = (f) => ff(['-i', f, '-vf', `${cover()},fps=${plan.fps},tpad=stop_mode=clone:stop_duration=${ins.dur}`, '-frames:v', String(frames), '-an', ...VENC(plan.fps), out], `fit ${ins.id}`);
   if (ins.kind === 'animation') {
     const f = renderScene(ins.scene, { ...ins.data, dur: ins.dur }, plan.fps, ins.id, log);
+    if (plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, { ...ins.data, dur: ins.dur })).filter((x) => x.at < ins.dur - 0.1);
     const p = probe(f);
     if (p.width !== W || p.height !== H) log(`  ! ${ins.id}: scene is ${p.width}x${p.height}; use M.setup({ preset: 'youtube' }) for 16:9`);
     fit(f);
@@ -100,6 +101,24 @@ async function buildInsert(ins, plan, dir, accent, log) {
   ins.media = out;
   return out;
 }
+// The sound effects a scene declares in M.setup({ sfx }) (each template times its own: pops, ticks, the hit
+// on the reveal), so animations arrive with their sound design. Cached like the render.
+async function sceneSfx(scene, data) {
+  const key = hash('sfx', readFileSync(scene, 'utf8'), readSceneLibs(scene), data);
+  const f = join(CACHE, key + '.sfx.json');
+  if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
+  let sfx = [];
+  try {
+    const { open } = await import('../../engines/skia.mjs');
+    const e = await open(scene, { data });
+    sfx = (e.V.sfx || []).filter((x) => x.name && Number.isFinite(+x.at)).map((x) => ({ at: +x.at, name: x.name, volume: x.volume ?? 0.6 }));
+    await e.close?.();
+  } catch {}
+  mkdirSync(CACHE, { recursive: true });
+  writeFileSync(f, JSON.stringify(sfx));
+  return sfx;
+}
+
 // A scene rendered once per (code, data, fps) and cached; returns the silent MP4.
 function renderScene(scene, data, fps, label, log) {
   const key = hash('anim', readFileSync(scene, 'utf8'), readSceneLibs(scene), data, fps, kitStamp());
@@ -144,7 +163,7 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null) {
 }
 
 // ---- sound: voice + music that ducks under it + effects, loudness for YouTube --------------------
-function mixAudio(R, voice, out, stemsDir) {
+function mixAudio(R, plan, voice, out, stemsDir) {
   const inputs = ['-i', voice], f = [];
   let n = 1;
   const beds = [];
@@ -157,7 +176,12 @@ function mixAudio(R, voice, out, stemsDir) {
     beds.push(`[m${n}]`); n++;
   }
   const fx = [];
-  for (const s of R.sfx) {
+  // Effects from the plan, plus each animation's own (quieter: they sit under the voice).
+  const level = plan.scene_sfx_volume ?? 0.55;
+  const all = [...R.sfx, ...R.inserts.flatMap((ins) => (ins.sceneSfx || []).map((x) => ({ at: ins.at + x.at, name: x.name, volume: x.volume * level })))]
+    .filter((x) => existsSync(join(ROOT, 'sounds', 'sfx', `${x.name}.mp3`)));
+  R.allSfx = all;
+  for (const s of all) {
     inputs.push('-i', join(ROOT, 'sounds', 'sfx', `${s.name}.mp3`));
     f.push(`[${n}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=${s.volume},adelay=${Math.round(s.at * 1000)}:all=1[s${n}]`);
     fx.push(`[s${n}]`); n++;
@@ -284,7 +308,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const aroll = buildARoll(R, plan, dir, log);
   for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log);
   const mix = join(dir, 'stems', 'mix.wav');
-  mixAudio(R, aroll.audio, mix, join(dir, 'stems'));
+  mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
   const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;

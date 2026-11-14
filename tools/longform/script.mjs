@@ -82,7 +82,7 @@ export function parseScript(text) {
     if (!l || l.startsWith('//') || l.startsWith('>')) continue;   // notes for the writer, not read aloud
     if (/^#\s/.test(l)) { meta.title ??= l.replace(/^#\s+/, ''); continue; }
     if (/^##+\s/.test(l)) { chapters.push({ title: l.replace(/^#+\s+/, '').trim(), word: words.length }); continue; }
-    const re = /\[\[([\s\S]*?)\]\]/g;
+    const re = /\[\[([\s\S]*?)\]\](?!\])/g;
     let last = 0, m;
     const pushText = (s) => { for (const w of s.replace(/[*_`]/g, '').split(/\s+/).filter(Boolean)) if (bare(w)) words.push({ w, b: bare(w) }); };
     while ((m = re.exec(l))) { pushText(l.slice(last, m.index)); cues.push({ ...parseCue(m[1]), word: words.length }); last = re.lastIndex; }
@@ -99,7 +99,7 @@ export function readingCopy(text) {
     const l = line.trim();
     if (l.startsWith('//') || l.startsWith('>') || /^#\s/.test(l)) continue;
     if (/^##+\s/.test(l)) { out.push(`\n— ${l.replace(/^#+\s+/, '')} —\n`); continue; }
-    const s = l.replace(/\[\[[\s\S]*?\]\]/g, '').replace(/[*_`]/g, '').replace(/\s{2,}/g, ' ').trim();
+    const s = l.replace(/\[\[[\s\S]*?\]\](?!\])/g, '').replace(/[*_`]/g, '').replace(/\s{2,}/g, ' ').trim();
     out.push(s);
   }
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
@@ -283,4 +283,22 @@ function missingLines(S, map) {
 }
 
 export const loadScript = (file) => readFileSync(file, 'utf8');
+
+// Load every animation cue's scene with its data and draw two frames, so a bad field (a list written as
+// text, a typo'd key) shows up now, while writing, not 20 minutes into a build.
+export async function tryScenes(text, { log = () => {} } = {}) {
+  const { open } = await import('../../engines/skia.mjs');
+  const S = parseScript(text), errors = [];
+  for (const c of S.cues) {
+    if (c.kind !== 'anim' || !c.scene || !existsSync(join(ROOT, c.scene))) continue;
+    const dur = Number(c.opts.dur) || 6;
+    try {
+      const e = await open(join(ROOT, c.scene), { data: { ...(S.meta.theme || {}), ...c.data, dur } });
+      e.frame(Math.min(1, dur / 3)); e.frame(dur * 0.8);
+      await e.close?.();
+    } catch (err) { errors.push(`[[${c.raw.trim().slice(0, 60)}]]: ${String(err.message || err).split('\n')[0]}`); }
+  }
+  log(`  ${S.cues.filter((c) => c.kind === 'anim').length} animations drawn`);
+  return errors;
+}
 export { seconds };

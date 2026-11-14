@@ -16,8 +16,9 @@
 const D = M.data({ dur: 6, kicker: 'BY THE NUMBERS', headline: 'Where the money goes', accent: '', unit: '%',
   bars: [{ label: 'Example A', value: 42 }, { label: 'Example B', value: 27 }, { label: 'Example C', value: 18 }, { label: 'Example D', value: 13 }], highlight: '', source: 'Example figures' });
 const th = LF.theme(D);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
 const max = Math.max(...D.bars.map((b) => b.value));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [...D.bars.map((_, i) => ({ at: 0.7 + i * 0.18, name: 'tick', volume: 0.45 })), { at: 1.7 + D.bars.length * 0.18, name: 'chime', volume: 0.55 }] });
 const top = D.highlight || D.bars.reduce((a, b) => (b.value > a.value ? b : a)).label;
 function draw(c, t) {
   LF.backdrop(c, t, th);
@@ -32,7 +33,7 @@ function draw(c, t) {
       const draw = () => { M.roundRect(c, x, y + row * 0.18, bw, row * 0.42, row * 0.21); c.fillStyle = hot ? th.color : FX.alpha(th.color, 0.45); c.fill(); };
       hot ? FX.glow(c, draw, { color: th.color, blur: 30, strength: 0.7 }) : draw();
       const v = Number.isInteger(b.value) ? Math.round(b.value * k) : (b.value * k).toFixed(1);
-      M.text(c, `${v}${D.unit}`, x + bw + 20, y + row * 0.5, { font: `700 36px ${LF.F.mono}`, color: hot ? th.color : th.ink });
+      M.text(c, `${v}${D.unit === "none" ? "" : D.unit}`, x + bw + 20, y + row * 0.5, { font: `700 36px ${LF.F.mono}`, color: hot ? th.color : th.ink });
     }
   });
   if (D.source) M.text(c, D.source, 120, 1010, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1.2, 0.4) });

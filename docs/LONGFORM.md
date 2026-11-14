@@ -67,6 +67,10 @@ base: backdrop                                      // optional: never show the 
 | `[[compare left.title: .. \| left.items: a; b \| left.tone: bad \| right...]]` | Two sides, with a verdict |
 | `[[steps steps: Title - body; Title - body]]` | A process building along a line |
 | `[[bars bars: Label=42; Label=27 \| unit: % \| source: ..]]` | Amounts as growing bars |
+| `[[line points: 1971=35; 2024=2400 \| notes: 1971=Gold window closes \| unit: .. \| source: ..]]` | A trend drawing itself, with labelled moments |
+| `[[share slices: Income tax=50; Payroll=35; Other=15 \| center: ..]]` | Part of a whole: a ring filling slice by slice |
+| `[[flow nodes: Bank - writes a loan; You - spend it; Store - deposits it \| labels: credit; pays \| loop: true]]` | How a system connects: boxes, moving arrows, an optional loop back |
+| `[[timeline events: 1913=The Fed; 1971=Off gold; 2008=Bailouts]]` | Dated events, the camera tracking to the latest |
 | `[[superposition]]` `[[collapse]]` `[[deception]]` | The poker x physics set (`scenes/longform/`) |
 | `[[<any scene name> key: value]]` / `[[anim path.html]]` | Any 16:9 scene in `scenes/longform/`, including new ones Claude writes for this video |
 | `[[stock <search>]]` | Free stock footage from Pexels (`node longform.mjs stock`) |
@@ -78,6 +82,13 @@ base: backdrop                                      // optional: never show the 
 Options on any visual: `dur` (seconds; default auto, which runs until the next visual, capped at 7 s on camera
 and 12 s voice-only), `layout: side` (a framed box with you still on screen), `id`, `note`, `offset`.
 On animations, `mark.<key>: <word>` lands a beat on that spoken word, e.g. the river flips on "boom".
+`unit: none` / `prefix: none` blank out a default (an empty value keeps the default).
+
+**Sound design comes with the animations.** Every template declares its own effects in `M.setup({ sfx })`,
+timed to its own beats: a pop as a number lands, ticks while it counts, a pop per list item, a riser into a
+reveal, a hit on the collapse. The build mixes them under the voice (and onto A3 in Premiere), plus a whoosh
+on every full-screen cut. `[[sfx name]]` adds one more; `"scene_sfx": false` in the plan turns them off and
+`"scene_sfx_volume": 0.4` makes them quieter. New scenes should declare theirs the same way.
 
 **On camera or voice only.** If the recording has a picture, the gaps between visuals show you (with punch-ins on
 the jump cuts), so the cadence of cues decides how often you're on screen. With an audio-only recording, or

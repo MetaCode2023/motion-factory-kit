@@ -18,7 +18,7 @@ const th = LF.theme(D);
 // Light up the highlighted words as they appear in the text (with their punctuation).
 const want = new Set(String(D.highlight).toLowerCase().split(/\s+/).filter(Boolean));
 const ACCENT = String(D.text).split(/\s+/).filter((w) => want.has(w.toLowerCase().replace(/[^a-z0-9']/g, ''))).join(' ');
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', sfx: [{ at: 0.15, name: 'tap', volume: 0.6 }, ...(D.by ? [{ at: 1.2, name: 'pop', volume: 0.6 }] : [])] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
   const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });

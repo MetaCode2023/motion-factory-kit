@@ -15,9 +15,10 @@
 const D = M.data({ dur: 7, kicker: 'HOW IT WORKS', headline: 'From possibility to fact', accent: 'fact',
   steps: [{ title: 'Uncertain', body: 'Many hands possible' }, { title: 'Observe', body: 'Every bet is a clue' }, { title: 'Update', body: 'Re-weight the range' }, { title: 'Collapse', body: 'The river decides' }] });
 const th = LF.theme(D);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
 const n = D.steps.length, X0 = 220, X1 = 1700, Y = 600;
 const AT = D.stepAt || D.steps.map((_, i) => 0.8 + i * Math.max(0.5, (D.dur - 2.2) / n));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: AT.map((at, i) => ({ at, name: i === AT.length - 1 ? 'success' : 'pop', volume: 0.55 })) });
 function draw(c, t) {
   LF.backdrop(c, t, th);
   LF.title(c, t, D, th);

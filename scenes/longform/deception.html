@@ -12,8 +12,9 @@
 <script>
 // 16:9 insert. Two hands make the same bet. A scanner (the opponent's "measurement") sweeps both and
 // reads the same signal; then the truth is revealed underneath: one is strong, one is air.
-// Data (optional): dur, kicker, headline, accent, left: { cards, truth }, right: { cards, truth },
-// bet: 'BET 3x', reading: 'STRONG'
+// Data (optional): dur, kicker, headline, accent, left: { cards, truth, title, tone }, right: {...},
+// bet: 'BET 3x', reading: 'LOOKS STRONG', prefix: 'REALLY: ' (before each truth; 'none' for nothing). tone: 'good' | 'bad'
+// (default: AIR/KING HIGH/NOTHING read as bad). title: a small label at the top of the panel.
 const D = M.data({
   dur: 7.5,
   kicker: 'DECEPTION',
@@ -23,20 +24,23 @@ const D = M.data({
   right: { cards: ['7c', '2d'], truth: 'AIR' },
   bet: 'BET 3x',
   reading: 'LOOKS STRONG',
+  prefix: 'REALLY: ',
   color: '#3CE0FF',
   good: '#3DDC97',
   bad: '#FF4D5E',
 });
 const W = 1920, H = 1080, C = D.color;
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
 const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
 const REVEAL = D.dur * 0.62;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [{ at: 1.4, name: 'whoosh', volume: 0.4 }, { at: 3.0, name: 'tap', volume: 0.5 }, { at: REVEAL, name: 'pop', volume: 0.5 }, { at: REVEAL + 0.35, name: 'success', volume: 0.45 }, { at: REVEAL + 0.5, name: 'error', volume: 0.4 }] });
 
 function panel(c, t, x, side, i) {
   const y = 330, w = 700, h = 560, a = M.prog(t, 0.6 + i * 0.25, 0.5);
   if (a <= 0) return;
   c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 50);
   FX.glass(c, x, y, w, h, { radius: 36, tint: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.16)' });
+  if (side.title) M.text(c, String(side.title).toUpperCase(), x + 40, y + 52, { font: '600 22px "JetBrains Mono"', color: '#8A93A6' });
   // Cards: face down until the reveal (that's what the opponent sees).
   const flip = M.ease.inOutCubic(M.clamp((t - REVEAL - i * 0.15) / 0.45));
   side.cards.forEach((cs, k) => P.card(c, x + 240 + k * 130, y + 190, 150, { ...split(cs), flip, rot: (k - 0.5) * 0.12 }));
@@ -52,10 +56,12 @@ function panel(c, t, x, side, i) {
   // The truth, after the reveal.
   const tk = M.ease.outBack(M.clamp((t - REVEAL - 0.35 - i * 0.15) / 0.45));
   if (tk > 0) {
-    const col = side.truth === 'AIR' ? D.bad : D.good;
+    const weak = side.tone ? side.tone === 'bad' : /^(AIR|NOTHING|KING HIGH|ACE HIGH|BLUFF)/i.test(side.truth);
+    const col = weak ? D.bad : D.good, label = `${D.prefix === 'none' ? '' : D.prefix}${side.truth}`;
+    c.font = `800 30px "Plus Jakarta Sans"`; const pw = Math.max(300, c.measureText(label).width + 70);
     c.save(); c.translate(x + w / 2, y + 510); c.scale(tk, tk);
-    M.roundRect(c, -150, -34, 300, 68, 34); c.fillStyle = FX.alpha(col, 0.18); c.fill(); c.strokeStyle = col; c.lineWidth = 3; c.stroke();
-    M.text(c, `REALLY: ${side.truth}`, 0, 12, { font: '800 30px "Plus Jakarta Sans"', color: col, align: 'center' });
+    M.roundRect(c, -pw / 2, -34, pw, 68, 34); c.fillStyle = FX.alpha(col, 0.18); c.fill(); c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+    M.text(c, label, 0, 12, { font: '800 30px "Plus Jakarta Sans"', color: col, align: 'center' });
     c.restore();
   }
   c.restore();

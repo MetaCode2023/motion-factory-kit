@@ -139,3 +139,9 @@ test('alignment matches the last take and labels the earlier one a retake to cut
   const map = align(['a', 'b', 'c'], ['x', 'a', 'b', 'c', 'y']);
   assert.deepEqual([...map], [1, 2, 3], 'leading and trailing chatter is free');
 });
+
+test('a cue whose JSON ends in ]]] keeps the whole value', () => {
+  const c = parseScript('[[superposition hands: [{"label":"A","cards":["Ah","Jh"],"p":0.4}]]] Hello.').cues[0];
+  assert.deepEqual(c.data.hands[0].cards, ['Ah', 'Jh']);
+  assert.ok(!/\]/.test(readingCopy('[[x a: [1]]] Hello.')));
+});
