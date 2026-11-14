@@ -20,7 +20,7 @@ const max = Math.max(...D.bars.map((b) => b.value));
 const AT = LF.schedule(D, D.bars.map((b) => b.label), { start: 0.7 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: [...AT.map((at) => ({ at, name: 'tick', volume: 0.45 })), { at: AT[AT.length - 1] + 0.9, name: 'chime', volume: 0.55 }] });
-const top = D.highlight || D.bars.reduce((a, b) => (b.value > a.value ? b : a)).label;
+const top = D.bars.find((x) => String(x.label) === String(D.highlight))?.label ?? D.bars.reduce((a, b) => (b.value > a.value ? b : a)).label;
 function draw(c, t) {
   LF.backdrop(c, t, th);
   const endCam = LF.drift(c, t, D, { zoom: 0.035 });

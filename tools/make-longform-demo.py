@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import shutil
 import subprocess
 import sys
@@ -53,7 +54,7 @@ FILLERS = {"um", "uh"}
 def say(word: str, tmp: Path) -> np.ndarray:
     wav = tmp / "w.wav"
     spoken = {"um": "umm", "uh": "uhh"}.get(word.lower().strip(",.?!"), word)
-    subprocess.run(["espeak-ng", "-v", "en-us", "-s", "175", "-p", "38", "-w", str(wav), spoken], check=True)
+    subprocess.run(["espeak-ng", "-v", "en-us", "-s", os.environ.get("TAKE_SPEED", "175"), "-p", "38", "-w", str(wav), spoken], check=True)
     with wave.open(str(wav)) as f:
         sr = f.getframerate()
         a = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16).astype(np.float32) / 32768
@@ -68,7 +69,7 @@ def synth(text: str, tmp: Path):
     audio.append(np.zeros(int(0.4 * SR), np.float32))
     for chunk in text.split():
         if chunk == "|":
-            gap = 1.35
+            gap = float(os.environ.get("TAKE_PAUSE", "1.35"))
             audio.append(np.zeros(int(gap * SR), np.float32)); t += gap; continue
         a = say(chunk, tmp)
         d = len(a) / SR

@@ -64,6 +64,7 @@ base: backdrop                                      // optional: never show the 
 | `[[story beats: bank=The Fed - creates money; coin=New dollars; person=You \| flow: coin \| layout: row/loop]]` | **Show it, don't write it.** Drawn objects pop in on the words that name them, joined by arrows with things flowing along them; the camera travels to follow. Objects: see `scenes/longform/props-gallery.html` (44: bank, ballot, camera, barrel, hospital, person, crowd, coin, chip, card, atom, eye...) |
 | `[[count prop: card \| total: 221 \| highlight: 1 \| value: 1 in 221 \| label: ..]]` | A grid of objects; the ones that matter light up on the spoken number |
 | `[[table3d board: Ks 9h 4d Jc \| river: Qs \| mark.flipAt: boom \| reveal: false]]` | **3D.** A poker table: the board is dealt and turned on its words, the camera drops in on the river |
+| `[[globe3d points: New York; London; Tokyo; Riyadh=24.7,46.7 \| hub: New York \| value: 56.7% \| label: ..]]` | **3D.** A dotted globe: places light up as they are named, arcs fly between them, the globe turns to follow (about 45 place names built in, or `Name=lat,lon`) |
 | `[[stacks3d bars: Rent=42; Food=27 \| prop: chip/coin \| unit: %]]` | **3D.** Amounts as stacks of chips or coins dropping in piece by piece, camera arcing around them |
 | `[[stat value: .. \| label: .. \| sub: .. \| source: ..]]` | One big number counting up |
 | `[[quote text: .. \| highlight: words \| by: ..]]` | A line, written big, key words lit (`by` only for a real quote) |

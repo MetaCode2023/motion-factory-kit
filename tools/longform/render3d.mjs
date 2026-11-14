@@ -47,7 +47,7 @@ export async function render3d(scene, { out, data = {}, dur = null, fps = 30, st
   const exe = chromePath();
   const { server, port } = await serve();
   const browser = await chromium.launch({ ...(exe ? { executablePath: exe } : {}), headless: true,
-    args: ['--no-sandbox', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', ...(process.env.MF_GPU ? [] : ['--use-gl=angle', '--use-angle=swiftshader'])] })
+    args: ['--no-sandbox', '--disable-background-networking', '--disable-component-update', '--disable-sync', '--no-first-run', '--ignore-gpu-blocklist', '--enable-unsafe-swiftshader', ...(process.env.MF_GPU ? [] : ['--use-gl=angle', '--use-angle=swiftshader'])] })
     .catch((e) => { server.close(); throw new Error(`could not start Chrome for 3D (${e.message.split('\n')[0]}). Install Chrome, or: npx playwright install chromium`); });
   try {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });

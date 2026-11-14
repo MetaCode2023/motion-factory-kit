@@ -17,7 +17,7 @@ import { stage, THREE, chip, coin, floor, camPath, schedule, prog, ease, clamp, 
 const S = await stage({ dur: 7, kicker: 'BY THE NUMBERS', headline: 'Where it stacks up', accent: 'stacks', bars: 'Example A=42; Example B=27; Example C=18; Example D=13', unit: '%', prop: 'chip', highlight: '', source: '' });
 const { D, th, scene, camera } = S;
 const BARS = Array.isArray(D.bars) ? D.bars : String(D.bars).split(';').filter((p) => p.trim()).map((p) => { const [l, v] = p.split('='); return { label: l.trim(), value: Number(v) }; });
-const n = BARS.length, max = Math.max(...BARS.map((b) => b.value)), top = D.highlight || BARS.find((b) => b.value === max).label;
+const n = BARS.length, max = Math.max(...BARS.map((b) => b.value)), top = BARS.find((x) => String(x.label) === String(D.highlight))?.label ?? BARS.find((x) => x.value === max).label;
 const MAXN = 24, PR = 0.32, PH = D.prop === 'coin' ? 0.045 : 0.052, GAPX = Math.min(1.7, 7.6 / n);
 const AT = schedule(D, BARS.map((b) => b.label), { start: 0.7, end: D.dur - 2.4, gap: 0.5 });
 const unit = D.unit === 'none' ? '' : D.unit;
