@@ -21,6 +21,9 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).
 
+Before drafting: read `docs/PLAYBOOK.md` plus `scripts/VOICE.md` / `scripts/SERIES.md` if present. `node longform.mjs script`
+prints a retention score with notes: fix them. On-camera layouts: `full`, `side`, `pip`, `split`.
+
 Around the video:
 - New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).
 - Give each video a look in the script header: `theme: blueprint | noir | sunset | paper | terminal` (default aurora).

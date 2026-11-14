@@ -201,3 +201,23 @@ test('every long-form template draws a frame in a dark and a light look', async 
     }
   }
 });
+
+test('retention flags a greeting hook, a missing promise and a missing next step; a tight script passes', async () => {
+  const { lintScript } = await import('../tools/longform/script.mjs');
+  const weak = lintScript('---\ntitle: T\n---\n## One\nHello everyone and welcome back to the channel. Today we talk about money. Money is a thing. It moves. It stops. That is all.\n');
+  assert.ok(weak.retention.notes.some((n) => n.startsWith('hook')));
+  assert.ok(weak.retention.notes.some((n) => n.startsWith('promise')));
+  assert.ok(weak.retention.notes.some((n) => n.startsWith('ending')));
+  const good = lintScript('---\ntitle: T\n---\n## One\nWhy do you never see where money comes from? By the end you\'ll know. But first, a bank. It types a number. Watch the next video for what happens after.\n');
+  assert.ok(!good.retention.notes.some((n) => /^(hook|promise|ending)/.test(n)), good.retention.notes.join(' | '));
+  assert.ok(good.retention.score > weak.retention.score);
+});
+
+test('pip and split are layouts, and fall back to full when there is no picture of the speaker', () => {
+  const lib = fakeLib();
+  const plan = { name: 't', fps: 30, a_roll: [{ clip: 'a' }], inserts: [{ kind: 'pull', title: 'x', at: 'a#1', dur: 1, layout: 'pip' }] };
+  lib.clips.a.height = 1080;
+  assert.equal(resolvePlan(plan, lib).inserts[0].layout, 'pip');
+  lib.clips.a.height = 0;
+  assert.equal(resolvePlan(plan, lib).inserts[0].layout, 'full');
+});

@@ -16,7 +16,7 @@
 //   broll <library clip> | from:       their own footage;  image <file>
 //   face                               back to the speaker here (ends the previous visual)
 //   music <track> [volume]             music from here;  sfx <name>   one effect on the next word
-// Options on any visual: dur (seconds or auto), layout (full|side), offset, id, note.
+// Options on any visual: dur (seconds or auto), layout (full|side|pip|split), offset, id, note.
 // Animations: mark.<key>: <word> lands a beat (e.g. mark.flipAt: boom) on that spoken word.
 // Lists: "items: a; b; c". Objects: "left.title: X". Pairs: "bars: Taxes=42; Rent=27".
 // Steps: "steps: Title - body; Title - body". Any value may also be JSON.
@@ -60,7 +60,7 @@ export function parseCue(raw) {
     if (!kv) continue;
     if (OPTION_KEYS.has(kv[1])) opts[kv[1]] = parseValue(kv[2]); else setPath(data, kv[1], parseValue(kv[2]));
   }
-  if (opts.layout && !['full', 'side'].includes(opts.layout)) { data.layout = opts.layout; delete opts.layout; }   // e.g. story's layout: loop
+  if (opts.layout && !['full', 'side', 'pip', 'split'].includes(opts.layout)) { data.layout = opts.layout; delete opts.layout; }   // e.g. story's layout: loop
   const arg = firstKV ? '' : first;
   let kind = kind0, scene = null;
   if (kind0 === 'anim') { scene = arg; kind = 'anim'; }
@@ -129,11 +129,57 @@ export function lintScript(text, { wpm } = {}) {
   const words = S.words.length;
   if (runtime > 12 * 60) warnings.push(`~${fmt(runtime)} at ${pace} wpm: long for a 10-minute video`);
   if (!S.chapters.length) warnings.push('no chapters (## headings): YouTube chapters help retention and search');
+  // Figures on screen need a source the viewer (and the creator) can check.
+  const FIGURES = /(stat|bars|line|share|count|timeline|stacks3d)\.html$/;
+  const unsourced = S.cues.filter((c) => c.kind === 'anim' && FIGURES.test(c.scene || '') && !c.data.source);
+  if (unsourced.length) warnings.push(`${unsourced.length} visual(s) show figures with no source: ${unsourced.slice(0, 4).map((c) => `[[${c.raw.slice(0, 40)}…]]`).join(', ')}${unsourced.length > 4 ? ', …' : ''} (add source: "who, year")`);
   const kinds = {};
   for (const c of S.cues) { const k = c.kind === 'anim' ? basename(c.scene || 'anim', '.html') : c.kind; kinds[k] = (kinds[k] || 0) + 1; }
   return { ok: !errors.length, errors, warnings, title: S.meta.title || '', words, runtime: +runtime.toFixed(1), pace,
     visuals: vis.length, every: vis.length ? +(runtime / vis.length).toFixed(1) : null, longestGap: gaps.length ? +Math.max(...gaps).toFixed(1) : null,
-    chapters: S.chapters.map((c) => `${fmt(tAt(c.word))} ${c.title}`), cues: kinds };
+    chapters: S.chapters.map((c) => `${fmt(tAt(c.word))} ${c.title}`), cues: kinds, retention: retention(S, pace) };
+}
+
+// ---- retention: the places a viewer is most likely to leave, found before anything is recorded --------
+// Heuristics, not rules: each note says where and why; fix it or decide it's fine.
+export function retention(S, pace = 150) {
+  const tAt = (wi) => (wi / pace) * 60, notes = [];
+  const sents = [];
+  let from = 0;
+  S.words.forEach((w, i) => { if (/[.?!]["')\]]*$/.test(w.w) || i === S.words.length - 1) { sents.push({ from, to: i, n: i - from + 1, text: S.words.slice(from, i + 1).map((x) => x.w).join(' '), q: /\?["')\]]*$/.test(w.w) }); from = i + 1; } });
+  if (!sents.length) return { score: 0, notes: ['no spoken words'] };
+  const has = (text, re) => re.test(text.toLowerCase());
+  // 1. The hook: the first ~10 s must give a reason to stay.
+  const hookWords = Math.round(pace / 6), hook = S.words.slice(0, hookWords).map((x) => x.w).join(' ');
+  if (has(sents[0].text, /^(hey|hi|hello|welcome|what's up|so,? today|in this video|today (we|i)|my name is)/)) notes.push(`hook: opens with a greeting or "in this video" ("${sents[0].text.slice(0, 50)}…"): open on the claim, the question or the number instead`);
+  else if (!has(hook, /\?|\d|\byou(r|'re)?\b|\b(never|nobody|secret|wrong|lie|why|isn't|aren't|don't|not)\b/)) notes.push(`hook: the first 10 s ("${hook.slice(0, 60)}…") has no question, number, "you" or surprise: give a reason to stay`);
+  if (sents[0].n > 22) notes.push(`hook: the first sentence is ${sents[0].n} words: make the first line short enough to land in one breath`);
+  // 2. A promise: by 45 s the viewer should know what they get for staying.
+  const early = S.words.slice(0, Math.round(pace * 0.75)).map((x) => x.w).join(' ');
+  if (!has(early, /by the end|in (a|the next) (minute|few)|i'll show|we'll (see|get to|find)|you'll (see|know|understand|learn)|stick|stay|here's (why|how|what)|the (real )?reason|turns out|but first|later/)) notes.push('promise: nothing in the first 45 s says what the viewer gets by staying ("by the end you\'ll…", "here\'s why…")');
+  // 3. Re-hooks: a question or a turn at least every ~90 s.
+  let last = 0;
+  const turns = sents.filter((s) => s.q || has(s.text, /^(but|except|here's the (thing|problem|twist)|now|so why|and yet|the problem|it gets (worse|better|stranger))/)).map((s) => tAt(s.from));
+  for (const t of [...turns, tAt(S.words.length)]) { if (t - last > 95) notes.push(`re-hook: ${fmt(last)}–${fmt(t)} has no question or turn ("but…", "here's the thing…"): give the viewer a reason to keep going`); last = t; }
+  // 4. Sentences that are hard to say (and to follow) out loud.
+  const long = sents.filter((s) => s.n > 34);
+  if (long.length) notes.push(`${long.length} sentence(s) over 34 words (at ${long.slice(0, 3).map((s) => fmt(tAt(s.from))).join(', ')}): split them, they're hard to say and to follow`);
+  const avg = S.words.length / sents.length;
+  if (avg > 19) notes.push(`sentences average ${avg.toFixed(0)} words: written for the page, not the mouth (aim for 12-16)`);
+  // 5. Chapters: none too long, none too thin.
+  const ch = S.chapters.map((c, i) => ({ title: c.title, len: tAt((S.chapters[i + 1]?.word ?? S.words.length) - c.word), at: tAt(c.word) }));
+  ch.filter((c) => c.len > 170).forEach((c) => notes.push(`chapter "${c.title}" runs ${fmt(c.len)}: split it or cut it (over ~2:45 the middle sags)`));
+  ch.filter((c) => c.len < 25).forEach((c) => notes.push(`chapter "${c.title}" is only ${Math.round(c.len)} s: merge it into its neighbour`));
+  // 6. Visuals: not two of the same in a row, not mostly words.
+  const anims = S.cues.filter((c) => c.kind === 'anim').map((c) => ({ name: basename(c.scene || '', '.html'), t: tAt(c.word) }));
+  const twice = anims.filter((a, i) => i && a.name === anims[i - 1].name);
+  if (twice.length) notes.push(`same visual twice in a row: ${twice.slice(0, 4).map((a) => `${a.name} at ${fmt(a.t)}`).join(', ')}`);
+  const vis = S.cues.filter((c) => VISUAL.has(c.kind)).length, wordy = anims.filter((a) => ['quote', 'term', 'compare', 'steps'].includes(a.name)).length;
+  if (vis >= 8 && wordy / vis > 0.3) notes.push(`${wordy} of ${vis} visuals are mostly words (quote, term, compare, steps): show more (story, count, 3D, stock, charts)`);
+  // 7. The ending: stop on the point, then say where to go next.
+  const end = S.words.slice(-Math.round(pace / 3)).map((x) => x.w).join(' ');
+  if (!has(end, /next|watch|subscribe|link|comment|see you|part two|part 2|video/)) notes.push('ending: the last 20 s never says what to watch or do next');
+  return { score: Math.max(0, 100 - 9 * notes.length), notes };
 }
 
 // ---- alignment: script words <-> recording transcript (semi-global, later takes preferred) ----------

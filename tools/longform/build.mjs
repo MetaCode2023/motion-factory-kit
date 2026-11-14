@@ -79,6 +79,23 @@ async function pullCard(ins, accent, out) {
   return out;
 }
 
+// The corner circle for layout "pip": a round mask for the speaker and an accent ring behind it.
+// plan.pip = { size: 300, margin: 56 } to change it.
+async function pipAssets(media, accent, plan) {
+  const { Canvas } = await import('skia-canvas');
+  const d = Math.round((plan.pip?.size ?? 300) / 2) * 2, ring = 6, margin = plan.pip?.margin ?? 56;
+  mkdirSync(media, { recursive: true });
+  const mask = join(media, 'pip-mask.png'), ringFile = join(media, 'pip-ring.png');
+  let cv = new Canvas(d, d), c = cv.getContext('2d');
+  c.fillStyle = '#000'; c.fillRect(0, 0, d, d); c.fillStyle = '#fff'; c.beginPath(); c.arc(d / 2, d / 2, d / 2 - 1, 0, Math.PI * 2); c.fill();
+  await cv.toFile(mask);
+  const D = d + 2 * ring;
+  cv = new Canvas(D, D); c = cv.getContext('2d');
+  c.fillStyle = accent; c.beginPath(); c.arc(D / 2, D / 2, D / 2 - 1, 0, Math.PI * 2); c.fill();
+  await cv.toFile(ringFile);
+  return { d, ring, margin, mask, ringFile };
+}
+
 // What an animation scene gets: its data, its length, and every word spoken while it is on screen
 // ({ w, t } with t in seconds from the insert's start), so its beats can land on the words.
 export function animData(ins, R) {
@@ -205,7 +222,7 @@ async function prerender(R, plan, log) {
 // its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
 // uses no more memory than a 1-minute one. Captions are drawn per chunk at the right times; the chunks are
 // joined without re-encoding and the mix is laid under them.
-function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}) {
+function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null) {
   const SIDE = sideBox(plan), fps = plan.fps;
   const N = Math.round(R.total * fps);
   const parts = [];
@@ -231,6 +248,24 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
       const ins = p.ins, d = n / fps, fade = Math.min(0.18, d / 4);
       const fades = `fade=t=in:st=0:d=${fade}:alpha=1,fade=t=out:st=${(d - fade).toFixed(3)}:d=${fade}:alpha=1`;
       const b = SIDE.border, col = accent.replace('#', '0x');
+      const fx = Math.min(1, Math.max(0, plan.face?.x ?? 0.5));   // where the speaker sits across the frame (0 left, 1 right)
+      if (ins.layout === 'pip' && pip) {
+        // The visual fills the frame; the speaker stays in a circle in the corner.
+        const D = pip.d, m = pip.margin, rx = W - D - 2 * pip.ring - m, ry = H - D - 2 * pip.ring - m;
+        const g = `[0:v]setpts=PTS-STARTPTS,split[bg][f0];[f0]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${D}:${D},format=rgba[f1];[2:v]format=gray[m];[f1][m]alphamerge[face];` +
+          `[1:v]setpts=PTS-STARTPTS[an];[an][3:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring},format=yuva420p,${fades}[i];[bg][i]overlay=0:0:eof_action=pass`;
+        ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile, '-filter_complex', `${g}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
+        return file;
+      }
+      if (ins.layout === 'split') {
+        // Speaker on the left half, the visual on the right half over a blurred copy of itself.
+        const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
+        const g = `[0:v]setpts=PTS-STARTPTS,split[bg][f0];[f0]crop=${hw}:${H}:(iw-${hw})*${fx}:0[L];` +
+          `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr];` +
+          `[L][Rr]hstack,drawbox=x=${hw - 3}:y=0:w=6:h=${H}:color=${col}:t=fill,format=yuva420p,${fades}[i];[bg][i]overlay=0:0:eof_action=pass`;
+        ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-filter_complex', `${g}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
+        return file;
+      }
       const fg = ins.layout === 'side'
         ? `[1:v]scale=${SIDE.w - 2 * b}:${SIDE.h - 2 * b},pad=${SIDE.w}:${SIDE.h}:${b}:${b}:color=${col},format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=${SIDE.x}:${SIDE.y}:eof_action=pass`
         : `[1:v]format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=0:0:eof_action=pass`;
@@ -294,7 +329,7 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
 function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
-  const full = R.inserts.filter((i) => i.layout === 'full').map((i) => [i.at, i.at + i.dur]);
+  const full = R.inserts.filter((i) => i.layout === 'full' || i.layout === 'pip').map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
   const center = R.voiceOnly;
   const bgr = (hex) => { const h = hex.replace('#', ''); return `&H${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
@@ -400,7 +435,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
   const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
-  composite(R, plan, aroll, mix, video, accent, ass, log);
+  composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null);
 
   const files = [relative(ROOT, video)];
   const write = (name, text) => { const f = join(dir, name); writeFileSync(f, text); files.push(relative(ROOT, f)); return f; };

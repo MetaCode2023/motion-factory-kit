@@ -6,7 +6,9 @@ import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs'
 import { loadLibrary } from './library.mjs';
 
 export const KINDS = ['animation', 'broll', 'pull', 'image', 'face'];
-export const LAYOUTS = ['full', 'side'];
+// full: the visual fills the frame. side: a box beside the speaker. pip: the visual fills the frame and the
+// speaker stays in a corner circle. split: speaker on the left half, visual on the right.
+export const LAYOUTS = ['full', 'side', 'pip', 'split'];
 export const TIGHTEN = { fillers: true, max_pause: 0.45, pad: 0.08 };
 
 // Where "side" inserts sit: a 16:9 box (default top-right, half width). plan.side = { w, x, y } to move it
@@ -196,6 +198,8 @@ export function resolvePlan(plan, lib = loadLibrary()) {
   inserts.sort((a, b) => a.at - b.at);
   // Voice-only: no picture in the recording (or plan.base = "backdrop"); the animated backdrop + captions fill the gaps.
   const voiceOnly = plan.base === 'backdrop' || (plan.a_roll || []).every((r) => lib.clips[r.clip] && !lib.clips[r.clip].height);
+  // With no picture of the speaker there is nobody to keep on screen: pip and split become full.
+  if (voiceOnly) inserts.forEach((i) => { if (i.layout === 'pip' || i.layout === 'split') i.layout = 'full'; });
   // "auto" lengths run to the next visual (or [[face]]), capped so the speaker comes back between ideas.
   inserts.forEach((ins, k) => {
     if (ins.auto) {

@@ -6,6 +6,8 @@ import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { FF, PY, ROOT, ff, fmt, fmtChapter, probe, seconds } from './common.mjs';
 import { loadPlan, resolvePlan } from './plan.mjs';
+import { loadLibrary } from './library.mjs';
+import { FILLERS, bare } from './common.mjs';
 
 const outDir = (plan) => join(ROOT, 'out', 'longform', plan.name);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -249,4 +251,93 @@ export async function shorts(planFile, { log = console.log, max = 6 } = {}) {
   }
   writeFileSync(join(sdir, 'SHORTS.md'), [`# Shorts from ${plan.title || plan.name}`, '', '| File | From | To | Title |', '|---|---|---|---|', ...files.map((f) => `| ${basename(f.file)} | ${fmtChapter(f.from)} | ${fmtChapter(f.to)} | ${f.title} |`), '', 'To change one, set "shorts": [{ "from": "1:02", "to": "1:48", "title": "…" }] in the plan and run this again.', ''].join('\n'));
   return { ok: true, files };
+}
+
+// ---- the creator's voice ------------------------------------------------------------------------------
+// scripts/VOICE.md: a measured part (pace, sentence length, the phrases they really use), rewritten by
+// `node longform.mjs voice`, and a hand-kept part (what they never say, humour, corrections) that is left alone.
+const VOICE = () => join(ROOT, 'scripts', 'VOICE.md');
+const STOPW = new Set('the a an and or but so to of in on at for with is it its this that these those be was were are you your they their we our he she his her i my me not no do does did just like then than as from by into out up about there here what when how why who all any some one very really can will would have has had if because which'.split(' '));
+
+export function voicePace(scriptFile) {
+  for (const f of [scriptFile && join(dirname(resolve(scriptFile)), 'VOICE.md'), VOICE()].filter(Boolean)) {
+    if (!existsSync(f)) continue;
+    const m = readFileSync(f, 'utf8').match(/Pace:\s*\**(\d{2,3})\**\s*words a minute/);
+    if (m) return Number(m[1]);
+  }
+  return undefined;
+}
+
+export function voiceProfile(ids = [], { out } = {}) {
+  const lib = loadLibrary();
+  const clips = (ids.length ? ids.map((id) => lib.clips[id]) : Object.values(lib.clips)).filter((c) => c?.words?.length);
+  if (!clips.length) throw new Error('no transcribed recordings found (node longform.mjs index <their solo recordings> first)');
+  let words = 0, talk = 0, fillers = 0, you = 0, questions = 0;
+  const lens = [], openers = {}, grams = {};
+  for (const c of clips) {
+    words += c.words.length;
+    fillers += c.words.filter((w) => FILLERS.has(bare(w.w))).length;
+    you += c.words.filter((w) => /^you(r|'re|'ll|'ve)?$/.test(bare(w.w))).length;
+    for (const s of c.sentences) {
+      talk += Math.max(0.2, s.e - s.s);
+      const ws = s.text.split(/\s+/).map(bare).filter((w) => w && !FILLERS.has(w));
+      if (ws.length < 2) continue;
+      lens.push(ws.length);
+      if (/\?\s*$/.test(s.text)) questions++;
+      const op = ws.slice(0, 2).join(' '); openers[op] = (openers[op] || 0) + 1;
+      for (const n of [2, 3, 4]) for (let i = 0; i + n <= ws.length; i++) { const g = ws.slice(i, i + n); if (g.filter((w) => !STOPW.has(w)).length >= Math.ceil(n / 2) && !STOPW.has(g[0]) | !STOPW.has(g[n - 1])) { const k = g.join(' '); grams[k] = (grams[k] || 0) + 1; } }
+    }
+  }
+  lens.sort((a, b) => a - b);
+  const med = lens[Math.floor(lens.length / 2)] || 0, p90 = lens[Math.floor(lens.length * 0.9)] || 0;
+  const top = (o, n, min) => Object.entries(o).filter(([, c]) => c >= min).sort((a, b) => b[1] - a[1]).slice(0, n);
+  // Longer phrases first; drop a shorter one that only ever appears inside a longer one already listed.
+  const phrases = [];
+  for (const [k, c] of top(grams, 60, 3).sort((a, b) => b[0].split(' ').length - a[0].split(' ').length || b[1] - a[1])) if (!phrases.some(([p, pc]) => p.includes(k) && pc >= c * 0.8)) phrases.push([k, c]);
+  const wpm = Math.round(words / (talk / 60)), mins = talk / 60;
+  const measured = [
+    `- Pace: **${wpm}** words a minute (scripts are timed at this pace)`,
+    `- Sentences: about **${med}** words; the long ones reach ${p90}`,
+    `- Questions: ${Math.round((questions / Math.max(1, lens.length)) * 100)}% of sentences`,
+    `- Talks to "you": ${((you / words) * 100).toFixed(1)} times per 100 words`,
+    `- Fillers: ${(fillers / mins).toFixed(1)} a minute (cut automatically)`,
+    `- Starts sentences with: ${top(openers, 8, 2).map(([k, c]) => `"${k}…" (${c})`).join(', ') || 'no repeats yet'}`,
+    `- Phrases they really use: ${phrases.sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, c]) => `"${k}" (${c})`).join(', ') || 'not enough footage yet'}`,
+    `- From: ${clips.length} recording(s), ${words} words, ${Math.round(mins)} min of talking (${clips.map((c) => c.id).slice(0, 8).join(', ')}${clips.length > 8 ? ', …' : ''})`,
+  ].join('\n');
+  const file = resolve(out || VOICE());
+  const A = '<!-- measured:start -->', B = '<!-- measured:end -->';
+  let text = existsSync(file) ? readFileSync(file, 'utf8') : `# Voice
+
+Read this before drafting any script. Write the way this person talks, not the way an essay reads.
+
+## Measured from their recordings
+
+${A}
+${B}
+
+## How they sound
+
+(Fill in after the first conversation and keep it current: plain or technical? dry or excitable? how they explain a hard idea; who they imagine they're talking to.)
+
+## Never says
+
+(Words and moves to avoid: phrases they've cut from drafts, anything that sounds like marketing or like an AI wrote it.)
+
+## Humour
+
+(What kind, how often, an example line they liked.)
+
+## Opening and sign-off
+
+(How they like to start a video and how they end one.)
+
+## Corrections
+
+(Every time they change a draft, add a line: what you wrote → what they changed it to. This is the list that makes the next draft better.)
+`;
+  text = text.includes(A) && text.includes(B) ? text.slice(0, text.indexOf(A) + A.length) + '\n' + measured + '\n' + text.slice(text.indexOf(B)) : text + `\n## Measured from their recordings\n\n${A}\n${measured}\n${B}\n`;
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, text);
+  return { ok: true, file, clips: clips.map((c) => c.id), words, wpm, sentence: med };
 }

@@ -124,6 +124,27 @@ build renders them through headless Chrome instead of the 2D engine.
   Software rendering works anywhere at roughly half a second per frame; set `MF_GPU=1` to use the graphics card.
 - Use 3D where depth is the point (objects, places, things you could pick up); keep 2D for charts and words.
 
+## Retention check
+
+`node longform.mjs script` ends with a score out of 100 and notes on where viewers are most likely to leave:
+a greeting or flat first 10 s, no promise by 45 s, 95 s+ with no question or turn, sentences over 34 words,
+chapters over ~2:45 or under 25 s, the same visual twice in a row, more than ~30% word cards, no next step at
+the end. They are heuristics: fix each one or decide it's fine. Figure visuals with no `source:` are warned about.
+
+## Layouts
+
+| Layout | What you see | Use it for |
+|---|---|---|
+| `full` (default) | the visual fills the frame | most visuals |
+| `side` | a box beside the speaker | a clip or a small fact while they keep talking |
+| `pip` | the visual fills the frame, the speaker stays in a corner circle | long explanations, so a face stays on screen |
+| `split` | speaker on the left half, the visual on the right | simple visuals: one number, one object, 3D |
+
+`[[stat: … | layout: pip]]` in a script, `"layout": "pip"` in a plan. `"face": { "x": 0.4 }` in the plan says
+where the speaker sits across the frame if they're off-centre; `"pip": { "size": 300, "margin": 56 }` resizes the
+circle. In voice-only videos there is no picture of the speaker, so `pip` and `split` become `full`. The Premiere
+timeline shows them as full-frame clips.
+
 ## Looks
 
 One word restyles the whole video: every animation and the voice-only backdrop. In a script's header write
@@ -181,6 +202,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
 | `node longform.mjs stock <plan>` | Downloads Pexels B-roll for `"stock"` inserts into `assets/broll/` and adds credits to `assets/broll/CREDITS.md`. |
 | `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. Animations render several at a time (`LONGFORM_JOBS=3` to set how many). Also writes `review.html`. |
+| `node longform.mjs voice [clip ids]` | Measures how the creator talks from their indexed recordings (pace, sentence length, real phrases) into `scripts/VOICE.md`. Scripts are then timed at that pace. See `docs/PLAYBOOK.md`. |
 | `node longform.mjs doctor` | Checks this machine: Node, packages, Python, transcription, Chrome for 3D, keys. Says what's missing and the one-line fix. |
 | `node longform.mjs feedback <name>.review.json` | Turns the reviewer's notes into `FEEDBACK.md`: each note with what was on screen, what was being said, and which insert in the plan to change. |
 | `node longform.mjs thumbnail <plan>` | Three 1280x720 thumbnails (`thumbnail-1..3.jpg`) from `"thumbnail": { "text", "accent", "prop", "kicker" }` in the plan. |

@@ -347,6 +347,12 @@ server.registerTool('longform_stock', {
   inputSchema: { plan: z.string() },
 }, async ({ plan }) => text(await cli('longform.mjs', ['stock', inRepo(plan)])));
 
+server.registerTool('longform_voice', {
+  title: 'Measure the creator\'s voice',
+  description: 'Measures how the creator talks from their indexed recordings (pace, sentence length, questions, the phrases they really use) and writes scripts/VOICE.md, keeping its hand-written sections. Index their solo recordings first, or pass clip ids. Read VOICE.md before drafting a script; scripts are timed at its pace.',
+  inputSchema: { clips: z.array(z.string()).optional() },
+}, async ({ clips }) => text(await cli('longform.mjs', ['voice', ...(clips || [])])));
+
 server.registerTool('longform_doctor', {
   title: 'Check the machine is set up',
   description: 'Lists everything the long-form editor needs on this machine (Node, packages, Python, transcription, Chrome for 3D, keys), what is missing and the one-line fix for each. Run it first on a new machine.',

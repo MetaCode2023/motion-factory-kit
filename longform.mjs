@@ -29,7 +29,7 @@ import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
 import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
-import { doctor, feedback, shorts, thumbnails } from './tools/longform/extras.mjs';
+import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -75,7 +75,7 @@ try {
   } else if (cmd === 'script') {
     // Check a script and write the reading copy (cues stripped) for the teleprompter.
     const file = args[0], text = readFileSync(file, 'utf8');
-    const r = lintScript(text, { wpm: opt('wpm') ? Number(opt('wpm')) : undefined });
+    const r = lintScript(text, { wpm: opt('wpm') ? Number(opt('wpm')) : voicePace(file) });
     if (r.ok && !rest.includes('--fast')) { const errs = await tryScenes(text); r.errors.push(...errs); r.ok = !errs.length; }
     const read = file.replace(/\.script\.md$|\.md$/, '') + '.read.txt';
     writeFileSync(read, readingCopy(text));
@@ -86,6 +86,8 @@ try {
       console.log(`${r.title}: ${r.words} words, ~${fmt(r.runtime)} at ${r.pace} wpm, ${r.visuals} visuals (one every ~${r.every}s, longest gap ${r.longestGap}s)`);
       console.log('  cues: ' + Object.entries(r.cues).map(([k, n]) => `${k} ${n}`).join(', '));
       r.chapters.forEach((c) => console.log('  ' + c));
+      console.log(`retention ${r.retention.score}/100${r.retention.notes.length ? ':' : ' (nothing flagged)'}`);
+      r.retention.notes.forEach((n) => console.log('  keep  ' + n));
       console.log(`reading copy -> ${read}`);
     }
     emit(r);
@@ -128,6 +130,11 @@ try {
     // node longform.mjs feedback <name>.review.json [plan.json]: the reviewer's notes -> FEEDBACK.md
     const r = feedback(args[0], args[1]);
     if (!json) { console.log(`${r.notes.length} note(s), ${r.approved ? 'approved once done' : 'not approved yet'} -> ${relative(ROOT, r.file)}`); r.notes.forEach((n) => console.log(`  ${fmt(n.t)}  ${n.insert ? n.insert.id : '(speaker)'}  ${n.text.split('\n')[0].slice(0, 80)}`)); }
+    emit(r);
+  } else if (cmd === 'voice') {
+    // node longform.mjs voice [clip ids…]: how the creator actually talks, measured from their own recordings
+    const r = voiceProfile(args.filter((a) => a !== opt('out')), { out: opt('out') });
+    if (!json) console.log(`${r.clips.length} recording(s), ${r.words} words: ${r.wpm} words a minute, sentences ~${r.sentence} words -> ${relative(ROOT, r.file)}`);
     emit(r);
   } else if (cmd === 'thumbnail') {
     emit(thumbnails(args[0], { log }));
@@ -200,6 +207,7 @@ function readmeUsage() {
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
   node longform.mjs demo [podcast]     run it all on bundled stand-in footage
+  node longform.mjs voice [clip ids]   measure how the creator talks -> scripts/VOICE.md
   node longform.mjs doctor             check this machine is set up
   node longform.mjs feedback <review.json>   reviewer's notes -> FEEDBACK.md
   node longform.mjs thumbnail <plan>   three thumbnails

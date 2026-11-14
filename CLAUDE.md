@@ -87,6 +87,9 @@ You are the writer's room, the editor and the motion designer. The creator bring
 the goal is a 10-minute video they can post without touching it.
 
 **Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
+0. **Read `docs/PLAYBOOK.md`**, and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
+   series look, fact and clip rules, what a finished package contains). No VOICE.md but recordings of them exist:
+   index the solo ones and run `node longform.mjs voice`.
 1. **Ask what the video is about** if they haven't said, and the angle (e.g. "why people love poker, as a Trojan
    horse for quantum mechanics"). Then research it (web search): the real numbers, the clearest analogies, and
    2-5 specific outside clips that prove a point (exact URL + timestamps).
@@ -98,7 +101,11 @@ the goal is a 10-minute video they can post without touching it.
    `node tools/longform/render3d.mjs <scene> --still t`) for objects and places with depth. **Show, don't write**: prefer `story` (drawn objects on their words, `scenes/longform/props-gallery.html`) and
    `count` over text cards; at most ~1 in 4 visuals should be mostly words. Label items with the words the script
    says, so they land on them. Vary them; never two of the same template in a row. Figures only from your research,
-   with `source:`. Run `node longform.mjs script` and fix every error and cadence warning.
+   with `source:`. Run `node longform.mjs script` and fix every error and cadence warning. It also
+   prints a **retention** score with notes (weak hook, no promise in the first 45 s, a stretch with no question or
+   turn, sagging chapters, too many word cards, no next step at the end): fix each or tell the creator why not.
+   Layouts when the speaker is on camera: `full`, `side` (box beside them), `pip` (visual full screen, speaker in a
+   corner circle: keeps a face on screen through long explanations), `split` (speaker left, simple visual right).
 3. **Revise with the creator** until they approve. Then they record from the `.read.txt` (re-reading a flubbed
    line is fine). New animations the script needs: write them now while they record (copy the closest
    `scenes/longform/*.html`; `preset: 'youtube'`, all text from `M.data`; check stills). Several new scenes are
