@@ -11,7 +11,7 @@
     "gallery": "node render.mjs scenes/examples/blocks-gallery.html --sheet",
     "render": "node render.mjs",
     "examples": "node batch.mjs scenes/examples --sheet",
-    "test": "node --test tests/kit.test.mjs tests/sound.test.mjs tests/batch.test.mjs tests/footage.test.mjs tests/review.test.mjs tests/mcp.test.mjs",
+    "test": "node --test tests/longform.test.mjs tests/kit.test.mjs tests/sound.test.mjs tests/batch.test.mjs tests/footage.test.mjs tests/review.test.mjs tests/mcp.test.mjs",
     "mcp": "node mcp/server.mjs",
     "overlays-demo": "python3 tools/overlay.py demo"
   },

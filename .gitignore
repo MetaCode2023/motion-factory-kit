@@ -14,3 +14,9 @@ edits/*
 data/*
 !data/README.md
 !data/example-ads.csv
+
+# Stock and pulled clips for long-form videos (licensing is yours; keep them out of a public repo).
+assets/broll/*
+!assets/broll/.gitkeep
+scripts/*
+!scripts/README.md

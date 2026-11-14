@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Measurement: the river collapses it</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="poker.js"></script>
+</head>
+<body>
+<script>
+// 16:9 insert. The board sits with the river face down above a wave of possible outcomes. The river
+// flips (the measurement), the screen flashes, and the whole wave collapses into one spike.
+// Data (optional): dur, kicker, headline, accent, board: ['Ks','9h','4d','Jc'], river: 'Qs',
+// before: 'possible outcomes', after: 'one outcome', flipAt (seconds; default 40% of dur)
+const D = M.data({
+  dur: 7,
+  kicker: 'MEASUREMENT',
+  headline: 'The river collapses it',
+  accent: 'collapses',
+  board: ['Ks', '9h', '4d', 'Jc'],
+  river: 'Qs',
+  before: 'possible outcomes',
+  after: 'one outcome · 100%',
+  color: '#3CE0FF',
+  hit: '#FFC23D',
+});
+const W = 1920, H = 1080, C = D.color, T = D.flipAt ?? D.dur * 0.4;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', cuts: [T] });
+const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
+
+// The wave: a sum of bumps (each a possible outcome). Collapse squeezes it into one spike at SPIKE.
+const X0 = 220, X1 = 1700, BASE = 960, CAP = 230, RIVER_X = 560 + 4 * 200, SPIKE = (RIVER_X - X0) / (X1 - X0);
+const R = FX.rng(9), BUMPS = Array.from({ length: 11 }, (_, i) => ({ x: (i + 0.5) / 11 + (R() - 0.5) * 0.04, h: 0.35 + R() * 0.65, w: 0.025 + R() * 0.03 }));
+function wave(u, t, k) {
+  let y = 0;
+  for (const b of BUMPS) {
+    const x = b.x + (SPIKE - b.x) * k, w = b.w * (1 - k) + 0.006 * k;
+    y += b.h * (1 - k) * Math.exp(-((u - x) ** 2) / (2 * w * w)) * (0.85 + 0.15 * Math.sin(t * 3 + b.x * 20));
+  }
+  return y + 2.6 * k * Math.exp(-((u - SPIKE) ** 2) / (2 * 0.006 ** 2));
+}
+
+function draw(c, t) {
+  const k = M.ease.inOutCubic(M.clamp((t - T - 0.08) / 0.7));
+  P.backdrop(c, t, W, H, { accent: k > 0.5 ? D.hit : C });
+  const end = FX.camera(c, t, { punch: [T], punchAmount: 0.05, shake: 0.06 });
+
+  // Board: four up, the river face down until T.
+  const cards = [...D.board, D.river];
+  cards.forEach((cs, i) => {
+    const x = 560 + i * 200, y = 500, a = M.ease.outBack(M.clamp((t - 0.2 - i * 0.1) / 0.5));
+    if (a <= 0) return;
+    const river = i === cards.length - 1;
+    const flip = river ? M.ease.inOutCubic(M.clamp((t - T + 0.25) / 0.35)) : 1;
+    c.save(); c.translate(x, y); c.scale(a, a); c.translate(-x, -y);
+    P.card(c, x, y, 150, { ...split(cs), flip, glow: river ? (flip < 1 ? 0.4 + 0.3 * Math.sin(t * 5) : 0.9 * (1 - k * 0.5)) : 0, glowColor: river && flip >= 1 ? D.hit : C });
+    c.restore();
+  });
+  M.text(c, 'RIVER', RIVER_X, 365, { font: '600 24px "JetBrains Mono"', color: k > 0.5 ? D.hit : '#8A93A6', align: 'center', alpha: M.prog(t, 0.8, 0.4) });
+
+  // The wave of outcomes, then the spike.
+  const ink = M.prog(t, 0.6, 0.8);
+  if (ink > 0) {
+    const col = k > 0.5 ? D.hit : C;
+    c.save(); c.globalAlpha = ink;
+    c.beginPath(); c.moveTo(X0, BASE);
+    for (let i = 0; i <= 400; i++) { const u = i / 400; c.lineTo(X0 + (X1 - X0) * u, BASE - Math.min(CAP, 110 * wave(u, t, k)) * ink); }
+    c.lineTo(X1, BASE); c.closePath();
+    const g = c.createLinearGradient(0, BASE - CAP, 0, BASE); g.addColorStop(0, FX.alpha(col, 0.55)); g.addColorStop(1, FX.alpha(col, 0.02));
+    c.fillStyle = g; c.fill();
+    FX.glow(c, () => {
+      c.beginPath();
+      for (let i = 0; i <= 400; i++) { const u = i / 400, y = BASE - Math.min(CAP, 110 * wave(u, t, k)) * ink; i ? c.lineTo(X0 + (X1 - X0) * u, y) : c.moveTo(X0 + (X1 - X0) * u, y); }
+      c.strokeStyle = col; c.lineWidth = 4; c.stroke();
+    }, { color: col, blur: 26, strength: 0.8 });
+    c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X0, BASE + 2); c.lineTo(X1, BASE + 2); c.stroke();
+    c.restore();
+    M.text(c, D.before.toUpperCase(), X0, BASE + 50, { font: '600 26px "JetBrains Mono"', color: '#8A93A6', alpha: ink * (1 - k) });
+    const sx = X0 + (X1 - X0) * SPIKE;
+    M.text(c, D.after.toUpperCase(), sx - 40, BASE - CAP + 30, { font: '700 34px "JetBrains Mono"', color: D.hit, align: 'right', alpha: M.clamp((k - 0.6) / 0.3) });
+  }
+  end();
+
+  // Flash on the measurement.
+  const fl = M.clamp(1 - Math.abs(t - T) / 0.18);
+  if (fl > 0) { c.fillStyle = `rgba(255,255,255,${0.55 * fl})`; c.fillRect(0, 0, W, H); }
+  P.title(c, t, { kicker: D.kicker, headline: D.headline, accent: D.accent, color: k > 0.5 ? D.hit : C, width: 1400 });
+  FX.vignette(c, { strength: 0.5 });
+}
+</script>
+</body>
+</html>

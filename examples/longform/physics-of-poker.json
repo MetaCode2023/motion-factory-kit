@@ -1,0 +1,135 @@
+{
+  "name": "physics-of-poker",
+  "title": "The Physics of Poker (demo cut)",
+  "a_roll": [
+    {
+      "clip": "podcast-ep1"
+    },
+    {
+      "clip": "podcast-ep2",
+      "from": "#2",
+      "to": "#9"
+    }
+  ],
+  "tighten": {
+    "fillers": true,
+    "max_pause": 0.45,
+    "cut": [
+      {
+        "at": "podcast-ep1#19",
+        "text": "They're running um"
+      }
+    ]
+  },
+  "punch_in": {
+    "every": 2,
+    "zoom": 1.12,
+    "focus": [
+      0.43,
+      0.42
+    ]
+  },
+  "chapters": [
+    {
+      "at": "podcast-ep1#1",
+      "title": "Every hand at once"
+    },
+    {
+      "at": "podcast-ep1#12",
+      "title": "The measurement"
+    },
+    {
+      "at": "podcast-ep2#2",
+      "title": "Deception"
+    }
+  ],
+  "inserts": [
+    {
+      "id": "superposition",
+      "kind": "animation",
+      "at": "podcast-ep1#3",
+      "word": "every",
+      "offset": -0.2,
+      "dur": 7,
+      "scene": "scenes/longform/superposition.html",
+      "note": "range as a probability cloud"
+    },
+    {
+      "id": "pull-final-table",
+      "kind": "pull",
+      "at": "podcast-ep1#8",
+      "dur": 4.5,
+      "layout": "side",
+      "title": "A pro staring down an opponent at a final table",
+      "search": "WSOP final table hero call read",
+      "note": "any famous read, 4-5 s"
+    },
+    {
+      "id": "collapse",
+      "kind": "animation",
+      "at": "podcast-ep1#12",
+      "word": "river",
+      "offset": -0.3,
+      "dur": 7,
+      "scene": "scenes/longform/collapse.html",
+      "marks": {
+        "flipAt": {
+          "at": "podcast-ep1#13",
+          "word": "boom"
+        }
+      },
+      "note": "river flips on 'Boom', wave collapses"
+    },
+    {
+      "id": "stock-static",
+      "kind": "broll",
+      "at": "podcast-ep2#2",
+      "word": "noise",
+      "dur": 2.4,
+      "stock": "tv static noise",
+      "note": "noise in the signal"
+    },
+    {
+      "id": "pull-famous-bluff",
+      "kind": "pull",
+      "at": "podcast-ep2#3",
+      "dur": 4,
+      "title": "A televised bluff that worked",
+      "search": "famous poker bluff high stakes TV",
+      "note": "the moment the opponent folds"
+    },
+    {
+      "id": "deception",
+      "kind": "animation",
+      "at": "podcast-ep2#5",
+      "word": "bluff",
+      "dur": 7.5,
+      "scene": "scenes/longform/deception.html",
+      "note": "same bet, same signal, different truth"
+    }
+  ],
+  "music": [
+    {
+      "at": 0,
+      "track": "calm",
+      "volume": 0.1
+    },
+    {
+      "at": "podcast-ep1#12",
+      "track": "drive",
+      "volume": 0.09
+    },
+    {
+      "at": "podcast-ep2#2",
+      "track": "calm",
+      "volume": 0.1
+    }
+  ],
+  "sfx": [
+    {
+      "at": "podcast-ep1#13",
+      "name": "hit",
+      "volume": 0.5
+    }
+  ]
+}

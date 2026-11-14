@@ -12,6 +12,8 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    - *Explainer / motion graphics / no footage* → start from `scenes/examples/showreel.html` (high-end look) or `showcase.html` (simpler).
    - *A folder of raw client footage → many ads* → the **editor** (`docs/EDITOR.md`, below).
    - *Many ads from a list/spreadsheet* → a template + `batch-ads.mjs` (below).
+   - *A long-form YouTube video (16:9, 5-20 min): "a 10-minute video on the physics of poker", a script to
+     record, a recording to finish, or podcasts to mine* → the **long-form editor** (`docs/LONGFORM.md`, below).
    - *A finished clip that needs a progress bar, explainer graphics or a hook* (talking head, podcast cut,
      whiteboard lesson, a series episode) → **overlays** (`docs/OVERLAYS.md`, below).
    - *A proven ad format* (3 reasons, us vs them, before/after, testimonials, problem/solution, listicle,
@@ -78,6 +80,41 @@ Transcripts come from, in order: a `<clip>.words.json` / `.srt` / `.vtt` next to
    the notes ask, then `node footage.mjs build edits/ --redo out/<batch>/review.json --batch <batch>`. If a note asks
    for something the footage can't give (a line nobody said), say so instead of faking it.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
+
+## Long-form YouTube (`longform.mjs`, details in `docs/LONGFORM.md`)
+
+You are the writer's room, the editor and the motion designer. The creator brings a subject and their voice;
+the goal is a 10-minute video they can post without touching it.
+
+**Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
+1. **Ask what the video is about** if they haven't said, and the angle (e.g. "why people love poker, as a Trojan
+   horse for quantum mechanics"). Then research it (web search): the real numbers, the clearest analogies, and
+   2-5 specific outside clips that prove a point (exact URL + timestamps).
+2. **Outline, then draft the script** in `scripts/<name>.script.md` (git-ignored; format in docs/LONGFORM.md).
+   Hook in the first 10 s, 4-6 chapters (`##`), ~1,400-1,600 words for 10 min, written to be said out loud.
+   **Put a visual cue every ~15 s** (every ~35-40 words): animations for ideas (`stat`, `term`, `compare`,
+   `steps`, `bars`, `quote`, or a new scene), `stock` for scenes, `clip` for outside proof, `[[face]]` when the
+   speaker should be seen. Vary them; never two of the same template in a row. Figures only from your research,
+   with `source:`. Run `node longform.mjs script` and fix every error and cadence warning.
+3. **Revise with the creator** until they approve. Then they record from the `.read.txt` (re-reading a flubbed
+   line is fine). New animations the script needs: write them now while they record (copy the closest
+   `scenes/longform/*.html`; `preset: 'youtube'`, all text from `M.data`; check stills). Several new scenes are
+   independent, so write them in parallel with subagents if you can.
+4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
+   Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
+   `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
+5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).
+   Hand over the MP4 to review, the YouTube title + description (hook, CHAPTERS.txt, sources, credits from
+   `assets/broll/CREDITS.md`), and anything still to pull. The `.premiere.xml` is there if they want to tweak.
+
+**From existing footage** (podcast archives). MCP: `longform_index`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.
+`node longform.mjs index` (footage in `footage/library/`), `search` several phrasings of every beat, pick the
+clearest take, and write a plan (`edits/longform/<name>.json`): `a_roll` in story order across clips,
+`tighten.cut` for false starts, inserts anchored to words, chapters, music. Never stitch words into a sentence
+they didn't say; if a beat isn't covered, give them the lines to record.
+
+Scripts, footage, plans and `assets/broll/` stay out of git. Outside clips: short, talked over, credited;
+the creator decides what to use.
 
 ## Finished clip → progress bar, explainer graphics, hook (`tools/overlay.py`, details in `docs/OVERLAYS.md`)
 

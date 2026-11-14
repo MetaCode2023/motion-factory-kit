@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Quote: words on screen</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A line said out loud, written big with the key words lit up: the thesis, a punchline,
+// or someone else's words (then set "by"). Only real quotes get "by".
+// Data: dur, text, highlight (words to light up, space separated), by, kicker, color, tint
+const D = M.data({ dur: 5, kicker: '', text: 'Every bet you make is a measurement.', highlight: 'measurement', by: '' });
+const th = LF.theme(D);
+// Light up the highlighted words as they appear in the text (with their punctuation).
+const want = new Set(String(D.highlight).toLowerCase().split(/\s+/).filter(Boolean));
+const ACCENT = String(D.text).split(/\s+/).filter((w) => want.has(w.toLowerCase().replace(/[^a-z0-9']/g, ''))).join(' ');
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });
+  if (D.by) M.text(c, '“', 150, 380, { font: `800 300px ${LF.F.display}`, color: FX.alpha(th.color, 0.25), alpha: M.prog(t, 0, 0.4) });
+  if (D.kicker) FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
+  const size = D.text.length > 90 ? 70 : D.text.length > 50 ? 86 : 104;
+  FX.text(c, t, D.text, 960, 540 - size * (D.text.length > 50 ? 1.1 : 0.6), { at: 0.15, mode: 'rise', font: `800 ${size}px ${LF.F.display}`, color: th.ink, accent: ACCENT, accentColor: th.color, align: 'center', maxWidth: 1560, stagger: 0.07 });
+  end();
+  if (D.by) FX.text(c, t, `— ${D.by}`, 960, 880, { at: 1.2, mode: 'rise', font: `600 40px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 1400 });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Compare: two sides</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. Two things side by side: what people think vs what's true, before vs after, A vs B.
+// Data: dur, kicker, headline, accent, left: { title, items: [...] , tone: 'bad'|'good'|'neutral' }, right: {...}, verdict
+const D = M.data({ dur: 6, kicker: 'COMPARE', headline: 'What you see vs what is there', accent: 'what is there',
+  left: { title: 'What you see', items: ['One hand', 'A sure thing', 'A tell'], tone: 'neutral' },
+  right: { title: 'What is there', items: ['Every possible hand', 'Probabilities', 'Information'], tone: 'good' }, verdict: '' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+const toneCol = (tone) => (tone === 'bad' ? th.bad : tone === 'good' ? th.good : tone === 'warm' ? th.warm : th.color);
+function side(c, t, s, x, at) {
+  const w = 780, y = 330, h = 520, a = M.prog(t, at, 0.5);
+  if (a <= 0) return;
+  const col = toneCol(s.tone);
+  c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 40);
+  FX.glass(c, x, y, w, h, { radius: 32, tint: FX.alpha(col, 0.06), border: FX.alpha(col, 0.45) });
+  M.text(c, String(s.title).toUpperCase(), x + 50, y + 80, { font: `700 34px ${LF.F.mono}`, color: col });
+  (s.items || []).forEach((it, i) => {
+    const k = M.ease.outCubic(M.clamp((t - at - 0.35 - i * 0.22) / 0.4));
+    if (k <= 0) return;
+    const yy = y + 160 + i * 105;
+    c.save(); c.globalAlpha *= k; c.translate((1 - k) * 30, 0);
+    c.beginPath(); c.arc(x + 66, yy - 14, 10, 0, Math.PI * 2); c.fillStyle = col; c.fill();
+    LF.para(c, it, x + 100, yy - 50, { font: `700 44px ${LF.F.display}`, color: th.ink, width: w - 150 });
+    c.restore();
+  });
+  c.restore();
+}
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  LF.title(c, t, D, th);
+  side(c, t, D.left, 120, 0.6);
+  side(c, t, D.right, 1020, 1.1);
+  const vs = M.ease.outBack(M.clamp((t - 1.0) / 0.4));
+  if (vs > 0) { c.save(); c.translate(960, 590); c.scale(vs, vs); c.beginPath(); c.arc(0, 0, 46, 0, Math.PI * 2); c.fillStyle = '#05060A'; c.fill(); c.strokeStyle = th.color; c.lineWidth = 3; c.stroke(); M.text(c, 'VS', 0, 12, { font: `800 32px ${LF.F.display}`, color: th.color, align: 'center' }); c.restore(); }
+  if (D.verdict) FX.text(c, t, D.verdict, 960, 920, { at: Math.min(D.dur - 1.5, 2.6), mode: 'rise', font: `700 46px ${LF.F.display}`, color: th.ink, accent: D.verdictAccent || '', accentColor: th.color, align: 'center', maxWidth: 1600 });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

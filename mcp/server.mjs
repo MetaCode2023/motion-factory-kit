@@ -10,7 +10,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPlan, loadIndex } from '../tools/plans.mjs';
@@ -115,6 +115,7 @@ server.registerTool('kit_overview', {
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
+    longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
     overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
   },
   templates: templates(),
@@ -123,7 +124,7 @@ server.registerTool('kit_overview', {
     explainer: ['notification', 'chat', 'checklist', 'stat', 'compare', 'steps', 'bars', 'phone', 'toast', 'endCard'] },
   captionStyles: ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop', 'word'],
   overlayCards: Object.keys(CARD_KINDS),
-  docs: ['CLAUDE.md', 'docs/OVERLAYS.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
+  docs: ['CLAUDE.md', 'docs/LONGFORM.md', 'docs/OVERLAYS.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
   rules: ['Never invent quotes, names or poll numbers: use what people said and what the shoot counted.', 'All on-screen text is drawn in code.', 'Client footage and plans stay out of git.'],
 }));
 
@@ -279,5 +280,80 @@ server.registerTool('overlay_join', {
   description: 'Join a hook (or any intro) and a clip into one MP4 at the clip\'s size and frame rate. hook_gain (dB, default -3) keeps the hook\'s effects from jumping out over the voice.',
   inputSchema: { hook: z.string(), clip: z.string(), out: z.string(), hook_gain: z.number().optional() },
 }, async ({ hook, clip, out, hook_gain }) => text(await py('tools/overlay.py', ['join', inRepo(hook), inRepo(clip), inRepo(out), ...(hook_gain != null ? ['--hook-gain', String(hook_gain)] : [])])));
+
+// ---- long-form YouTube editor (longform.mjs, docs/LONGFORM.md) -------------------------------------
+server.registerTool('longform_index', {
+  title: 'Index the long-form footage library',
+  description: 'Transcribe and index every video in the library folder (default footage/library; only new or changed files are processed). Returns clip count and hours. Then read footage/library/.index/LIBRARY.md (one row per clip with its topics) and <clip>.md (every sentence numbered, with times), and look_at <clip>.sheet.jpg to see what is in a clip.',
+  inputSchema: { folder: z.string().optional().describe('Library folder, relative to the kit (default footage/library)'), force: z.boolean().optional() },
+}, async ({ folder, force }) => text(await cli('longform.mjs', ['index', ...(folder ? [inRepo(folder)] : []), ...(force ? ['--force'] : [])])));
+
+server.registerTool('longform_search', {
+  title: 'Search everything that was said',
+  description: 'Rank moments across the whole footage library by topic ("bluffing", "wave function collapse"). Each hit has an anchor (clip#sentence) you can put straight into a plan: a_roll ranges, insert "at", chapters. Search several phrasings; people rarely use the exact words.',
+  inputSchema: { query: z.string(), limit: z.number().optional() },
+}, async ({ query, limit }) => text(await cli('longform.mjs', ['search', query, ...(limit ? ['--limit', String(limit)] : [])])));
+
+server.registerTool('longform_words', {
+  title: 'Word timings of a clip or sentence',
+  description: 'Every word with its start time, for one sentence (sentence: 12) or a whole clip. Use it to write tighten.cut entries for false starts and repeats, and to anchor an insert on an exact word.',
+  inputSchema: { clip: z.string(), sentence: z.number().optional() },
+}, async ({ clip, sentence }) => text(await cli('longform.mjs', ['words', clip, ...(sentence ? ['#' + sentence] : [])])));
+
+server.registerTool('longform_write_plan', {
+  title: 'Check and save a long-form plan',
+  description: 'Resolve a long-form edit plan against the library and save it as edits/longform/<name>.json (git-ignored). Returns every problem at once (unknown anchors, words not found, overlapping inserts, missing scenes/files, chapter rules) plus the resolved timeline. Refuses plans with errors. Format: docs/LONGFORM.md.',
+  inputSchema: { plan: z.record(z.string(), z.any()) },
+}, async ({ plan }) => {
+  const dir = join(ROOT, 'edits', 'longform');
+  mkdirSync(dir, { recursive: true });
+  const file = join(dir, `${String(plan.name || 'untitled').replace(/[^\w-]/g, '-')}.json`);
+  const prev = existsSync(file) ? readFileSync(file, 'utf8') : null;
+  writeFileSync(file, JSON.stringify(plan, null, 2) + '\n');
+  const res = await cli('longform.mjs', ['check', file]);
+  if (!res.ok) { if (prev != null) writeFileSync(file, prev); else rmSync(file, { force: true }); return text({ ...res, written: null }); }
+  return text({ ...res, written: relative(ROOT, file) });
+});
+
+server.registerTool('longform_script', {
+  title: 'Check a video script',
+  description: 'Save (optional) and check a long-form script: spoken text with visual cues in [[double brackets]] (grammar in docs/LONGFORM.md: [[stat value: .. | label: ..]], [[stock search]], [[clip title | url: .. | from: .. | to: ..]], [[face]], [[music drive 0.08]], [[sfx hit]], any scenes/longform/<name>.html). Returns runtime at speaking pace, visuals count, average/longest gap between visuals (target ~15 s), chapters, errors, and writes the reading copy (cues stripped) for the teleprompter.',
+  inputSchema: { file: z.string().describe('Script path, e.g. scripts/physics-of-poker.script.md'), text: z.string().optional().describe('Script text to save at that path first') },
+}, async ({ file, text: body }) => {
+  const f = inRepo(file);
+  if (body != null) { mkdirSync(dirname(f), { recursive: true }); writeFileSync(f, body); }
+  return text(await cli('longform.mjs', ['script', f]));
+});
+
+server.registerTool('longform_from_script', {
+  title: 'Recording + script -> plan (-> video)',
+  description: 'Transcribe the creator\'s recording of a script (video or audio-only), align it word by word to the script (re-read lines: the last take is kept, earlier takes cut; ad-libs kept and listed), and write edits/longform/<name>.json with every cue anchored to its spoken word. build: true also builds the video (minutes). Read the alignment report: lines not found in the recording need a decision.',
+  inputSchema: { script: z.string(), recording: z.string(), name: z.string().optional(), build: z.boolean().optional() },
+}, async ({ script, recording, name, build }) => {
+  const res = await cli('longform.mjs', ['from-script', inRepo(script), inRepo(recording), ...(name ? ['--name', name] : []), ...(build ? ['--build'] : [])]);
+  const sheet = res.build?.sheet;
+  return sheet && existsSync(sheet) ? picture(sheet, res) : text(res);
+});
+
+server.registerTool('longform_pull', {
+  title: 'Fetch clips to pull',
+  description: 'For pull inserts that have a url (and from/to), download just that section with yt-dlp into assets/broll/<id>.mp4 (credited in assets/broll/CREDITS.md); the next build uses them. Only for clips the creator has chosen to use: keep them short and talked over.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['pull', inRepo(plan)])));
+
+server.registerTool('longform_stock', {
+  title: 'Download stock B-roll',
+  description: 'For every insert with "stock": "<search>" in a plan, download the best free landscape Pexels video to assets/broll/<id>.mp4 and add a credit line to assets/broll/CREDITS.md (needs PEXELS_API_KEY). Look at the result with a build; if a pick is wrong, delete the file and set "pick": 2 on the insert.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['stock', inRepo(plan)])));
+
+server.registerTool('longform_build', {
+  title: 'Build a long-form video',
+  description: 'Build a plan: word-exact A-roll (fillers and dead air out, punch-ins on jump cuts), animation/B-roll/pull inserts, music that ducks under the voice, effects, YouTube loudness. Writes out/longform/<name>/: the MP4, a Premiere/Resolve XML timeline that points at the original footage, .srt captions, CHAPTERS.txt, PULL-LIST.md, REPORT.md. Returns the result and the inserts contact sheet as a picture: look at it, fix the plan, rebuild (rendered inserts are cached). Takes minutes.',
+  inputSchema: { plan: z.string().describe('Plan file, e.g. edits/longform/physics-of-poker.json') },
+}, async ({ plan }) => {
+  const res = await cli('longform.mjs', ['build', inRepo(plan)]);
+  return res.sheet && existsSync(res.sheet) ? picture(res.sheet, res) : text(res);
+});
 
 await server.connect(new StdioServerTransport());

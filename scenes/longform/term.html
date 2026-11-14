@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Term: a definition</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A word most viewers don't know, defined in one line, with an everyday translation.
+// Data: dur, kicker, term, pronounce (optional), definition, plain ("In poker terms: ..."), color, tint
+const D = M.data({ dur: 6, kicker: 'DEFINITION', term: 'Superposition', pronounce: 'soo-per-puh-ZISH-un',
+  definition: 'A system existing in several possible states at once, until it is measured.', plain: 'In poker: your opponent holds every hand in their range until the cards are shown.' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const end = FX.camera(c, t, { zoom: 1 + 0.025 * M.clamp(t / D.dur) });
+  FX.text(c, t, String(D.kicker).toUpperCase(), 160, 220, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: 1400 });
+  FX.text(c, t, D.term, 160, 270, { at: 0.2, mode: 'mask', font: `800 ${D.term.length > 16 ? 110 : 140}px ${LF.F.display}`, color: th.ink, maxWidth: 1600 });
+  if (D.pronounce) M.text(c, `/ ${D.pronounce} /`, 164, 490, { font: `500 32px ${LF.F.mono}`, color: th.muted, alpha: M.prog(t, 0.7, 0.4) });
+  const k = M.ease.outCubic(M.clamp((t - 0.6) / 0.6));
+  c.save(); c.globalAlpha = k;
+  FX.glow(c, () => { c.fillStyle = th.color; c.fillRect(160, 540, 8 + 400 * k, 6); }, { color: th.color, blur: 20, strength: 0.7 });
+  c.restore();
+  FX.text(c, t, D.definition, 160, 590, { at: 0.9, mode: 'rise', font: `700 54px ${LF.F.display}`, color: th.ink, maxWidth: 1500, stagger: 0.03 });
+  if (D.plain) {
+    const a = M.prog(t, Math.min(D.dur - 1.6, 2.2), 0.5);
+    if (a > 0) { c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 20); LF.card(c, 150, 820, 1620, 150, th); LF.para(c, D.plain, 200, 852, { font: `600 38px ${LF.F.display}`, color: th.color, width: 1520 }); c.restore(); }
+  }
+  end();
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

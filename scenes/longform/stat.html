@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stat: one big number</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. One number that matters, counting up, with what it means.
+// Data: dur, kicker, value ("1,326" | "$4.2T" | "38%"), label (what it counts), sub (one line of context),
+// source (small print, when the number comes from somewhere), color, tint
+const D = M.data({ dur: 5, kicker: 'THE NUMBER', value: '1,326', label: 'possible starting hands', sub: '', source: '' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+const N = LF.parseNumber(D.value);
+const SIZE = Math.min(240, Math.floor(1500 / Math.max(3, String(D.value).length) * 1.7));
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });
+  FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 32px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
+  const k = M.ease.outCubic(M.clamp((t - 0.25) / Math.min(1.6, D.dur * 0.4)));
+  const shown = N ? LF.formatNumber(N, N.num * k) : D.value;
+  const pop = M.ease.outBack(M.clamp((t - 0.2) / 0.5));
+  c.save(); c.translate(960, 540); c.scale(pop, pop);
+  const font = `800 ${SIZE}px ${LF.F.display}`;
+  FX.glow(c, () => FX.gradientText(c, shown, 0, 0, { font, colors: [th.ink, th.color], align: 'center', t }), { color: th.color, blur: 50, strength: 0.6 });
+  c.restore();
+  FX.text(c, t, D.label, 960, 640, { at: 0.6, mode: 'rise', font: `700 58px ${LF.F.display}`, color: th.ink, align: 'center', maxWidth: 1500 });
+  if (D.sub) FX.text(c, t, D.sub, 960, 750, { at: 1.0, mode: 'rise', font: `600 38px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 1400 });
+  end();
+  if (D.source) M.text(c, D.source, 960, 1010, { font: `600 22px ${LF.F.mono}`, color: th.muted, align: 'center', alpha: M.prog(t, 1.2, 0.4) * 0.8 });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

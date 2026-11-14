@@ -22,6 +22,12 @@
 - [tools/transcripts.mjs](tools/transcripts.mjs), [tools/transcribe.py](tools/transcribe.py): transcripts from .words.json/.srt/.vtt or local faster-whisper (standalone)
 - [tools/plans.mjs](tools/plans.mjs): validate an edit plan against the footage index (standalone)
 
+## Long-form YouTube (16:9, talking footage)
+- [docs/LONGFORM.md](docs/LONGFORM.md): script-first videos (script with [[cues]] -> recording aligned -> finished video), footage library + search, plans anchored to words, inserts (animation, B-roll, stock, outside clips), Premiere XML
+- [longform.mjs](longform.mjs): script / from-script / index / search / words / check / stock / pull / build / demo
+- [tools/longform/](tools/longform/): library (index+search), plan (word-exact cuts, anchors), build (assembly, mix), premiere (FCP7 XML), stock (Pexels)
+- [scenes/longform/](scenes/longform/): 16:9 animation starters (stat, quote, term, compare, steps, bars, backdrop; poker set: superposition, collapse, deception)
+
 ## Building videos
 - [docs/TEMPLATES.md](docs/TEMPLATES.md): 12 data-driven ad and organic formats
 - [docs/BLOCKS.md](docs/BLOCKS.md): 32 canvas blocks (UGC, street-interview overlays, explainer UI)

@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Superposition: every hand at once</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="poker.js"></script>
+</head>
+<body>
+<script>
+// 16:9 insert for long-form videos. Your opponent's face-down cards are every possible hand at once,
+// shown as flickering ghost hands inside a probability cloud, with the range as weighted bars.
+// Data (all optional): dur, kicker, headline, accent, caption, hands: [{ label, cards: ['Ah','Ad'], p }]
+const D = M.data({
+  dur: 7,
+  kicker: 'SUPERPOSITION',
+  headline: 'Every hand at once',
+  accent: 'once',
+  caption: 'Until it is measured, the hand is a cloud of probabilities.',
+  color: '#3CE0FF',
+  hands: [
+    { label: 'Big pair', cards: ['Ah', 'As'], p: 0.08 },
+    { label: 'Two broadway', cards: ['Kd', 'Qd'], p: 0.22 },
+    { label: 'Middle pair', cards: ['8c', '8h'], p: 0.18 },
+    { label: 'Suited connectors', cards: ['7s', '6s'], p: 0.17 },
+    { label: 'Air', cards: ['9h', '2c'], p: 0.35 },
+  ],
+});
+const W = 1920, H = 1080, C = D.color;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+
+const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
+const CX = 560, CY = 610;
+
+function draw(c, t) {
+  P.backdrop(c, t, W, H, { accent: C });
+  const end = FX.camera(c, t, { zoom: 1 + 0.025 * M.clamp(t / D.dur), shake: 0.05 });
+
+  // The cloud of possible hands behind the real (face-down) cards.
+  const inK = M.prog(t, 0.4, 1.0);
+  P.cloud(c, t, CX, CY, 520, 380, { color: C, alpha: inK, n: 320 });
+  D.hands.forEach((h, i) => {
+    const ang = (i / D.hands.length) * Math.PI * 2 + t * 0.35, rad = 210 + 20 * Math.sin(t * 1.3 + i);
+    const x = CX + Math.cos(ang) * rad * 1.25, y = CY + Math.sin(ang) * rad * 0.62;
+    const flicker = 0.5 + 0.5 * Math.sin(t * (3.1 + i * 0.7) + i * 2);
+    const a = inK * (0.16 + 0.42 * flicker) * M.prog(t, 0.6 + i * 0.12, 0.5);
+    h.cards.forEach((cs, k) => P.card(c, x - 34 + k * 68, y, 104, { ...split(cs), alpha: a, rot: (k - 0.5) * 0.18, glow: 0.6, glowColor: C }));
+  });
+  // The real cards: face down, steady, glowing faintly (it IS one hand; we just can't see which).
+  const k0 = M.ease.outBack(M.clamp((t - 0.15) / 0.55));
+  if (k0 > 0) {
+    c.save(); c.translate(CX, CY); c.scale(k0, k0); c.translate(-CX, -CY);
+    P.card(c, CX - 62, CY, 170, { flip: 0, rot: -0.12, glow: 0.35 + 0.25 * Math.sin(t * 2), glowColor: C });
+    P.card(c, CX + 62, CY, 170, { flip: 0, rot: 0.12, glow: 0.35 + 0.25 * Math.sin(t * 2 + 1), glowColor: C });
+    c.restore();
+  }
+  M.text(c, '?', CX, CY - 250, { font: '800 64px "Plus Jakarta Sans"', color: C, align: 'center', alpha: M.prog(t, 1.0, 0.4) * (0.6 + 0.4 * Math.sin(t * 4)) });
+  end();
+
+  P.title(c, t, { kicker: D.kicker, headline: D.headline, accent: D.accent, color: C });
+
+  // The range: one bar per kind of hand, weighted.
+  const px = 1090, py = 290, pw = 700, row = 104;
+  const pk = M.prog(t, 0.9, 0.6);
+  if (pk > 0) {
+    c.save(); c.globalAlpha = pk; c.translate(0, (1 - pk) * 40);
+    FX.glass(c, px - 40, py - 70, pw + 80, D.hands.length * row + 110, { radius: 32, tint: 'rgba(60,224,255,0.05)', border: 'rgba(60,224,255,0.3)' });
+    M.text(c, 'THEIR RANGE', px, py - 18, { font: '600 26px "JetBrains Mono"', color: '#8A93A6' });
+    D.hands.forEach((h, i) => {
+      const y = py + 30 + i * row, bk = M.ease.outCubic(M.clamp((t - 1.3 - i * 0.18) / 0.8));
+      M.text(c, h.label, px, y + 22, { font: '700 34px "Plus Jakarta Sans"', color: '#F5F7FA' });
+      M.roundRect(c, px, y + 40, pw - 120, 18, 9); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
+      if (bk > 0) {
+        const bw = Math.max(18, (pw - 120) * Math.min(1, h.p / Math.max(...D.hands.map((x) => x.p))) * bk);
+        FX.glow(c, () => { M.roundRect(c, px, y + 40, bw, 18, 9); c.fillStyle = C; c.fill(); }, { color: C, blur: 22, strength: 0.6 });
+      }
+      M.text(c, `${Math.round(h.p * 100 * bk)}%`, px + pw - 10, y + 60, { font: '600 34px "JetBrains Mono"', color: C, align: 'right', alpha: M.clamp(bk * 2) });
+    });
+    c.restore();
+  }
+  if (D.caption) FX.text(c, t, D.caption, 120, 950, { at: 2.4, mode: 'rise', font: '600 38px "Plus Jakarta Sans"', color: '#C9CDD8', maxWidth: 1600, until: D.dur - 0.1 });
+  FX.vignette(c, { strength: 0.5 });
+}
+</script>
+</body>
+</html>

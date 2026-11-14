@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Deception: every observation looks the same</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="poker.js"></script>
+</head>
+<body>
+<script>
+// 16:9 insert. Two hands make the same bet. A scanner (the opponent's "measurement") sweeps both and
+// reads the same signal; then the truth is revealed underneath: one is strong, one is air.
+// Data (optional): dur, kicker, headline, accent, left: { cards, truth }, right: { cards, truth },
+// bet: 'BET 3x', reading: 'STRONG'
+const D = M.data({
+  dur: 7.5,
+  kicker: 'DECEPTION',
+  headline: 'Make every observation look the same',
+  accent: 'the same',
+  left: { cards: ['Ah', 'Ad'], truth: 'STRONG' },
+  right: { cards: ['7c', '2d'], truth: 'AIR' },
+  bet: 'BET 3x',
+  reading: 'LOOKS STRONG',
+  color: '#3CE0FF',
+  good: '#3DDC97',
+  bad: '#FF4D5E',
+});
+const W = 1920, H = 1080, C = D.color;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
+const REVEAL = D.dur * 0.62;
+
+function panel(c, t, x, side, i) {
+  const y = 330, w = 700, h = 560, a = M.prog(t, 0.6 + i * 0.25, 0.5);
+  if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 50);
+  FX.glass(c, x, y, w, h, { radius: 36, tint: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.16)' });
+  // Cards: face down until the reveal (that's what the opponent sees).
+  const flip = M.ease.inOutCubic(M.clamp((t - REVEAL - i * 0.15) / 0.45));
+  side.cards.forEach((cs, k) => P.card(c, x + 240 + k * 130, y + 190, 150, { ...split(cs), flip, rot: (k - 0.5) * 0.12 }));
+  // Same bet on both.
+  P.chips(c, x + 570, y + 260, 50, 6, '#E5484D');
+  M.text(c, D.bet, x + 570, y + 320, { font: '700 30px "JetBrains Mono"', color: '#F5F7FA', align: 'center' });
+  // What the opponent measures: identical meters.
+  const mk = M.ease.outCubic(M.clamp((t - 2.2 - i * 0.2) / 0.9));
+  M.text(c, 'WHAT THEY SEE', x + 60, y + 410, { font: '600 22px "JetBrains Mono"', color: '#8A93A6' });
+  M.roundRect(c, x + 60, y + 430, w - 120, 22, 11); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
+  FX.glow(c, () => { M.roundRect(c, x + 60, y + 430, Math.max(22, (w - 120) * 0.86 * mk), 22, 11); c.fillStyle = C; c.fill(); }, { color: C, blur: 20, strength: 0.6 });
+  M.text(c, D.reading, x + w - 60, y + 410, { font: '700 24px "JetBrains Mono"', color: C, align: 'right', alpha: mk });
+  // The truth, after the reveal.
+  const tk = M.ease.outBack(M.clamp((t - REVEAL - 0.35 - i * 0.15) / 0.45));
+  if (tk > 0) {
+    const col = side.truth === 'AIR' ? D.bad : D.good;
+    c.save(); c.translate(x + w / 2, y + 510); c.scale(tk, tk);
+    M.roundRect(c, -150, -34, 300, 68, 34); c.fillStyle = FX.alpha(col, 0.18); c.fill(); c.strokeStyle = col; c.lineWidth = 3; c.stroke();
+    M.text(c, `REALLY: ${side.truth}`, 0, 12, { font: '800 30px "Plus Jakarta Sans"', color: col, align: 'center' });
+    c.restore();
+  }
+  c.restore();
+}
+
+function draw(c, t) {
+  P.backdrop(c, t, W, H, { accent: C, tint: '#1A1030' });
+  P.title(c, t, { kicker: D.kicker, headline: D.headline, accent: D.accent, color: C, width: 1500 });
+  panel(c, t, 170, D.left, 0);
+  panel(c, t, 1050, D.right, 1);
+  // The scanner: one beam sweeping both hands, the same way.
+  const sk = M.clamp((t - 1.4) / 2.0);
+  if (sk > 0 && sk < 1) {
+    const x = 170 + (1580 - 170) * M.ease.inOutCubic(sk);
+    const g = c.createLinearGradient(x - 90, 0, x + 90, 0);
+    g.addColorStop(0, 'rgba(60,224,255,0)'); g.addColorStop(0.5, 'rgba(60,224,255,0.35)'); g.addColorStop(1, 'rgba(60,224,255,0)');
+    c.fillStyle = g; c.fillRect(x - 90, 320, 180, 580);
+    c.fillStyle = C; c.fillRect(x - 1.5, 320, 3, 580);
+  }
+  // "=" between the two readings while the cards are hidden.
+  const eq = M.prog(t, 3.0, 0.4) * (1 - M.prog(t, REVEAL, 0.3));
+  M.text(c, '=', 960, 790, { font: '800 90px "Plus Jakarta Sans"', color: C, align: 'center', alpha: eq });
+  FX.vignette(c, { strength: 0.5 });
+}
+</script>
+</body>
+</html>

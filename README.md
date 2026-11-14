@@ -30,6 +30,16 @@ street-audio cleanup, face-following reframe, overlays, client review loop) lift
   filling in). Each gets a quiet sound effect under the voice.
 - **3-second cold-open hooks** built before the speaker comes in, then joined on. `npm run overlays-demo` shows all of it.
 
+**Make 10-minute YouTube videos from a subject** ([docs/LONGFORM.md](docs/LONGFORM.md))
+- Claude asks what the video is about, researches it, and **co-writes the script with the visuals built in**:
+  a `[[cue]]` every ~15 seconds (animated stats, definitions, comparisons, steps, charts, stock footage, outside
+  clips that prove the point, back-to-camera moments). The check reports runtime and visual cadence.
+- You read it (camera + mic, or just the mic). Flub a line and re-read it: the recording is aligned word by
+  word to the script, the last take wins, ums and dead air go.
+- Out comes the **finished video**: every visual on its word, music that ducks under you, sound effects,
+  captions, chapters, plus a Premiere timeline if you want to tweak. `node longform.mjs demo` shows it.
+- Already have hours of podcasts? Index them once and **search everything you've ever said**.
+
 **Make lots of ads**
 - **Raw-footage editor** (`footage.mjs`): drop a client's Drive folder of footage in, get dozens of finished ads out.
   Clips are transcribed (with who's talking), Claude picks the best takes and writes an edit plan per ad, and the

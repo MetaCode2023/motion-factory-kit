@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Steps: a process</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A sequence that builds one step at a time along a line (how a thing works, a timeline).
+// Data: dur, kicker, headline, accent, steps: [{ title, body }] (3-5), stepAt: [seconds] (optional; default even)
+const D = M.data({ dur: 7, kicker: 'HOW IT WORKS', headline: 'From possibility to fact', accent: 'fact',
+  steps: [{ title: 'Uncertain', body: 'Many hands possible' }, { title: 'Observe', body: 'Every bet is a clue' }, { title: 'Update', body: 'Re-weight the range' }, { title: 'Collapse', body: 'The river decides' }] });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic' });
+const n = D.steps.length, X0 = 220, X1 = 1700, Y = 600;
+const AT = D.stepAt || D.steps.map((_, i) => 0.8 + i * Math.max(0.5, (D.dur - 2.2) / n));
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  LF.title(c, t, D, th);
+  const xs = D.steps.map((_, i) => X0 + (X1 - X0) * (n === 1 ? 0.5 : i / (n - 1)));
+  c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(X1, Y); c.stroke();
+  let reached = X0;
+  D.steps.forEach((s, i) => { const k = M.ease.inOutCubic(M.clamp((t - AT[i] + 0.35) / 0.35)); if (k > 0) reached = Math.max(reached, i ? xs[i - 1] + (xs[i] - xs[i - 1]) * k : X0 + (xs[0] - X0) * k); });
+  FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(reached, Y); c.stroke(); }, { color: th.color, blur: 24, strength: 0.7 });
+  D.steps.forEach((s, i) => {
+    const k = M.ease.outBack(M.clamp((t - AT[i]) / 0.45)), on = t >= AT[i];
+    c.save(); c.translate(xs[i], Y); c.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
+    c.beginPath(); c.arc(0, 0, 38, 0, Math.PI * 2); c.fillStyle = on ? th.color : '#11131A'; c.fill();
+    c.lineWidth = 4; c.strokeStyle = on ? th.color : 'rgba(255,255,255,0.25)'; c.stroke();
+    M.text(c, String(i + 1), 0, 14, { font: `800 38px ${LF.F.display}`, color: on ? '#05060A' : th.muted, align: 'center' });
+    c.restore();
+    const a = M.prog(t, AT[i] + 0.1, 0.4);
+    if (a > 0) {
+      const above = i % 2 === 1, ty = above ? Y - 210 : Y + 80;
+      c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * (above ? -20 : 20));
+      M.text(c, s.title, xs[i], ty + 50, { font: `800 46px ${LF.F.display}`, color: th.ink, align: 'center' });
+      if (s.body) LF.para(c, s.body, xs[i], ty + 64, { font: `600 32px ${LF.F.display}`, color: th.muted, width: 360, align: 'center' });
+      c.restore();
+    }
+  });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>
