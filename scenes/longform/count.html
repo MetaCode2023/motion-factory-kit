@@ -58,7 +58,7 @@ function draw(c, t) {
     if (D.sub) LF.para(c, D.sub, 1220, 650, { font: `600 32px ${LF.F.display}`, color: th.muted, width: 600, alpha: M.prog(t, HIT + 0.5, 0.4) });
   }
   if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

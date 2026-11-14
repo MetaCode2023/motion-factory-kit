@@ -40,7 +40,7 @@ function panel(c, t, x, side, i) {
   const y = 330, w = 700, h = 560, a = M.prog(t, 0.6 + i * 0.25, 0.5);
   if (a <= 0) return;
   c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 50);
-  FX.glass(c, x, y, w, h, { radius: 36, tint: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.16)' });
+  FX.glass(c, x, y, w, h, { radius: 36, tint: LF.w(th, 0.04), border: LF.w(th, 0.16) });
   if (side.title) M.text(c, String(side.title).toUpperCase(), x + 40, y + 52, { font: '600 22px "JetBrains Mono"', color: '#8A93A6' });
   // Cards: face down until the reveal (that's what the opponent sees).
   const flip = M.ease.inOutCubic(M.clamp((t - REVEAL - i * 0.15) / 0.45));
@@ -51,7 +51,7 @@ function panel(c, t, x, side, i) {
   // What the opponent measures: identical meters.
   const mk = M.ease.outCubic(M.clamp((t - 2.2 - i * 0.2) / 0.9));
   M.text(c, 'WHAT THEY SEE', x + 60, y + 410, { font: '600 22px "JetBrains Mono"', color: '#8A93A6' });
-  M.roundRect(c, x + 60, y + 430, w - 120, 22, 11); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
+  M.roundRect(c, x + 60, y + 430, w - 120, 22, 11); c.fillStyle = LF.w(th, 0.08); c.fill();
   FX.glow(c, () => { M.roundRect(c, x + 60, y + 430, Math.max(22, (w - 120) * 0.86 * mk), 22, 11); c.fillStyle = C; c.fill(); }, { color: C, blur: 20, strength: 0.6 });
   M.text(c, D.reading, x + w - 60, y + 410, { font: '700 24px "JetBrains Mono"', color: C, align: 'right', alpha: mk });
   // The truth, after the reveal.
@@ -85,7 +85,7 @@ function draw(c, t) {
   // "=" between the two readings while the cards are hidden.
   const eq = M.prog(t, 3.0, 0.4) * (1 - M.prog(t, REVEAL, 0.3));
   M.text(c, '=', 960, 790, { font: '800 90px "Plus Jakarta Sans"', color: C, align: 'center', alpha: eq });
-  FX.vignette(c, { strength: 0.5 });
+  LF.vignette(c, th, 0.5);
 }
 </script>
 </body>

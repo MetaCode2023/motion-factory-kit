@@ -106,9 +106,15 @@ the goal is a 10-minute video they can post without touching it.
 4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
    Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
    `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
+   Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
 5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).
    Hand over the MP4 to review, the YouTube title + description (hook, CHAPTERS.txt, sources, credits from
    `assets/broll/CREDITS.md`), and anything still to pull. The `.premiere.xml` is there if they want to tweak.
+
+6. **Around the video.** New machine: `node longform.mjs doctor`. The build writes `review.html`; when the
+   creator sends back `<name>.review.json`, run `node longform.mjs feedback <file>`, read `FEEDBACK.md`, change
+   only what the notes ask for, rebuild. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
+   and `shorts <plan>` (set `"shorts": [{ from, to, title }]` to the stretches that stand alone) finish the package.
 
 **From existing footage** (podcast archives). MCP: `longform_index`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.
 `node longform.mjs index` (footage in `footage/library/`), `search` several phrasings of every beat, pick the

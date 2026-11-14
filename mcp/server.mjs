@@ -347,6 +347,30 @@ server.registerTool('longform_stock', {
   inputSchema: { plan: z.string() },
 }, async ({ plan }) => text(await cli('longform.mjs', ['stock', inRepo(plan)])));
 
+server.registerTool('longform_doctor', {
+  title: 'Check the machine is set up',
+  description: 'Lists everything the long-form editor needs on this machine (Node, packages, Python, transcription, Chrome for 3D, keys), what is missing and the one-line fix for each. Run it first on a new machine.',
+  inputSchema: {},
+}, async () => text(await cli('longform.mjs', ['doctor'])));
+
+server.registerTool('longform_feedback', {
+  title: 'Read review notes',
+  description: 'Turns <name>.review.json (saved from out/longform/<name>/review.html, where the creator pauses and types notes) into FEEDBACK.md: each note with what was on screen, what was being said, and which insert in the plan it points at. Then change only what the notes ask for and rebuild.',
+  inputSchema: { review: z.string(), plan: z.string().optional() },
+}, async ({ review, plan }) => text(await cli('longform.mjs', ['feedback', inRepo(review), ...(plan ? [inRepo(plan)] : [])])));
+
+server.registerTool('longform_thumbnail', {
+  title: 'Make thumbnails',
+  description: 'Three 1280x720 thumbnails for a plan, from its "thumbnail": { text (2-4 words), accent (the word to colour), prop (a name from scenes/longform/props.js), kicker }. Look at them and pick.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['thumbnail', inRepo(plan)])));
+
+server.registerTool('longform_shorts', {
+  title: 'Cut vertical shorts',
+  description: 'Vertical 9:16 shorts cut from the finished long video: the ones listed in the plan as "shorts": [{ from, to, title }] (times in the finished video), or one per chapter if none are listed.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['shorts', inRepo(plan)])));
+
 server.registerTool('longform_build', {
   title: 'Build a long-form video',
   description: 'Build a plan: word-exact A-roll (fillers and dead air out, punch-ins on jump cuts), animation/B-roll/pull inserts, music that ducks under the voice, effects, YouTube loudness. Writes out/longform/<name>/: the MP4, a Premiere/Resolve XML timeline that points at the original footage, .srt captions, CHAPTERS.txt, PULL-LIST.md, REPORT.md. Returns the result and the inserts contact sheet as a picture: look at it, fix the plan, rebuild (rendered inserts are cached). Takes minutes.',

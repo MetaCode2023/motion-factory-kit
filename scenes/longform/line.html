@@ -33,7 +33,7 @@ function draw(c, t) {
   const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const k = M.ease.inOutCubic(M.clamp((t - 0.6) / DRAW)), u = k * (PTS.length - 1);
-  c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X0, Y0); c.lineTo(X1, Y0); c.stroke();
+  c.strokeStyle = LF.w(th, 0.12); c.lineWidth = 2; c.beginPath(); c.moveTo(X0, Y0); c.lineTo(X1, Y0); c.stroke();
   PTS.forEach((p, i) => { if (PTS.length <= 12 || i % Math.ceil(PTS.length / 10) === 0 || i === PTS.length - 1) M.text(c, p.x, px(i), Y0 + 44, { font: `600 26px ${LF.F.mono}`, color: th.muted, align: 'center', alpha: M.prog(t, 0.3, 0.4) }); });
   if (k > 0) {
     const head = Math.floor(u), frac = u - head;
@@ -56,7 +56,7 @@ function draw(c, t) {
   });
   if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
   endCam();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

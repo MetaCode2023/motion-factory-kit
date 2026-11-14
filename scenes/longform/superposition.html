@@ -74,7 +74,7 @@ function draw(c, t) {
     D.hands.forEach((h, i) => {
       const y = py + 30 + i * row, bk = M.ease.outCubic(M.clamp((t - HAT[i]) / 0.8));
       M.text(c, h.label, px, y + 22, { font: '700 34px "Plus Jakarta Sans"', color: '#F5F7FA' });
-      M.roundRect(c, px, y + 40, pw - 120, 18, 9); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
+      M.roundRect(c, px, y + 40, pw - 120, 18, 9); c.fillStyle = LF.w(th, 0.08); c.fill();
       if (bk > 0) {
         const bw = Math.max(18, (pw - 120) * Math.min(1, h.p / Math.max(...D.hands.map((x) => x.p))) * bk);
         FX.glow(c, () => { M.roundRect(c, px, y + 40, bw, 18, 9); c.fillStyle = C; c.fill(); }, { color: C, blur: 22, strength: 0.6 });
@@ -84,7 +84,7 @@ function draw(c, t) {
     c.restore();
   }
   if (D.caption) FX.text(c, t, D.caption, 120, 950, { at: 2.4, mode: 'rise', font: '600 38px "Plus Jakarta Sans"', color: '#C9CDD8', maxWidth: 1600, until: D.dur - 0.1 });
-  FX.vignette(c, { strength: 0.5 });
+  LF.vignette(c, th, 0.5);
 }
 </script>
 </body>

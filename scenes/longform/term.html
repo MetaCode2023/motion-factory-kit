@@ -35,7 +35,7 @@ function draw(c, t) {
     if (a > 0) { c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 20); LF.card(c, 150, 820, 1620, 150, th); LF.para(c, D.plain, 200, 852, { font: `600 38px ${LF.F.display}`, color: th.color, width: 1520 }); c.restore(); }
   }
   end();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

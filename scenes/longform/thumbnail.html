@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Thumbnail: 3-4 huge words and one object</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+<script src="props.js"></script>
+</head>
+<body>
+<script>
+// A YouTube thumbnail (rendered as one still, exported at 1280x720 by `node longform.mjs thumbnail`).
+// Data: text (2-4 words, readable at phone size), accent (the word to colour), kicker (optional small line),
+//       prop (a name from props.js), layout (0 text left / 1 text right / 2 centred over the object),
+//       style / color / tint (the video's theme)
+const D = M.data({ text: 'Poker is physics', accent: 'physics', kicker: '', prop: 'card', layout: 0 });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: 1, background: th.deep, draw });
+M.fonts([`800 100px ${LF.F.display}`, `600 30px ${LF.F.mono}`]);
+
+function draw(c) {
+  const W = 1920, H = 1080, L = +D.layout || 0;
+  LF.ground(c, 0.9, th);
+  // the object: big, tilted, glowing, on the side the text is not
+  const px = L === 0 ? 1440 : L === 1 ? 480 : 960, py = L === 2 ? 470 : 540, size = L === 2 ? 760 : 700;
+  const halo = c.createRadialGradient(px, py, 40, px, py, 620);
+  halo.addColorStop(0, FX.alpha(th.color, th.light ? 0.28 : 0.42)); halo.addColorStop(1, FX.alpha(th.color, 0));
+  c.fillStyle = halo; c.fillRect(0, 0, W, H);
+  if (PR.names.includes(D.prop)) PR.draw(c, D.prop, px, py, size, { color: th.color, glow: 1, rot: L === 1 ? 0.14 : -0.14, alpha: L === 2 ? 0.55 : 1 });
+
+  // the words: as large as the box allows, at most three lines, the accent word in colour
+  const box = L === 2 ? { x: 160, w: 1600, align: 'center' } : L === 0 ? { x: 110, w: 1010, align: 'left' } : { x: 800, w: 1010, align: 'left' };
+  const words = String(D.text).trim().split(/\s+/);
+  let best = null;
+  for (let size = 300; size >= 90 && !best; size -= 10) {
+    c.font = `800 ${size}px ${LF.F.display}`;
+    const lines = []; let cur = '';
+    for (const w of words) { const tryL = cur ? cur + ' ' + w : w; if (c.measureText(tryL.toUpperCase()).width > box.w && cur) { lines.push(cur); cur = w; } else cur = tryL; }
+    lines.push(cur);
+    if (lines.length <= 3 && lines.every((l) => c.measureText(l.toUpperCase()).width <= box.w) && lines.length * size * 0.98 <= (D.kicker ? 760 : 860)) best = { size, lines };
+  }
+  best ||= { size: 90, lines: [words.join(' ')] };
+  const lh = best.size * 0.98, total = best.lines.length * lh;
+  let y = (H - total) / 2 + best.size * 0.82 + (D.kicker ? 30 : 0);
+  if (D.kicker) M.text(c, String(D.kicker).toUpperCase(), box.align === 'center' ? 960 : box.x, y - best.size * 0.82 - 34, { font: `600 44px ${LF.F.mono}`, color: th.color, align: box.align });
+  const acc = String(D.accent || '').toLowerCase().split(/\s+/).filter(Boolean);
+  c.save(); c.font = `800 ${best.size}px ${LF.F.display}`; c.textBaseline = 'alphabetic'; c.lineJoin = 'round';
+  for (const line of best.lines) {
+    const up = line.toUpperCase(), lw = c.measureText(up).width;
+    let x = box.align === 'center' ? 960 - lw / 2 : box.x;
+    for (const w of up.split(' ')) {
+      const on = acc.includes(w.toLowerCase().replace(/[^a-z0-9$%]/g, ''));
+      c.lineWidth = best.size * 0.11; c.strokeStyle = th.light ? '#FFFDF8' : 'rgba(0,0,0,0.85)'; c.strokeText(w, x, y);
+      c.fillStyle = on ? th.color : th.ink; c.fillText(w, x, y);
+      x += c.measureText(w + ' ').width;
+    }
+    y += lh;
+  }
+  c.restore();
+}
+</script>
+</body>
+</html>

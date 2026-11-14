@@ -20,3 +20,11 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).
+
+Around the video:
+- New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).
+- Give each video a look in the script header: `theme: blueprint | noir | sunset | paper | terminal` (default aurora).
+- Every build writes `review.html`. Notes come back as `<name>.review.json` → `node longform.mjs feedback <file>` →
+  read `FEEDBACK.md`, change only what the notes ask for, rebuild.
+- `node longform.mjs thumbnail <plan>` (plan: `"thumbnail": { text: 2-4 words, accent, prop }`) and
+  `node longform.mjs shorts <plan>` (plan: `"shorts": [{ from, to, title }]`, or one per chapter).

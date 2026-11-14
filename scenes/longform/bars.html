@@ -29,7 +29,7 @@ function draw(c, t) {
   D.bars.forEach((b, i) => {
     const k = M.ease.outCubic(M.clamp((t - AT[i]) / 0.9)), hot = b.label === top, y = y0 + i * row;
     M.text(c, b.label, x - 40, y + row * 0.45, { font: `700 40px ${LF.F.display}`, color: hot ? th.ink : th.muted, align: 'right', alpha: M.prog(t, AT[i] - 0.2, 0.3) });
-    M.roundRect(c, x, y + row * 0.18, w, row * 0.42, row * 0.21); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill();
+    M.roundRect(c, x, y + row * 0.18, w, row * 0.42, row * 0.21); c.fillStyle = LF.w(th, 0.06); c.fill();
     if (k > 0) {
       const bw = Math.max(row * 0.42, w * (b.value / max) * k);
       const draw = () => { M.roundRect(c, x, y + row * 0.18, bw, row * 0.42, row * 0.21); c.fillStyle = hot ? th.color : FX.alpha(th.color, 0.45); c.fill(); };
@@ -40,7 +40,7 @@ function draw(c, t) {
   });
   if (D.source) M.text(c, D.source, 120, 1010, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1.2, 0.4) });
   endCam();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

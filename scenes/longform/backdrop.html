@@ -17,12 +17,7 @@ const th = LF.theme(D);
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw });
 function draw(c, t) {
   const p = (t / D.dur) * Math.PI * 2;
-  const g = c.createRadialGradient(960 + 220 * Math.cos(p), 540 + 120 * Math.sin(p), 80, 960, 540, 1300);
-  g.addColorStop(0, th.tint); g.addColorStop(1, '#05060A');
-  c.fillStyle = g; c.fillRect(0, 0, 1920, 1080);
-  c.save(); c.globalAlpha = 0.07; c.strokeStyle = th.color; c.lineWidth = 1;
-  for (let x = -100; x < 2020; x += 80) { c.beginPath(); c.moveTo(x + 40 * Math.sin(p), 0); c.lineTo(x - 40 * Math.sin(p), 1080); c.stroke(); }
-  c.restore();
+  LF.ground(c, p, th);
   const r = FX.rng(3);
   for (let i = 0; i < 70; i++) {
     const x = r() * 1920, y = r() * 1080, ph = r() * 6.28, s = 1 + r() * 2;
@@ -30,7 +25,7 @@ function draw(c, t) {
     c.fillStyle = th.color; c.beginPath(); c.arc(x + 12 * Math.sin(p + ph), y + 12 * Math.cos(p + ph), s, 0, Math.PI * 2); c.fill();
   }
   c.globalAlpha = 1;
-  FX.vignette(c, { strength: 0.6 });
+  LF.vignette(c, th, 0.6);
 }
 </script>
 </body>

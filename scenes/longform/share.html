@@ -18,7 +18,7 @@ const D = M.data({ dur: 6.5, kicker: 'WHERE IT GOES', headline: 'Who actually pa
 const th = LF.theme(D);
 const S = (Array.isArray(D.slices) ? D.slices : String(D.slices).split(';').filter((p) => p.trim()).map((p) => { const [l, v] = p.split('='); return { label: l.trim(), value: Number(v) }; }));
 const total = S.reduce((a, s) => a + s.value, 0);
-const COLS = [th.color, FX.alpha(th.color, 0.65), FX.alpha(th.color, 0.4), FX.alpha(th.color, 0.22), 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.08)'];
+const COLS = [th.color, FX.alpha(th.color, 0.65), FX.alpha(th.color, 0.4), FX.alpha(th.color, 0.22), LF.w(th, 0.15), LF.w(th, 0.08)];
 const AT = LF.schedule(D, S.map((s) => s.label), { start: 0.7, gap: 0.45 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', sfx: AT.map((at, i) => ({ at, name: i ? 'tick' : 'pop', volume: 0.5 })) });
 function draw(c, t) {
@@ -26,7 +26,7 @@ function draw(c, t) {
   const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const cx = 620, cy = 640, R = 270, w = 92;
-  c.lineWidth = w; c.strokeStyle = 'rgba(255,255,255,0.05)'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke();
+  c.lineWidth = w; c.strokeStyle = LF.w(th, 0.05); c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.stroke();
   let a0 = -Math.PI / 2;
   S.forEach((s, i) => {
     const k = M.ease.outCubic(M.clamp((t - AT[i]) / 0.6)), span = (s.value / total) * Math.PI * 2;
@@ -46,7 +46,7 @@ function draw(c, t) {
   if (ck > 0) { c.save(); c.translate(cx, cy); c.scale(ck, ck); M.text(c, D.center || `${S[0].value}${D.unit === "none" ? "" : D.unit}`, 0, 28, { font: `800 96px ${LF.F.display}`, color: th.ink, align: 'center' }); if (!D.center) M.text(c, S[0].label, 0, 82, { font: `600 30px ${LF.F.display}`, color: th.muted, align: 'center' }); c.restore(); }
   if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
   endCam();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

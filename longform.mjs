@@ -16,6 +16,12 @@
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
 //   node longform.mjs pull <plan>                 # fetch pulls that have a url + from/to (needs yt-dlp)
 //
+//   Around the video:
+//   node longform.mjs doctor                      # is this machine set up? what's missing and how to fix it
+//   node longform.mjs feedback x.review.json      # notes from out/longform/<name>/review.html -> FEEDBACK.md
+//   node longform.mjs thumbnail <plan>            # three 1280x720 thumbnails
+//   node longform.mjs shorts <plan>               # vertical shorts cut from the finished video
+//
 // Add --json for a machine-readable last line. Details: docs/LONGFORM.md.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
@@ -23,6 +29,7 @@ import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
 import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
+import { doctor, feedback, shorts, thumbnails } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -108,6 +115,27 @@ try {
     if (chk.ok && rest.includes('--build')) built = await build(out, { log });
     emit({ ok: chk.ok && (!built || built.ok), plan: out, clip: clip.id, align: report, check: chk, build: built });
     if (!chk.ok) process.exitCode = 1;
+  } else if (cmd === 'doctor') {
+    // Is this machine ready? Every piece the editor needs, and the one-line fix for what's missing.
+    const r = doctor();
+    if (!json) {
+      for (const x of r.rows) console.log(`${x.ok ? 'OK     ' : x.need ? 'MISSING' : 'optional'}  ${x.name.padEnd(18)} ${x.detail}${x.fix ? `\n           -> ${x.fix}` : ''}`);
+      console.log(r.ready ? '\nReady: you can write a script, record it and build the video.' : '\nNot ready yet: fix the MISSING lines above.');
+    }
+    emit(r);
+    if (!r.ready) process.exitCode = 1;
+  } else if (cmd === 'feedback') {
+    // node longform.mjs feedback <name>.review.json [plan.json]: the reviewer's notes -> FEEDBACK.md
+    const r = feedback(args[0], args[1]);
+    if (!json) { console.log(`${r.notes.length} note(s), ${r.approved ? 'approved once done' : 'not approved yet'} -> ${relative(ROOT, r.file)}`); r.notes.forEach((n) => console.log(`  ${fmt(n.t)}  ${n.insert ? n.insert.id : '(speaker)'}  ${n.text.split('\n')[0].slice(0, 80)}`)); }
+    emit(r);
+  } else if (cmd === 'thumbnail') {
+    emit(thumbnails(args[0], { log }));
+  } else if (cmd === 'shorts') {
+    const r = await shorts(args[0], { log });
+    if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
   } else if (cmd === 'remix') {
     // node longform.mjs remix <plan> --no-voice : the built video with music + effects only
     const r = await remix(args[0], { voice: !rest.includes('--no-voice'), log });
@@ -171,5 +199,9 @@ function readmeUsage() {
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
-  node longform.mjs demo [podcast]     run it all on bundled stand-in footage`;
+  node longform.mjs demo [podcast]     run it all on bundled stand-in footage
+  node longform.mjs doctor             check this machine is set up
+  node longform.mjs feedback <review.json>   reviewer's notes -> FEEDBACK.md
+  node longform.mjs thumbnail <plan>   three thumbnails
+  node longform.mjs shorts <plan>      vertical shorts from the finished video`;
 }

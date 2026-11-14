@@ -25,7 +25,7 @@ function draw(c, t) {
   const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const xs = D.steps.map((_, i) => X0 + (X1 - X0) * (n === 1 ? 0.5 : i / (n - 1)));
-  c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(X1, Y); c.stroke();
+  c.strokeStyle = LF.w(th, 0.12); c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(X1, Y); c.stroke();
   let reached = X0;
   D.steps.forEach((s, i) => { const k = M.ease.inOutCubic(M.clamp((t - AT[i] + 0.35) / 0.35)); if (k > 0) reached = Math.max(reached, i ? xs[i - 1] + (xs[i] - xs[i - 1]) * k : X0 + (xs[0] - X0) * k); });
   FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(reached, Y); c.stroke(); }, { color: th.color, blur: 24, strength: 0.7 });
@@ -33,7 +33,7 @@ function draw(c, t) {
     const k = M.ease.outBack(M.clamp((t - AT[i]) / 0.45)), on = t >= AT[i];
     c.save(); c.translate(xs[i], Y); c.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
     c.beginPath(); c.arc(0, 0, 38, 0, Math.PI * 2); c.fillStyle = on ? th.color : '#11131A'; c.fill();
-    c.lineWidth = 4; c.strokeStyle = on ? th.color : 'rgba(255,255,255,0.25)'; c.stroke();
+    c.lineWidth = 4; c.strokeStyle = on ? th.color : LF.w(th, 0.25); c.stroke();
     M.text(c, String(i + 1), 0, 14, { font: `800 38px ${LF.F.display}`, color: on ? '#05060A' : th.muted, align: 'center' });
     c.restore();
     const a = M.prog(t, AT[i] + 0.1, 0.4);
@@ -46,7 +46,7 @@ function draw(c, t) {
     }
   });
   endCam();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

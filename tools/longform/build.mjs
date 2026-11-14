@@ -1,12 +1,14 @@
 // tools/longform/build.mjs: a long-form edit plan -> preview MP4, Premiere timeline, captions,
 // chapters, pull list and a self-check report, in out/longform/<name>/.
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { cpus } from 'node:os';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
+import { writeReview } from './extras.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -156,6 +158,46 @@ const readSceneLibs = (scene) => [...readFileSync(scene, 'utf8').matchAll(/<scri
 
 let _stamp;
 const kitStamp = () => (_stamp ??= ['kit/motion.js', 'kit/fx.js', 'kit/blocks.js', 'brand.js'].map((f) => existsSync(join(ROOT, f)) ? statSync(join(ROOT, f)).mtimeMs : 0).join('|'));
+
+
+// Every animation the build is about to need and hasn't cached, rendered several at a time (the build
+// itself then finds them in the cache). LONGFORM_JOBS sets how many at once; default half the cores, max 4.
+async function prerender(R, plan, log) {
+  const todo = [], seen = new Set();
+  const want = (scene, data, label) => {
+    if (!scene || !existsSync(scene)) return;
+    const key = sceneKey(scene, data, plan.fps);
+    if (seen.has(key) || existsSync(join(CACHE, key + '.mp4'))) return;
+    seen.add(key); todo.push({ scene, data, label, key });
+  };
+  if (R.voiceOnly) want(join(ROOT, 'scenes', 'longform', 'backdrop.html'), { ...(plan.theme || {}), dur: 12 }, 'backdrop');
+  for (const ins of R.inserts) if (ins.kind === 'animation') want(ins.scene, animData(ins, R), ins.id);
+  const cores = cpus().length, P = Math.max(1, Math.min(4, Number(process.env.LONGFORM_JOBS) || Math.floor(cores / 2)));
+  if (todo.length < 2 || P < 2) return;
+  mkdirSync(CACHE, { recursive: true });
+  log(`  rendering ${todo.length} animations, ${P} at a time`);
+  const inner = String(Math.max(1, Math.floor((cores - 1) / P)));
+  const one = (j) => new Promise((done) => {
+    const dj = join(CACHE, j.key + '.data.json'), part = join(CACHE, j.key + '.part.mp4'), file = join(CACHE, j.key + '.mp4');
+    writeFileSync(dj, JSON.stringify(j.data));
+    const args = is3d(j.scene)
+      ? [join(ROOT, 'tools', 'longform', 'render3d.mjs'), j.scene, '--out', part, '--data', dj, '--dur', String(j.data.dur), '--fps', String(plan.fps)]
+      : [join(ROOT, 'render.mjs'), j.scene, '--out', part, '--data', dj, '--to', String(j.data.dur), '--fps', String(plan.fps), '--jobs', inner];
+    const ch = spawn(process.execPath, args, { cwd: ROOT, stdio: 'ignore' });
+    ch.on('error', () => done());
+    ch.on('close', (code) => {
+      if (code === 0 && existsSync(part)) {
+        if (existsSync(part + '.sfx.json')) renameSync(part + '.sfx.json', file + '.sfx.json');
+        renameSync(part, file);
+      } else rmSync(part, { force: true });   // the build renders it again in order and reports the error
+      done();
+    });
+  });
+  // 3D scenes each start a browser: two at a time at most.
+  const run = async (list, n) => { let k = 0; await Promise.all(Array.from({ length: Math.min(n, list.length) }, async () => { while (k < list.length) await one(list[k++]); })); };
+  await run(todo.filter((j) => !is3d(j.scene)), P);
+  await run(todo.filter((j) => is3d(j.scene)), Math.min(P, 2));
+}
 
 // ---- picture: inserts over the A-roll ------------------------------------------------------------
 // The picture is built in chunks: plain stretches of the A-roll, and one chunk per insert (the insert over
@@ -349,6 +391,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const accent = plan.accent || plan.theme?.color || brandAccent();
   log(`${plan.name}: ${fmt(R.total)} from ${fmt(R.source)} of talking, ${R.cuts.length} pieces, ${R.inserts.length} inserts`);
   const started = Date.now();
+  await prerender(R, plan, log);
   const aroll = buildARoll(R, plan, dir, log);
   for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log, R);
   const mix = join(dir, 'stems', 'mix.wav');
@@ -380,11 +423,12 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   // Critic: stretches where the picture barely changes for 3 s+ (a frozen animation, an empty frame).
   const fr = spawnSync(FF, ['-hide_banner', '-i', video, '-vf', 'scale=480:-2,freezedetect=n=0.002:d=3', '-an', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
   R.frozen = [...(fr.stderr || '').matchAll(/freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+  files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });
   log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md)`);
-  return { ok: true, video, dir, report: join(dir, 'REPORT.md'), sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
+  return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
 }
 
 // Same picture, new sound (e.g. no voice): re-mix and lay it under the already-built video.

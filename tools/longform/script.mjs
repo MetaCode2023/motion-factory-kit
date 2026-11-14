@@ -221,7 +221,7 @@ export function planFromScript(text, clip, { name } = {}) {
   const cut = runs.filter((r) => r.retake && !r.edge).map((r) => ({ at: `${clip.id}@${Math.max(0, clip.words[r.from].s - 0.01).toFixed(3)}`, text: r.text }));
   const adlibs = runs.filter((r) => !r.retake && !r.edge && r.to - r.from >= 2);
 
-  const theme = S.meta.theme && typeof S.meta.theme === 'object' ? S.meta.theme : undefined;
+  const theme = themeOf(S.meta.theme);
   const plan = {
     name: name || S.meta.name || (S.meta.title ? S.meta.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : clip.id),
     title: S.meta.title || clip.id,
@@ -295,7 +295,7 @@ export async function tryScenes(text, { log = () => {} } = {}) {
     if (c.kind !== 'anim' || !c.scene || !existsSync(join(ROOT, c.scene)) || /[\\/]3d[\\/]/.test(c.scene)) continue;   // 3D scenes need Chrome: checked at build
     const dur = Number(c.opts.dur) || 6;
     try {
-      const e = await open(join(ROOT, c.scene), { data: { ...(S.meta.theme || {}), ...c.data, dur } });
+      const e = await open(join(ROOT, c.scene), { data: { ...(themeOf(S.meta.theme) || {}), ...c.data, dur } });
       e.frame(Math.min(1, dur / 3)); e.frame(dur * 0.8);
       await e.close?.();
     } catch (err) { errors.push(`[[${c.raw.trim().slice(0, 60)}]]: ${String(err.message || err).split('\n')[0]}`); }
@@ -304,3 +304,6 @@ export async function tryScenes(text, { log = () => {} } = {}) {
   return errors;
 }
 export { seconds };
+
+// theme: blueprint  |  theme: { style, color, tint }
+function themeOf(t) { return t && typeof t === 'object' ? t : typeof t === 'string' && t.trim() ? { style: t.trim() } : undefined; }

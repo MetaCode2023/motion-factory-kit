@@ -37,7 +37,7 @@ function draw(c, t) {
   if (D.sub) FX.text(c, t, D.sub, 960, 750, { at: 1.0, mode: 'rise', font: `600 38px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 1400 });
   end();
   if (D.source) M.text(c, D.source, 960, 1010, { font: `600 22px ${LF.F.mono}`, color: th.muted, align: 'center', alpha: M.prog(t, 1.2, 0.4) * 0.8 });
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

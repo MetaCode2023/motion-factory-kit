@@ -53,7 +53,7 @@ function draw(c, t) {
   if (vs > 0) { c.save(); c.translate(960, 590); c.scale(vs, vs); c.beginPath(); c.arc(0, 0, 46, 0, Math.PI * 2); c.fillStyle = '#05060A'; c.fill(); c.strokeStyle = th.color; c.lineWidth = 3; c.stroke(); M.text(c, 'VS', 0, 12, { font: `800 32px ${LF.F.display}`, color: th.color, align: 'center' }); c.restore(); }
   if (D.verdict) FX.text(c, t, D.verdict, 960, 920, { at: Math.min(D.dur - 1.5, 2.6), mode: 'rise', font: `700 46px ${LF.F.display}`, color: th.ink, accent: D.verdictAccent || '', accentColor: th.color, align: 'center', maxWidth: 1600 });
   endCam();
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

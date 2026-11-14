@@ -28,7 +28,7 @@ function draw(c, t) {
   FX.text(c, t, D.text, 960, 540 - size * (D.text.length > 50 ? 1.1 : 0.6), { at: 0.15, mode: 'rise', font: `800 ${size}px ${LF.F.display}`, color: th.ink, accent: ACCENT, accentColor: th.color, align: 'center', maxWidth: 1560, stagger: 0.07 });
   end();
   if (D.by) FX.text(c, t, `— ${D.by}`, 960, 880, { at: 1.2, mode: 'rise', font: `600 40px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 1400 });
-  FX.vignette(c, { strength: 0.45 });
+  LF.vignette(c, th, 0.45);
 }
 </script>
 </body>

@@ -164,3 +164,21 @@ test('animations schedule each item on the word that names it, the rest spread b
   const even = LF.schedule({ dur: 6 }, ['a1', 'b2', 'c3']);
   assert.ok(even[0] < even[1] && even[1] < even[2] && even[2] <= 4.8, 'no words: an even spread');
 });
+
+test('doctor reports every requirement with a fix for the missing ones', async () => {
+  const { doctor } = await import('../tools/longform/extras.mjs');
+  const r = doctor();
+  assert.ok(r.rows.length >= 8);
+  assert.ok(r.rows.every((x) => x.ok || x.fix));
+  assert.equal(r.ready, r.rows.filter((x) => x.need).every((x) => x.ok));
+});
+
+test('a one-word theme in a plan becomes a style for every animation', async () => {
+  const { writeFileSync, mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { loadPlan } = await import('../tools/longform/plan.mjs');
+  const f = join(mkdtempSync(join(tmpdir(), 'lf-')), 'p.json');
+  writeFileSync(f, JSON.stringify({ theme: 'blueprint', a_roll: [] }));
+  assert.deepEqual(loadPlan(f).theme, { style: 'blueprint' });
+});

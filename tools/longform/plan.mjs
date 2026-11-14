@@ -20,6 +20,7 @@ export function loadPlan(file) {
   const plan = readJSON(file);
   plan.name = plan.name || file.replace(/^.*[\\/]/, '').replace(/\.json$/, '');
   plan.fps = plan.fps || 30;
+  if (typeof plan.theme === 'string') plan.theme = { style: plan.theme };   // "theme": "blueprint"
   plan._file = resolve(file);
   return plan;
 }

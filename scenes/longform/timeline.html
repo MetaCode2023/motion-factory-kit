@@ -26,13 +26,13 @@ function draw(c, t) {
   const prev = Math.max(0, cur - 1), mv = M.ease.inOutCubic(M.clamp((t - (AT[cur] - 0.35)) / 0.5));
   const focus = (prev + (cur - prev) * mv) * STEP;
   const ox = 1200 - focus - 300;
-  c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, Y); c.lineTo(1920, Y); c.stroke();
+  c.strokeStyle = LF.w(th, 0.12); c.lineWidth = 4; c.beginPath(); c.moveTo(0, Y); c.lineTo(1920, Y); c.stroke();
   FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 4; c.beginPath(); c.moveTo(0, Y); c.lineTo(Math.max(0, ox + 300 + focus), Y); c.stroke(); }, { color: th.color, blur: 18, strength: 0.6 });
   E.forEach((e, i) => {
     const x = ox + 300 + i * STEP;
     if (x < -300 || x > 2300) return;
     const on = t >= AT[i], k = M.ease.outBack(M.clamp((t - AT[i]) / 0.45));
-    c.beginPath(); c.arc(x, Y, on ? 16 : 10, 0, Math.PI * 2); c.fillStyle = on ? th.color : 'rgba(255,255,255,0.3)'; c.fill();
+    c.beginPath(); c.arc(x, Y, on ? 16 : 10, 0, Math.PI * 2); c.fillStyle = on ? th.color : LF.w(th, 0.3); c.fill();
     if (k <= 0) return;
     const latest = i === cur, up = i % 2 === 0;
     c.save(); c.globalAlpha = Math.min(1, k) * (latest ? 1 : 0.55);
@@ -41,9 +41,9 @@ function draw(c, t) {
     c.restore();
   });
   // title on top of the moving scene
-  c.save(); const g = c.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, 'rgba(5,6,10,0.85)'); g.addColorStop(1, 'rgba(5,6,10,0)'); c.fillStyle = g; c.fillRect(0, 0, 1920, 300); c.restore();
+  c.save(); const g = c.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, FX.alpha(th.deep, 0.85)); g.addColorStop(1, FX.alpha(th.deep, 0)); c.fillStyle = g; c.fillRect(0, 0, 1920, 300); c.restore();
   LF.title(c, t, D, th);
-  FX.vignette(c, { strength: 0.5 });
+  LF.vignette(c, th, 0.5);
 }
 </script>
 </body>

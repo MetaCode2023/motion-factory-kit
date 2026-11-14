@@ -78,7 +78,7 @@ function draw(c, t) {
       for (let i = 0; i <= 400; i++) { const u = i / 400, y = BASE - Math.min(CAP, 110 * wave(u, t, k)) * ink; i ? c.lineTo(X0 + (X1 - X0) * u, y) : c.moveTo(X0 + (X1 - X0) * u, y); }
       c.strokeStyle = col; c.lineWidth = 4; c.stroke();
     }, { color: col, blur: 26, strength: 0.8 });
-    c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X0, BASE + 2); c.lineTo(X1, BASE + 2); c.stroke();
+    c.strokeStyle = LF.w(th, 0.15); c.lineWidth = 2; c.beginPath(); c.moveTo(X0, BASE + 2); c.lineTo(X1, BASE + 2); c.stroke();
     c.restore();
     M.text(c, D.before.toUpperCase(), X0, BASE + 50, { font: '600 26px "JetBrains Mono"', color: '#8A93A6', alpha: ink * (1 - k) });
     const sx = X0 + (X1 - X0) * SPIKE;
@@ -90,7 +90,7 @@ function draw(c, t) {
   const fl = M.clamp(1 - Math.abs(t - T) / 0.18);
   if (fl > 0) { c.fillStyle = `rgba(255,255,255,${0.55 * fl})`; c.fillRect(0, 0, W, H); }
   P.title(c, t, { kicker: D.kicker, headline: D.headline, accent: D.accent, color: k > 0.5 ? D.hit : C, width: 1400 });
-  FX.vignette(c, { strength: 0.5 });
+  LF.vignette(c, th, 0.5);
 }
 </script>
 </body>

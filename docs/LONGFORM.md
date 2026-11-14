@@ -124,7 +124,38 @@ build renders them through headless Chrome instead of the 2D engine.
   Software rendering works anywhere at roughly half a second per frame; set `MF_GPU=1` to use the graphics card.
 - Use 3D where depth is the point (objects, places, things you could pick up); keep 2D for charts and words.
 
+## Looks
+
+One word restyles the whole video: every animation and the voice-only backdrop. In a script's header write
+`theme: blueprint`; in a plan, `"theme": "blueprint"` (or `{ "style": "blueprint", "color": "#..." }` to
+keep the look and change the accent).
+
+| Style | Feel | Good for |
+|---|---|---|
+| `aurora` (default) | dark, soft colour fields, cyan | science, tech |
+| `blueprint` | drafting grid on deep blue | how things work, engineering, systems |
+| `noir` | black, one spotlight, yellow | surveillance, crime, power |
+| `sunset` | plum to orange, low sun | history, endings, energy |
+| `paper` | light ruled paper, red ink | money, taxes, voting, anything civic |
+| `terminal` | green on black, scanlines | data, hacking, AI |
+
+Pick one per video (or per series) so the videos don't all look the same. 3D scenes take the accent colour
+only.
+
+## Review, thumbnail, shorts
+
+- **Review.** Every build writes `out/longform/<name>/review.html`. Send the folder (or open it yourself):
+  watch, pause where something is off, type the note, press Add; Save notes downloads `<name>.review.json`.
+  `node longform.mjs feedback <name>.review.json` writes `FEEDBACK.md`. Change only what the notes ask for
+  in the script/plan and rebuild; untouched visuals come from the cache.
+- **Thumbnail.** Two to four words that work at phone size, one accent word, one object from
+  `props-gallery.html`. Write two or three different angles in `"thumbnails": [{...}, {...}]` if you want options.
+- **Shorts.** Pick the 30-55 s stretches that stand alone (a surprising number, a clean analogy) and give
+  each a title that is a hook, not the chapter name. Times are in the finished video.
+
 ## Setup
+
+Run `node longform.mjs doctor` first: it lists what is installed and what is missing.
 
 ```bash
 npm install
@@ -149,10 +180,14 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
 | `node longform.mjs stock <plan>` | Downloads Pexels B-roll for `"stock"` inserts into `assets/broll/` and adds credits to `assets/broll/CREDITS.md`. |
-| `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. |
+| `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. Animations render several at a time (`LONGFORM_JOBS=3` to set how many). Also writes `review.html`. |
+| `node longform.mjs doctor` | Checks this machine: Node, packages, Python, transcription, Chrome for 3D, keys. Says what's missing and the one-line fix. |
+| `node longform.mjs feedback <name>.review.json` | Turns the reviewer's notes into `FEEDBACK.md`: each note with what was on screen, what was being said, and which insert in the plan to change. |
+| `node longform.mjs thumbnail <plan>` | Three 1280x720 thumbnails (`thumbnail-1..3.jpg`) from `"thumbnail": { "text", "accent", "prop", "kicker" }` in the plan. |
+| `node longform.mjs shorts <plan>` | Vertical shorts cut from the finished video, one per chapter, or the ones in `"shorts": [{ "from", "to", "title" }]`. |
 
 The same steps are MCP tools (`longform_index`, `longform_search`, `longform_words`, `longform_write_plan`,
-`longform_stock`, `longform_build`). The build tool returns the inserts contact sheet as a picture.
+`longform_stock`, `longform_build`, `longform_doctor`, `longform_feedback`, `longform_thumbnail`, `longform_shorts`). The build tool returns the inserts contact sheet as a picture.
 
 ## Plans from existing footage
 
