@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
+import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 
@@ -316,6 +316,8 @@ function report(R, plan, files) {
   pass(!pulls, pulls ? `${pulls} clip(s) still to pull: see PULL-LIST.md` : 'no placeholders left');
   const longPull = R.inserts.filter((i) => (i.kind === 'pull' || i.pulled) && !i.stock && i.dur > 10);   // stock is licensed; outside clips stay short
   if (longPull.length) pass(false, `borrowed clips over 10 s (${longPull.map((i) => i.id).join(', ')}): trim them and talk over them`);
+  if (R.frozen) R.frozen = R.frozen.filter(([a, d]) => !R.inserts.some((i) => i.kind === 'pull' && a >= i.at - 0.5 && a + d <= i.at + i.dur + 0.5));   // placeholders are still on purpose
+  if (R.frozen) pass(!R.frozen.length, R.frozen.length ? `picture frozen for 3 s+ at ${R.frozen.map(([a, d]) => `${fmt(a)} (${d.toFixed(1)} s)`).join(', ')}: add motion or a visual there` : 'nothing on screen sits frozen for 3 s+');
   pass(R.chapters.length >= 3, R.chapters.length >= 3 ? `${R.chapters.length} chapters` : 'add 3+ chapters for YouTube');
   lines.push('## Checks', '', ...checks, '', '## Timeline', '', '| Time | Insert | Kind | Layout | Length | Note |', '|---|---|---|---|---|---|');
   for (const i of R.inserts) lines.push(`| ${fmt(i.at)} | ${i.id} | ${i.kind} | ${i.layout} | ${i.dur.toFixed(1)} s | ${(i.note || i.title || '').replace(/\|/g, '/')} |`);
@@ -362,6 +364,9 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const sheetFile = await sheet(items, join(dir, `${plan.name}.inserts.jpg`), { title: `${plan.name}  ·  ${fmt(R.total)}  ·  ${R.inserts.length} inserts` });
   rmSync(tmp, { recursive: true, force: true });
   files.push(relative(ROOT, sheetFile));
+  // Critic: stretches where the picture barely changes for 3 s+ (a frozen animation, an empty frame).
+  const fr = spawnSync(FF, ['-hide_banner', '-i', video, '-vf', 'scale=480:-2,freezedetect=n=0.002:d=3', '-an', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
+  R.frozen = [...(fr.stderr || '').matchAll(/freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)/g)].map((m) => [+m[1], +m[2]]);
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });

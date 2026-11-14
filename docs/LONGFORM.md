@@ -61,6 +61,8 @@ base: backdrop                                      // optional: never show the 
 
 | Cue | What it puts on screen |
 |---|---|
+| `[[story beats: bank=The Fed - creates money; coin=New dollars; person=You \| flow: coin \| layout: row/loop]]` | **Show it, don't write it.** Drawn objects pop in on the words that name them, joined by arrows with things flowing along them; the camera travels to follow. Objects: see `scenes/longform/props-gallery.html` (44: bank, ballot, camera, barrel, hospital, person, crowd, coin, chip, card, atom, eye...) |
+| `[[count prop: card \| total: 221 \| highlight: 1 \| value: 1 in 221 \| label: ..]]` | A grid of objects; the ones that matter light up on the spoken number |
 | `[[stat value: .. \| label: .. \| sub: .. \| source: ..]]` | One big number counting up |
 | `[[quote text: .. \| highlight: words \| by: ..]]` | A line, written big, key words lit (`by` only for a real quote) |
 | `[[term term: .. \| definition: .. \| plain: ..]]` | A definition with an everyday translation |
@@ -83,6 +85,12 @@ Options on any visual: `dur` (seconds; default auto, which runs until the next v
 and 12 s voice-only), `layout: side` (a framed box with you still on screen), `id`, `note`, `offset`.
 On animations, `mark.<key>: <word>` lands a beat on that spoken word, e.g. the river flips on "boom".
 `unit: none` / `prefix: none` blank out a default (an empty value keeps the default).
+
+**Animations follow the words.** The build hands every animation the words spoken while it is on screen,
+with their times. Each step, item, bar, slice, node, event, note or object appears when the speaker says it (its
+label or `say:` words), the number finishes counting as it is said, and anything not said spreads evenly between.
+Every template also drifts slowly, so nothing sits frozen after its last beat. Write cue labels with the words
+the script actually uses and the sync takes care of itself.
 
 **Sound design comes with the animations.** Every template declares its own effects in `M.setup({ sfx })`,
 timed to its own beats: a pop as a number lands, ticks while it counts, a pop per list item, a riser into a

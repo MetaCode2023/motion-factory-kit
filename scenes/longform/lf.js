@@ -65,11 +65,16 @@
 
   // One time per item, in order: each on its spoken word when it is said, the rest spread between the
   // known ones. Times stay inside [start, end] and at least `gap` apart.
-  LF.schedule = (D, items, { start = 0.6, end = null, gap = 0.35, lead = 0.1 } = {}) => {
+  LF.schedule = (D, items, { start = 0.6, end = null, gap = 0.35, lead = 0.1, open: _o } = {}) => {
     const n = items.length, hi = end ?? Math.max(start + 0.5, (D.dur || 6) - 1.2);
-    const found = [];
-    let after = start - lead;
-    for (const it of items) { const t = it == null ? null : LF.when(D, it, after); found.push(t == null ? null : Math.max(start, t - lead)); if (t != null) after = t + 0.05; }
+    // Each item's word, searched from the start (not after the previous item, so one late match can't
+    // push everything after it off the end). Matches that would break the order are dropped, and the
+    // first item never waits more than `open` seconds: an animation opens on something, not an empty frame.
+    let found = items.map((it) => { const t = it == null ? null : LF.when(D, it, start - lead); return t == null ? null : Math.max(start, t - lead); });
+    let last = -Infinity;
+    found = found.map((t) => { if (t == null || t <= last) return null; last = t; return t; });
+    const open = start + 0.8;
+    if (found[0] == null || found[0] > open) found[0] = start;
     const out = found.slice();
     for (let i = 0; i < n; i++) if (out[i] == null) {
       let a = i - 1; while (a >= 0 && out[a] == null) a--;

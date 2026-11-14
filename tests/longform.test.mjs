@@ -145,3 +145,22 @@ test('a cue whose JSON ends in ]]] keeps the whole value', () => {
   assert.deepEqual(c.data.hands[0].cards, ['Ah', 'Jh']);
   assert.ok(!/\]/.test(readingCopy('[[x a: [1]]] Hello.')));
 });
+
+test('animations schedule each item on the word that names it, the rest spread between', async () => {
+  const { readFileSync } = await import('node:fs');
+  const vm = await import('node:vm');
+  const ctx = { window: {}, M: { clamp: (x) => Math.max(0, Math.min(1, x)), ease: { inOutCubic: (x) => x } }, FX: {} };
+  vm.createContext(ctx);
+  vm.runInContext(readFileSync(new URL('../scenes/longform/lf.js', import.meta.url), 'utf8'), ctx);
+  const LF = ctx.window.LF;
+  const D = { dur: 8, words: [{ w: 'You', t: 0.2 }, { w: 'start', t: 0.5 }, { w: 'uncertain.', t: 1.0 }, { w: 'watch.', t: 2.5 }, { w: 'update.', t: 3.9 }, { w: 'decide.', t: 6.0 }] };
+  const at = LF.schedule(D, ['Uncertain', 'Observe', 'Update', 'Decide']);
+  assert.ok(Math.abs(at[0] - 0.9) < 0.01 && Math.abs(at[2] - 3.8) < 0.01 && Math.abs(at[3] - 5.9) < 0.01, JSON.stringify(at));
+  // A first item said late (or out of order) doesn't leave the frame empty or hold up the rest.
+  const late = LF.schedule({ dur: 8, words: [{ w: 'quantum', t: 1.0 }, { w: 'poker', t: 5.0 }] }, ['poker', 'quantum']);
+  assert.ok(late[0] <= 1.4 && late[1] > late[0] && late[1] < 6.8, JSON.stringify(late));
+  assert.ok(at[1] > at[0] && at[1] < at[2], 'an unsaid item lands between its neighbours');
+  assert.equal(LF.when(D, 'nothing like it'), null);
+  const even = LF.schedule({ dur: 6 }, ['a1', 'b2', 'c3']);
+  assert.ok(even[0] < even[1] && even[1] < even[2] && even[2] <= 4.8, 'no words: an even spread');
+});

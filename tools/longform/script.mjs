@@ -59,6 +59,7 @@ export function parseCue(raw) {
     if (!kv) continue;
     if (OPTION_KEYS.has(kv[1])) opts[kv[1]] = parseValue(kv[2]); else setPath(data, kv[1], parseValue(kv[2]));
   }
+  if (opts.layout && !['full', 'side'].includes(opts.layout)) { data.layout = opts.layout; delete opts.layout; }   // e.g. story's layout: loop
   const arg = firstKV ? '' : first;
   let kind = kind0, scene = null;
   if (kind0 === 'anim') { scene = arg; kind = 'anim'; }
