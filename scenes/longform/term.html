@@ -15,8 +15,10 @@
 const D = M.data({ dur: 6, kicker: 'DEFINITION', term: 'Superposition', pronounce: 'soo-per-puh-ZISH-un',
   definition: 'A system existing in several possible states at once, until it is measured.', plain: 'In poker: your opponent holds every hand in their range until the cards are shown.' });
 const th = LF.theme(D);
+// The everyday translation appears when the speaker gets to it (its words), else ~2 s in.
+const PLAIN = Math.min(D.dur - 1.2, LF.when(D, String(D.plain).replace(/^in [a-z ]+terms:?/i, ''), 1.2) ?? Math.min(D.dur - 1.6, 2.2));
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
-  sfx: [{ at: 0.2, name: 'type', volume: 0.6 }, { at: 0.6, name: 'tick', volume: 0.5 }, ...(D.plain ? [{ at: Math.min(D.dur - 1.6, 2.2), name: 'pop', volume: 0.6 }] : [])] });
+  sfx: [{ at: 0.2, name: 'type', volume: 0.6 }, { at: 0.6, name: 'tick', volume: 0.5 }, ...(D.plain ? [{ at: PLAIN, name: 'pop', volume: 0.6 }] : [])] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
   const end = FX.camera(c, t, { zoom: 1 + 0.025 * M.clamp(t / D.dur) });
@@ -29,7 +31,7 @@ function draw(c, t) {
   c.restore();
   FX.text(c, t, D.definition, 160, 590, { at: 0.9, mode: 'rise', font: `700 54px ${LF.F.display}`, color: th.ink, maxWidth: 1500, stagger: 0.03 });
   if (D.plain) {
-    const a = M.prog(t, Math.min(D.dur - 1.6, 2.2), 0.5);
+    const a = M.prog(t, PLAIN, 0.5);
     if (a > 0) { c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 20); LF.card(c, 150, 820, 1620, 150, th); LF.para(c, D.plain, 200, 852, { font: `600 38px ${LF.F.display}`, color: th.color, width: 1520 }); c.restore(); }
   }
   end();

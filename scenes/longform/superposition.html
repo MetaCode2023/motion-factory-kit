@@ -6,6 +6,7 @@
 <script src="../../brand.js"></script>
 <script src="../../kit/motion.js"></script>
 <script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
 <script src="poker.js"></script>
 </head>
 <body>
@@ -29,8 +30,9 @@ const D = M.data({
   ],
 });
 const W = 1920, H = 1080, C = D.color;
+const HAT = LF.schedule(D, D.hands.map((h) => h.label), { start: 1.3, gap: 0.18 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
-  sfx: [{ at: 0.15, name: 'pop', volume: 0.6 }, { at: 0.5, name: 'riser', volume: 0.35 }, ...D.hands.map((_, i) => ({ at: 1.3 + i * 0.18, name: 'tick', volume: 0.4 }))] });
+  sfx: [{ at: 0.15, name: 'pop', volume: 0.6 }, { at: 0.5, name: 'riser', volume: 0.35 }, ...HAT.map((at) => ({ at, name: 'tick', volume: 0.4 }))] });
 
 const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
 const CX = 560, CY = 610;
@@ -70,7 +72,7 @@ function draw(c, t) {
     FX.glass(c, px - 40, py - 70, pw + 80, D.hands.length * row + 110, { radius: 32, tint: 'rgba(60,224,255,0.05)', border: 'rgba(60,224,255,0.3)' });
     M.text(c, 'THEIR RANGE', px, py - 18, { font: '600 26px "JetBrains Mono"', color: '#8A93A6' });
     D.hands.forEach((h, i) => {
-      const y = py + 30 + i * row, bk = M.ease.outCubic(M.clamp((t - 1.3 - i * 0.18) / 0.8));
+      const y = py + 30 + i * row, bk = M.ease.outCubic(M.clamp((t - HAT[i]) / 0.8));
       M.text(c, h.label, px, y + 22, { font: '700 34px "Plus Jakarta Sans"', color: '#F5F7FA' });
       M.roundRect(c, px, y + 40, pw - 120, 18, 9); c.fillStyle = 'rgba(255,255,255,0.08)'; c.fill();
       if (bk > 0) {

@@ -47,5 +47,47 @@
     return y + size + (lines.length - 1) * size * lh + size * 0.35;
   };
 
+  // ---- word timing ----------------------------------------------------------------------------------
+  // D.words = [{ w, t }]: what the speaker says while this animation is on screen (t = seconds from its
+  // start; the build fills it in). Without it (preview, tests) everything falls back to an even spread.
+  const STOP = new Set('the a an and or but so to of in on at for with is it its this that these those be was were are you your they their we our he she his her i my me not no do does did just like then than as from by into out up about there here what when how why who all any some one very really can will would'.split(' '));
+  const bare = (w) => String(w).toLowerCase().replace(/[^a-z0-9$%]/g, '');
+  const keys = (text) => String(text).toLowerCase().split(/[^a-z0-9$%]+/).filter((w) => w.length > 2 && !STOP.has(w));
+  const hit = (spoken, key) => { const a = bare(spoken); return a && (a === key || (key.length > 4 && a.startsWith(key.slice(0, Math.max(5, key.length - 2)))) || (a.length > 4 && key.startsWith(a.slice(0, Math.max(5, a.length - 2))))); };
+
+  // The time the speaker says (one of the content words of) `text`, after `after`; null if they don't.
+  LF.when = (D, text, after = 0) => {
+    const ks = Array.isArray(text) ? text.flatMap(keys) : keys(text);
+    if (!ks.length) return null;
+    for (const w of D.words || []) if (w.t >= after - 0.01 && ks.some((k) => hit(w.w, k))) return w.t;
+    return null;
+  };
+
+  // One time per item, in order: each on its spoken word when it is said, the rest spread between the
+  // known ones. Times stay inside [start, end] and at least `gap` apart.
+  LF.schedule = (D, items, { start = 0.6, end = null, gap = 0.35, lead = 0.1 } = {}) => {
+    const n = items.length, hi = end ?? Math.max(start + 0.5, (D.dur || 6) - 1.2);
+    const found = [];
+    let after = start - lead;
+    for (const it of items) { const t = it == null ? null : LF.when(D, it, after); found.push(t == null ? null : Math.max(start, t - lead)); if (t != null) after = t + 0.05; }
+    const out = found.slice();
+    for (let i = 0; i < n; i++) if (out[i] == null) {
+      let a = i - 1; while (a >= 0 && out[a] == null) a--;
+      let b = i + 1; while (b < n && found[b] == null) b++;
+      const ta = a >= 0 ? out[a] : start - (hi - start) / Math.max(1, n), tb = b < n ? found[b] : hi + (hi - start) / Math.max(1, n);
+      out[i] = ta + ((tb - ta) * (i - a)) / (b - a);
+    }
+    for (let i = 0; i < n; i++) out[i] = Math.min(hi, Math.max(start + i * 0.05, out[i], i ? out[i - 1] + gap : start));
+    return out.map((t) => +t.toFixed(3));
+  };
+
+  // ---- never freeze ---------------------------------------------------------------------------------
+  // A slow push-in across the whole insert plus a gentle drift: after the last reveal the frame still moves.
+  LF.drift = (c, t, D, { zoom = 0.05, x = 18, y = 10 } = {}) => {
+    const k = M.ease.inOutCubic(M.clamp(t / (D.dur || 6)));
+    return FX.camera(c, t, { zoom: 1 + zoom * k, x: x * Math.sin(t * 0.35), y: y * Math.cos(t * 0.28) });
+  };
+  LF.pulse = (t, speed = 2, phase = 0) => 0.5 + 0.5 * Math.sin(t * speed + phase);
+
   window.LF = LF;
 })();

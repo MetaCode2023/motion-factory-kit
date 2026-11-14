@@ -77,15 +77,23 @@ async function pullCard(ins, accent, out) {
   return out;
 }
 
-async function buildInsert(ins, plan, dir, accent, log) {
+// What an animation scene gets: its data, its length, and every word spoken while it is on screen
+// ({ w, t } with t in seconds from the insert's start), so its beats can land on the words.
+export function animData(ins, R) {
+  const words = R.words.filter((w) => w.s >= ins.at - 0.05 && w.s < ins.at + ins.dur).map((w) => ({ w: w.w, t: +(w.s - ins.at).toFixed(3) }));
+  return { ...ins.data, dur: ins.dur, words };
+}
+
+async function buildInsert(ins, plan, dir, accent, log, R) {
   const media = join(dir, 'media');
   mkdirSync(media, { recursive: true });
   const out = join(media, `${ins.id}.mp4`);
   const frames = Math.round(ins.dur * plan.fps);
   const fit = (f) => ff(['-i', f, '-vf', `${cover()},fps=${plan.fps},tpad=stop_mode=clone:stop_duration=${ins.dur}`, '-frames:v', String(frames), '-an', ...VENC(plan.fps), out], `fit ${ins.id}`);
   if (ins.kind === 'animation') {
-    const f = renderScene(ins.scene, { ...ins.data, dur: ins.dur }, plan.fps, ins.id, log);
-    if (plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, { ...ins.data, dur: ins.dur })).filter((x) => x.at < ins.dur - 0.1);
+    const data = animData(ins, R);
+    const f = renderScene(ins.scene, data, plan.fps, ins.id, log);
+    if (plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, data)).filter((x) => x.at < ins.dur - 0.1);
     const p = probe(f);
     if (p.width !== W || p.height !== H) log(`  ! ${ins.id}: scene is ${p.width}x${p.height}; use M.setup({ preset: 'youtube' }) for 16:9`);
     fit(f);
@@ -327,7 +335,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   log(`${plan.name}: ${fmt(R.total)} from ${fmt(R.source)} of talking, ${R.cuts.length} pieces, ${R.inserts.length} inserts`);
   const started = Date.now();
   const aroll = buildARoll(R, plan, dir, log);
-  for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log);
+  for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log, R);
   const mix = join(dir, 'stems', 'mix.wav');
   mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);
@@ -370,7 +378,7 @@ export async function remix(planFile, { voice = true, log = console.log } = {}) 
   const dir = join(ROOT, 'out', 'longform', plan.name), video = join(dir, `${plan.name}.mp4`);
   const voiceWav = join(dir, 'stems', 'voice.wav');
   if (!existsSync(video) || !existsSync(voiceWav)) return { ok: false, errors: ['build the plan first'] };
-  for (const ins of R.inserts) if (ins.kind === 'animation' && plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, { ...ins.data, dur: ins.dur })).filter((x) => x.at < ins.dur - 0.1);
+  for (const ins of R.inserts) if (ins.kind === 'animation' && plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, animData(ins, R))).filter((x) => x.at < ins.dur - 0.1);
   const tag = voice ? 'remix' : 'novoice';
   const mix = join(dir, 'stems', `${tag}.wav`);
   mixAudio(R, plan, voiceWav, mix, join(dir, 'stems', '.tmp'));

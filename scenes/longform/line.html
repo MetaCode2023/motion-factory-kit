@@ -25,11 +25,12 @@ const f = (v) => (D.log ? Math.log10(Math.max(1e-9, v)) : v);
 const lo = Math.min(0, ...PTS.map((p) => f(p.y))), hi = Math.max(...PTS.map((p) => f(p.y)));
 const px = (i) => X0 + (X1 - X0) * (PTS.length === 1 ? 0.5 : i / (PTS.length - 1));
 const py = (v) => Y0 - (Y0 - Y1) * ((f(v) - lo) / (hi - lo || 1));
-const DRAW = Math.max(1.5, D.dur * 0.55), noteAt = (n) => 0.6 + DRAW * (PTS.findIndex((p) => p.x === n.x) / Math.max(1, PTS.length - 1));
+const DRAW = Math.max(1.5, D.dur * 0.55), noteAt = (n) => Math.max(0.6 + DRAW * (PTS.findIndex((p) => p.x === n.x) / Math.max(1, PTS.length - 1)), LF.when(D, n.text) ?? 0);
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: [{ at: 0.6, name: 'riser', volume: 0.3 }, ...NOTES.map((n) => ({ at: noteAt(n), name: 'pop', volume: 0.5 })), { at: 0.6 + DRAW, name: 'chime', volume: 0.5 }] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
+  const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const k = M.ease.inOutCubic(M.clamp((t - 0.6) / DRAW)), u = k * (PTS.length - 1);
   c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 2; c.beginPath(); c.moveTo(X0, Y0); c.lineTo(X1, Y0); c.stroke();
@@ -54,6 +55,7 @@ function draw(c, t) {
     c.restore();
   });
   if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
+  endCam();
   FX.vignette(c, { strength: 0.45 });
 }
 </script>

@@ -17,7 +17,7 @@ const D = M.data({ dur: 7, kicker: 'HOW WE GOT HERE', headline: 'A short history
 const th = LF.theme(D);
 const E = Array.isArray(D.events) ? D.events : String(D.events).split(';').filter((p) => p.trim()).map((p) => { const i = p.indexOf('='); return { date: p.slice(0, i).trim(), text: p.slice(i + 1).trim() }; });
 const n = E.length, STEP = 520, Y = 640;
-const AT = E.map((_, i) => 0.6 + i * Math.max(0.7, (D.dur - 1.8) / n));
+const AT = LF.schedule(D, E.map((e) => [e.date, e.text]), { start: 0.6, gap: 0.7 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', sfx: AT.map((at, i) => ({ at, name: i === n - 1 ? 'hit' : 'tick', volume: i === n - 1 ? 0.5 : 0.55 })) });
 function draw(c, t) {
   LF.backdrop(c, t, th);

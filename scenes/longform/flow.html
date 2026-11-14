@@ -21,7 +21,7 @@ const N = Array.isArray(D.nodes) ? D.nodes : String(D.nodes).split(';').filter((
 const LB = Array.isArray(D.labels) ? D.labels : String(D.labels || '').split(';').map((s) => s.trim());
 const n = N.length, BW = Math.min(330, 1500 / n - 50), BH = 210, GAP = (1680 - n * BW) / Math.max(1, n - 1), Y = 470;
 const bx = (i) => 120 + i * (BW + GAP);
-const AT = N.map((_, i) => 0.6 + i * Math.max(0.55, (D.dur - 2.6) / n));
+const AT = LF.schedule(D, N.map((x) => [x.title, x.body]), { start: 0.6, end: D.dur - 2, gap: 0.55 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: [...AT.map((at) => ({ at, name: 'pop', volume: 0.5 })), ...(D.loop ? [{ at: AT[n - 1] + 0.6, name: 'whoosh', volume: 0.4 }] : [])] });
 function arrow(c, t, x1, y1, x2, y2, k, label) {
@@ -35,6 +35,7 @@ function arrow(c, t, x1, y1, x2, y2, k, label) {
 }
 function draw(c, t) {
   LF.backdrop(c, t, th);
+  const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   N.forEach((node, i) => {
     const a = M.ease.outBack(M.clamp((t - AT[i]) / 0.45));
@@ -55,6 +56,7 @@ function draw(c, t) {
       if (LB[n - 1]) M.text(c, LB[n - 1], (x1 + x2) / 2, y + depth + 50, { font: `600 26px ${LF.F.mono}`, color: th.color, align: 'center', alpha: k });
     }
   }
+  endCam();
   FX.vignette(c, { strength: 0.45 });
 }
 </script>

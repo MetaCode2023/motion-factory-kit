@@ -17,16 +17,18 @@ const D = M.data({ dur: 6, kicker: 'BY THE NUMBERS', headline: 'Where the money 
   bars: [{ label: 'Example A', value: 42 }, { label: 'Example B', value: 27 }, { label: 'Example C', value: 18 }, { label: 'Example D', value: 13 }], highlight: '', source: 'Example figures' });
 const th = LF.theme(D);
 const max = Math.max(...D.bars.map((b) => b.value));
+const AT = LF.schedule(D, D.bars.map((b) => b.label), { start: 0.7 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
-  sfx: [...D.bars.map((_, i) => ({ at: 0.7 + i * 0.18, name: 'tick', volume: 0.45 })), { at: 1.7 + D.bars.length * 0.18, name: 'chime', volume: 0.55 }] });
+  sfx: [...AT.map((at) => ({ at, name: 'tick', volume: 0.45 })), { at: AT[AT.length - 1] + 0.9, name: 'chime', volume: 0.55 }] });
 const top = D.highlight || D.bars.reduce((a, b) => (b.value > a.value ? b : a)).label;
 function draw(c, t) {
   LF.backdrop(c, t, th);
+  const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const x = 520, w = 1150, y0 = 340, row = Math.min(130, 560 / D.bars.length);
   D.bars.forEach((b, i) => {
-    const k = M.ease.outCubic(M.clamp((t - 0.7 - i * 0.18) / 0.9)), hot = b.label === top, y = y0 + i * row;
-    M.text(c, b.label, x - 40, y + row * 0.45, { font: `700 40px ${LF.F.display}`, color: hot ? th.ink : th.muted, align: 'right', alpha: M.prog(t, 0.5 + i * 0.18, 0.3) });
+    const k = M.ease.outCubic(M.clamp((t - AT[i]) / 0.9)), hot = b.label === top, y = y0 + i * row;
+    M.text(c, b.label, x - 40, y + row * 0.45, { font: `700 40px ${LF.F.display}`, color: hot ? th.ink : th.muted, align: 'right', alpha: M.prog(t, AT[i] - 0.2, 0.3) });
     M.roundRect(c, x, y + row * 0.18, w, row * 0.42, row * 0.21); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill();
     if (k > 0) {
       const bw = Math.max(row * 0.42, w * (b.value / max) * k);
@@ -37,6 +39,7 @@ function draw(c, t) {
     }
   });
   if (D.source) M.text(c, D.source, 120, 1010, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1.2, 0.4) });
+  endCam();
   FX.vignette(c, { strength: 0.45 });
 }
 </script>

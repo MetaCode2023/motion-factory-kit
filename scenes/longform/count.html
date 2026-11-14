@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Count: one in many</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+<script src="props.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template: a grid of drawn units (people, cards, houses, coins...) fills in, then the ones that matter
+// light up on the spoken word: "1 in 221", "3 in 4 Americans", "40% of the budget".
+// Data: dur, kicker, prop (person | card | house | coin | chip | ...), total (<= 400), highlight (how many light up),
+//   value ("1 in 221"), label, sub, source, say (the words that trigger the highlight; default the value)
+const D = M.data({ dur: 6, kicker: 'ODDS', prop: 'card', total: 221, highlight: 1, value: '1 in 221', label: 'hands is pocket aces', sub: '', source: '', say: '' });
+const th = LF.theme(D);
+const N = Math.max(1, Math.min(400, Math.round(D.total))), HL = Math.max(0, Math.min(N, Math.round(D.highlight)));
+const cols = Math.ceil(Math.sqrt(N * 1.45)), rows = Math.ceil(N / cols);
+const GW = 1000, GH = 760, cell = Math.min(GW / cols, GH / rows), X0 = 110 + (GW - cell * cols) / 2, Y0 = 200 + (GH - cell * rows) / 2;
+const R = FX.rng(N + HL), PICK = new Set();
+while (PICK.size < HL) PICK.add(HL === 1 ? Math.floor(N * 0.62) : Math.floor(R() * N));
+const FILL = Math.min(1.4, D.dur * 0.25);
+const HIT = Math.max(FILL + 0.2, LF.when(D, D.say || D.value, 0) ?? D.dur * 0.45);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  sfx: [{ at: 0.1, name: 'riser', volume: 0.3 }, { at: HIT, name: HL === 1 ? 'hit' : 'chime', volume: 0.6 }] });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const end = LF.drift(c, t, D, { zoom: 0.03 });
+  const on = M.ease.outCubic(M.clamp((t - HIT) / 0.5));
+  for (let i = 0; i < N; i++) {
+    const cx = X0 + (i % cols + 0.5) * cell, cy = Y0 + (Math.floor(i / cols) + 0.5) * cell;
+    const a = M.clamp((t - 0.15 - (i / N) * FILL) / 0.25);
+    if (a <= 0) continue;
+    const hot = PICK.has(i);
+    if (hot) continue;   // drawn on top, below
+    PR.draw(c, D.prop, cx, cy, cell * 0.78, { color: '#5B6478', alpha: a * (1 - 0.6 * on), shadow: false });
+  }
+  // The ones that matter: lift out of the grid, glow, and (for a single one) grow and get a pulsing ring.
+  for (const i of PICK) {
+    const cx = X0 + (i % cols + 0.5) * cell, cy = Y0 + (Math.floor(i / cols) + 0.5) * cell;
+    if (t < 0.15 + (i / N) * FILL) continue;
+    const grow = HL === 1 ? 1 + 2.2 * M.ease.outBack(M.clamp((t - HIT) / 0.6)) : 1 + 0.3 * on;
+    if (on > 0 && HL <= 12) { c.save(); c.beginPath(); c.arc(cx, cy, cell * 0.5 * grow + 14 + 10 * LF.pulse(t, 4), 0, Math.PI * 2); c.strokeStyle = FX.alpha(th.color, 0.7 * on); c.lineWidth = 4; c.stroke(); c.restore(); }
+    PR.draw(c, D.prop, cx, cy, cell * 0.78 * grow, { color: on > 0 ? th.color : '#5B6478', glow: on, shadow: false });
+  }
+  end();
+  FX.text(c, t, String(D.kicker).toUpperCase(), 1220, 330, { at: 0.1, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: 620 });
+  const vk = M.ease.outBack(M.clamp((t - HIT) / 0.5));
+  if (vk > 0) {
+    c.save(); c.translate(1220, 480); c.scale(vk, vk);
+    FX.glow(c, () => M.text(c, D.value, 0, 0, { font: `800 ${String(D.value).length > 8 ? 96 : 120}px ${LF.F.display}`, color: th.ink }), { color: th.color, blur: 40, strength: 0.5 });
+    c.restore();
+    LF.para(c, D.label, 1220, 510, { font: `700 44px ${LF.F.display}`, color: th.ink, width: 600, alpha: M.prog(t, HIT + 0.2, 0.4) });
+    if (D.sub) LF.para(c, D.sub, 1220, 650, { font: `600 32px ${LF.F.display}`, color: th.muted, width: 600, alpha: M.prog(t, HIT + 0.5, 0.4) });
+  }
+  if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
+  FX.vignette(c, { strength: 0.45 });
+}
+</script>
+</body>
+</html>

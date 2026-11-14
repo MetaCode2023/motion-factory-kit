@@ -16,11 +16,13 @@ const D = M.data({ dur: 7, kicker: 'HOW IT WORKS', headline: 'From possibility t
   steps: [{ title: 'Uncertain', body: 'Many hands possible' }, { title: 'Observe', body: 'Every bet is a clue' }, { title: 'Update', body: 'Re-weight the range' }, { title: 'Collapse', body: 'The river decides' }] });
 const th = LF.theme(D);
 const n = D.steps.length, X0 = 220, X1 = 1700, Y = 600;
-const AT = D.stepAt || D.steps.map((_, i) => 0.8 + i * Math.max(0.5, (D.dur - 2.2) / n));
+// Each step lands when it is said (its title, else its body); unsaid ones spread between.
+const AT = D.stepAt || LF.schedule(D, D.steps.map((s) => [s.title, s.body]), { start: 0.8 });
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: AT.map((at, i) => ({ at, name: i === AT.length - 1 ? 'success' : 'pop', volume: 0.55 })) });
 function draw(c, t) {
   LF.backdrop(c, t, th);
+  const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   const xs = D.steps.map((_, i) => X0 + (X1 - X0) * (n === 1 ? 0.5 : i / (n - 1)));
   c.strokeStyle = 'rgba(255,255,255,0.12)'; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(X1, Y); c.stroke();
@@ -43,6 +45,7 @@ function draw(c, t) {
       c.restore();
     }
   });
+  endCam();
   FX.vignette(c, { strength: 0.45 });
 }
 </script>

@@ -16,7 +16,8 @@
 const D = M.data({ dur: 5, kicker: 'THE NUMBER', value: '1,326', label: 'possible starting hands', sub: '', source: '' });
 const th = LF.theme(D);
 const N = LF.parseNumber(D.value);
-const COUNT = Math.min(1.6, D.dur * 0.4);
+const SAID = LF.when(D, [D.value, D.label], 0);
+const COUNT = Math.min(Math.max(0.8, (SAID ?? 1.6) - 0.25), D.dur * 0.5);   // finish counting as it is said
 // Sound: a pop as the number lands, ticks while it counts, a chime (or coins for money) when it settles.
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: [{ at: 0.2, name: 'pop' }, ...(N ? [0.45, 0.75, 1.05].filter((x) => x < 0.25 + COUNT).map((at) => ({ at, name: 'tick', volume: 0.5 })) : []), { at: 0.25 + COUNT, name: /[$\u20ac\u00a3]/.test(D.value) ? 'coin' : 'chime' }] });

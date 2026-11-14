@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Props gallery</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+<script src="props.js"></script>
+</head>
+<body>
+<script>
+// Every prop in props.js, labelled: the menu to pick from when writing [[story]] / [[count]] cues.
+const D = M.data({ dur: 3 });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw });
+function draw(c, t) {
+  LF.backdrop(c, t, th, { particles: false });
+  const cols = 9;
+  PR.names.forEach((n, i) => {
+    const x = 130 + (i % cols) * 207, y = 140 + Math.floor(i / cols) * 200;
+    PR.draw(c, n, x, y + PR.bob(t, i, 3), 110, { color: th.color });
+    M.text(c, n, x, y + 82, { font: `600 22px ${LF.F.mono}`, color: th.muted, align: 'center' });
+  });
+}
+</script>
+</body>
+</html>

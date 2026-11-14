@@ -16,11 +16,16 @@ const D = M.data({ dur: 6, kicker: 'COMPARE', headline: 'What you see vs what is
   left: { title: 'What you see', items: ['One hand', 'A sure thing', 'A tell'], tone: 'neutral' },
   right: { title: 'What is there', items: ['Every possible hand', 'Probabilities', 'Information'], tone: 'good' }, verdict: '' });
 const th = LF.theme(D);
-const items = (s, at) => (s.items || []).map((_, i) => ({ at: at + 0.35 + i * 0.22, name: 'pop', volume: 0.45 }));
+// Items land as they are said; the left panel opens just before its first item, the right before its own.
+const LI = D.left.items || [], RI = D.right.items || [];
+const AT = LF.schedule(D, [...LI, ...RI], { start: 0.95, gap: 0.22 });
+const LT = AT.slice(0, LI.length), RT = AT.slice(LI.length);
+const LA = Math.max(0.6, (LT[0] ?? 0.95) - 0.35), RA = Math.max(LA + 0.4, (RT[0] ?? 1.45) - 0.35);
+const items = (times) => times.map((at) => ({ at, name: 'pop', volume: 0.45 }));
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
-  sfx: [...items(D.left, 0.6), { at: 1.0, name: 'hit', volume: 0.5 }, ...items(D.right, 1.1), ...(D.verdict ? [{ at: Math.min(D.dur - 1.5, 2.6), name: 'chime', volume: 0.6 }] : [])] });
+  sfx: [...items(LT), { at: RA - 0.1, name: 'hit', volume: 0.5 }, ...items(RT), ...(D.verdict ? [{ at: Math.min(D.dur - 1.5, 2.6), name: 'chime', volume: 0.6 }] : [])] });
 const toneCol = (tone) => (tone === 'bad' ? th.bad : tone === 'good' ? th.good : tone === 'warm' ? th.warm : th.color);
-function side(c, t, s, x, at) {
+function side(c, t, s, x, at, times) {
   const w = 780, y = 330, h = 520, a = M.prog(t, at, 0.5);
   if (a <= 0) return;
   const col = toneCol(s.tone);
@@ -28,7 +33,7 @@ function side(c, t, s, x, at) {
   FX.glass(c, x, y, w, h, { radius: 32, tint: FX.alpha(col, 0.06), border: FX.alpha(col, 0.45) });
   M.text(c, String(s.title).toUpperCase(), x + 50, y + 80, { font: `700 34px ${LF.F.mono}`, color: col });
   (s.items || []).forEach((it, i) => {
-    const k = M.ease.outCubic(M.clamp((t - at - 0.35 - i * 0.22) / 0.4));
+    const k = M.ease.outCubic(M.clamp((t - times[i]) / 0.4));
     if (k <= 0) return;
     const yy = y + 160 + i * 105;
     c.save(); c.globalAlpha *= k; c.translate((1 - k) * 30, 0);
@@ -40,12 +45,14 @@ function side(c, t, s, x, at) {
 }
 function draw(c, t) {
   LF.backdrop(c, t, th);
+  const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
-  side(c, t, D.left, 120, 0.6);
-  side(c, t, D.right, 1020, 1.1);
-  const vs = M.ease.outBack(M.clamp((t - 1.0) / 0.4));
+  side(c, t, D.left, 120, LA, LT);
+  side(c, t, D.right, 1020, RA, RT);
+  const vs = M.ease.outBack(M.clamp((t - RA + 0.1) / 0.4));
   if (vs > 0) { c.save(); c.translate(960, 590); c.scale(vs, vs); c.beginPath(); c.arc(0, 0, 46, 0, Math.PI * 2); c.fillStyle = '#05060A'; c.fill(); c.strokeStyle = th.color; c.lineWidth = 3; c.stroke(); M.text(c, 'VS', 0, 12, { font: `800 32px ${LF.F.display}`, color: th.color, align: 'center' }); c.restore(); }
   if (D.verdict) FX.text(c, t, D.verdict, 960, 920, { at: Math.min(D.dur - 1.5, 2.6), mode: 'rise', font: `700 46px ${LF.F.display}`, color: th.ink, accent: D.verdictAccent || '', accentColor: th.color, align: 'center', maxWidth: 1600 });
+  endCam();
   FX.vignette(c, { strength: 0.45 });
 }
 </script>
