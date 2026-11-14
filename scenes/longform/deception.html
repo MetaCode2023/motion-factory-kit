@@ -33,6 +33,7 @@ const D = M.data({
 const W = 1920, H = 1080, C = D.color;
 const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });
 const REVEAL = D.dur * 0.62;
+const th = LF.theme(D);
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
   sfx: [{ at: 1.4, name: 'whoosh', volume: 0.4 }, { at: 3.0, name: 'tap', volume: 0.5 }, { at: REVEAL, name: 'pop', volume: 0.5 }, { at: REVEAL + 0.35, name: 'success', volume: 0.45 }, { at: REVEAL + 0.5, name: 'error', volume: 0.4 }] });
 

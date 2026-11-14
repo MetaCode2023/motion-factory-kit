@@ -29,6 +29,7 @@ const D = M.data({
 });
 const W = 1920, H = 1080, C = D.color, T = D.flipAt ?? D.dur * 0.4;
 // Sound: a riser into the flip, a hit on the measurement, a chime as the wave settles into one spike.
+const th = LF.theme(D);
 M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', cuts: [T],
   sfx: [{ at: Math.max(0, T - 1.3), name: 'riser', volume: 0.4 }, { at: T, name: 'hit', volume: 0.8 }, { at: T + 0.8, name: 'chime', volume: 0.5 }] });
 const split = (s) => ({ rank: s.slice(0, -1).replace('T', '10'), suit: s.slice(-1) });

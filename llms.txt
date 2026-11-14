@@ -24,7 +24,7 @@
 
 ## Long-form YouTube (16:9, talking footage)
 - [docs/LONGFORM.md](docs/LONGFORM.md): script-first videos (script with [[cues]] -> recording aligned -> finished video), footage library + search, plans anchored to words, inserts (animation, B-roll, stock, outside clips), Premiere XML
-- [longform.mjs](longform.mjs): script / from-script / index / search / words / check / stock / pull / build / demo
+- [longform.mjs](longform.mjs): script / from-script / index / search / words / check / stock / pull / build / demo / doctor / feedback / thumbnail / shorts
 - [tools/longform/](tools/longform/): library (index+search), plan (word-exact cuts, anchors), build (assembly, mix), premiere (FCP7 XML), stock (Pexels)
 - [scenes/longform/](scenes/longform/): 16:9 animation starters (stat, quote, term, compare, steps, bars, backdrop; poker set: superposition, collapse, deception)
 

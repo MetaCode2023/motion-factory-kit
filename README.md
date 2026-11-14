@@ -37,7 +37,7 @@ street-audio cleanup, face-following reframe, overlays, client review loop) lift
 - You read it (camera + mic, or just the mic). Flub a line and re-read it: the recording is aligned word by
   word to the script, the last take wins, ums and dead air go.
 - Out comes the **finished video**: every visual on its word, music that ducks under you, sound effects,
-  captions, chapters, plus a Premiere timeline if you want to tweak. `node longform.mjs demo` shows it.
+  captions, chapters, plus a Premiere timeline if you want to tweak. Six looks (`theme: blueprint`, `noir`, `paper`...), a review page for timestamped notes, thumbnails and vertical shorts from the same video. `node longform.mjs demo` shows it; `node longform.mjs doctor` checks your machine.
 - Already have hours of podcasts? Index them once and **search everything you've ever said**.
 
 **Make lots of ads**

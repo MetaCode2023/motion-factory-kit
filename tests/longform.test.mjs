@@ -182,3 +182,22 @@ test('a one-word theme in a plan becomes a style for every animation', async () 
   writeFileSync(f, JSON.stringify({ theme: 'blueprint', a_roll: [] }));
   assert.deepEqual(loadPlan(f).theme, { style: 'blueprint' });
 });
+
+test('every long-form template draws a frame in a dark and a light look', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const { readdirSync, writeFileSync, mkdtempSync, existsSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { ROOT } = await import('../tools/longform/common.mjs');
+  const tmp = mkdtempSync(join(tmpdir(), 'lf-scenes-'));
+  const dir = join(ROOT, 'scenes', 'longform');
+  for (const style of ['noir', 'paper']) {
+    const dj = join(tmp, style + '.json');
+    writeFileSync(dj, JSON.stringify({ style, dur: 6 }));
+    for (const f of readdirSync(dir).filter((x) => x.endsWith('.html') && x !== 'props-gallery.html')) {
+      const out = join(tmp, `${style}-${f}.png`);
+      const r = spawnSync(process.execPath, [join(ROOT, 'render.mjs'), join(dir, f), '--data', dj, '--still', '3', '--out', out], { cwd: ROOT, encoding: 'utf8' });
+      assert.ok(r.status === 0 && existsSync(out), `${f} (${style}): ${(r.stderr || r.stdout).split('\n').find((l) => /Error/.test(l)) || 'no frame'}`);
+    }
+  }
+});

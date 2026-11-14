@@ -194,9 +194,15 @@ export function table({ felt = '#0F5C41', rail = '#1B1410', rx = 6.2, rz = 3.5 }
   return g;
 }
 // A dark studio floor that catches shadows and a little light.
-export function floor(color = '#0A0E16') {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.25 }));
-  m.rotation.x = -Math.PI / 2; m.receiveShadow = true; return m;
+// A floor that fades out with distance, so there is no hard horizon line against the backdrop.
+export function floor(color = '#0A0E16', { size = 80, solid = 0.1, fade = 0.34 } = {}) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 512;
+  const c = cv.getContext('2d'), g = c.createRadialGradient(256, 256, 256 * solid * 2, 256, 256, 256 * fade * 2);
+  g.addColorStop(0, '#fff'); g.addColorStop(1, '#000');
+  c.fillStyle = g; c.fillRect(0, 0, 512, 512);
+  const alpha = new THREE.CanvasTexture(cv);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.25, alphaMap: alpha, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.receiveShadow = true; m.renderOrder = -1; return m;
 }
 
 // ---- HUD (2D over the 3D frame) -----------------------------------------------------------------------

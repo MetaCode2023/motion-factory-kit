@@ -141,16 +141,17 @@ const sceneKey = (scene, data, fps) => hash('anim', readFileSync(scene, 'utf8'),
 function renderScene(scene, data, fps, label, log) {
   const key = sceneKey(scene, data, fps);
   return cached(key, '.mp4', (file) => {
-    const dj = join(CACHE, key + '.data.json');
+    const dj = join(CACHE, key + '.data.json'), part = join(CACHE, key + '.part.mp4');
     writeFileSync(dj, JSON.stringify(data));
     log(`  rendering ${label} (${relative(ROOT, scene)}, ${data.dur}s${is3d(scene) ? ', 3D' : ''})`);
-    if (is3d(scene)) {
-      const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'longform', 'render3d.mjs'), scene, '--out', file, '--data', dj, '--dur', String(data.dur), '--fps', String(fps)], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-      if (r.status !== 0) throw new Error(`3D render failed for ${label}: ${(r.stderr || r.stdout).slice(-600)}`);
-      return;
-    }
-    const r = spawnSync(process.execPath, [join(ROOT, 'render.mjs'), scene, '--out', file, '--data', dj, '--to', String(data.dur), '--fps', String(fps)], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-    if (r.status !== 0) throw new Error(`render failed for ${label}: ${(r.stderr || r.stdout).slice(-800)}`);
+    const args = is3d(scene)
+      ? [join(ROOT, 'tools', 'longform', 'render3d.mjs'), scene, '--out', part, '--data', dj, '--dur', String(data.dur), '--fps', String(fps)]
+      : [join(ROOT, 'render.mjs'), scene, '--out', part, '--data', dj, '--to', String(data.dur), '--fps', String(fps)];
+    const r = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    // A failed render never stays in the cache as a broken file.
+    if (r.status !== 0 || !existsSync(part)) { rmSync(part, { force: true }); throw new Error(`${is3d(scene) ? '3D render' : 'render'} failed for ${label}: ${(r.stderr || r.stdout).slice(-800)}`); }
+    if (existsSync(part + '.sfx.json')) renameSync(part + '.sfx.json', file + '.sfx.json');
+    renameSync(part, file);
   });
 }
 // Shared scripts next to a scene (lf.js, poker.js) are part of its cache key.

@@ -162,8 +162,8 @@ export function thumbnails(planFile, { log = console.log } = {}) {
 // ---- shorts: vertical cuts of the finished long video --------------------------------------------------
 // plan.shorts = [{ from: "1:02", to: "1:48", title: "Why bluffing is math" }] (times in the finished video).
 // With none in the plan, one is proposed per chapter: from its first line to the sentence that ends
-// nearest 45 s later. The 16:9 picture sits in the middle of a 9:16 frame over a blurred copy of itself,
-// with the title above and the long video's name below.
+// nearest 45 s later. The 16:9 picture sits in a 9:16 frame over a blurred copy of itself: title above,
+// big word-by-word captions below (for the words the long video doesn't already caption), all inside the safe area.
 export async function shorts(planFile, { log = console.log, max = 6 } = {}) {
   const plan = loadPlan(planFile), R = resolvePlan(plan);
   if (R.errors.length) return { ok: false, errors: R.errors };
@@ -189,30 +189,61 @@ export async function shorts(planFile, { log = console.log, max = 6 } = {}) {
   const sdir = join(dir, 'shorts');
   mkdirSync(sdir, { recursive: true });
   const files = [];
+  // Words the long video doesn't already show as captions in this stretch get big captions under the picture
+  // (burn: true = it shows them all, 'gaps' = only between full-screen visuals, off = none).
+  const burn = R.captions?.burn;
+  const full = R.inserts.filter((i) => i.layout === 'full').map((i) => [i.at, i.at + i.dur]);
+  const shown = (w) => burn === true || (burn === 'gaps' && !full.some(([a, b]) => w.s < b - 0.05 && w.e > a + 0.05));
+  const bgr = (hex) => { const h = hex.replace('#', ''); return `&H${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
+  const ts = (x) => { const cs = Math.round(Math.max(0, x) * 100); return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, '0')}:${String(Math.floor(cs / 100) % 60).padStart(2, '0')}.${String(cs % 100).padStart(2, '0')}`; };
+  const PY = 540, PH = 608;   // the 16:9 picture inside the 9:16 frame
   for (const [k, s] of list.entries()) {
-    // Title card overlay (transparent PNG): title in the top third (below the app's top bar), source line under the picture.
+    const d = s.to - s.from;
+    // Title above the picture (below the app's top bar), source line at the bottom of the safe area.
     const cv = new Canvas(1080, 1920), c = cv.getContext('2d');
     c.textAlign = 'center'; c.fillStyle = '#fff'; c.shadowColor = 'rgba(0,0,0,0.7)'; c.shadowBlur = 18;
-    let size = 92, lines = [];
+    let size = 96, lines = [];
     for (; size >= 54; size -= 6) {
       c.font = `800 ${size}px "LF Display"`; lines = []; let cur = '';
       for (const w of String(s.title).split(/\s+/)) { const t = cur ? cur + ' ' + w : w; if (c.measureText(t).width > 940 && cur) { lines.push(cur); cur = w; } else cur = t; }
       lines.push(cur);
-      if (lines.length <= 3) break;
+      if (lines.length <= 2) break;
     }
-    const top = 656 - 70 - (lines.length - 1) * size * 1.1;   // the picture's top edge is y=656
-    lines.forEach((l, i) => c.fillText(l, 540, Math.max(300, top) + i * size * 1.1));
-    c.fillStyle = accent; c.fillRect(490, 656 - 34, 100, 8);
-    c.font = '600 40px "LF Body"'; c.fillStyle = 'rgba(255,255,255,0.85)';
-    c.fillText(`From: ${plan.title || plan.name}`.slice(0, 44), 540, 1264 + 86);
+    const top = PY - 78 - (lines.length - 1) * size * 1.1;
+    lines.forEach((l, i) => c.fillText(l, 540, Math.max(290, top) + i * size * 1.1));
+    c.fillStyle = accent; c.fillRect(490, PY - 36, 100, 8);
+    c.font = '600 34px "LF Body"'; c.fillStyle = 'rgba(255,255,255,0.7)';
+    c.fillText(`From: ${plan.title || plan.name}`.slice(0, 48), 540, 1425);
     const png = join(sdir, `.title-${k}.png`);
     await cv.toFile(png);
-    const out = join(sdir, `${plan.name}-short-${k + 1}.mp4`), d = s.to - s.from;
+    // Captions: three or four words at a time, the spoken one in the accent colour.
+    const words = R.words.filter((w) => w.s >= s.from && w.e <= s.to + 0.2 && !shown(w));
+    const ev = []; let cur = [];
+    const flush = () => {
+      cur.forEach((w, j) => {
+        const a = w.s - s.from, b = (j + 1 < cur.length ? cur[j + 1].s : w.e + 0.2) - s.from;
+        ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${cur.map((x, i) => (i === j ? `{\\c${bgr(accent)}}${x.w.replace(/[{}\\]/g, '')}{\\c&HFFFFFF&}` : x.w.replace(/[{}\\]/g, ''))).join(' ')}`);
+      });
+      cur = [];
+    };
+    words.forEach((w, i) => {
+      cur.push(w);
+      const next = words[i + 1], text = cur.map((x) => x.w).join(' ');
+      if (/[.?!,;:]$/.test(w.w) || text.length > 16 || cur.length >= 4 || !next || next.s - w.e > 0.45) flush();
+    });
+    const ass = join(sdir, `.caps-${k}.ass`);
+    writeFileSync(ass, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1080', 'PlayResY: 1920', 'WrapStyle: 0', '', '[V4+ Styles]',
+      'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
+      `Style: C,Plus Jakarta Sans,88,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,5,0,8,60,60,${PY + PH + 70},1`, '', '[Events]',
+      'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
+    const fe = (p) => p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'");
+    const caps = ev.length ? `,ass='${fe(ass)}':fontsdir='${fe(join(ROOT, 'fonts'))}'` : '';
+    const out = join(sdir, `${plan.name}-short-${k + 1}.mp4`);
     ff(['-ss', s.from.toFixed(3), '-t', d.toFixed(3), '-i', src, '-loop', '1', '-i', png, '-filter_complex',
-      `[0:v]split[a][b];[a]scale=-2:1920,crop=1080:1920,boxblur=24:4,eq=brightness=-0.22:saturation=0.8[bg];[b]scale=1080:608[fg];[bg][fg]overlay=0:656[v0];[v0][1:v]overlay=0:0:shortest=1,fade=t=in:d=0.2,fade=t=out:st=${(d - 0.3).toFixed(3)}:d=0.3,format=yuv420p[v]`,
+      `[0:v]split[a][b];[a]scale=-2:480,crop=270:480,boxblur=6:2,scale=1080:1920,eq=brightness=-0.22:saturation=0.8[bg];[b]scale=1080:${PH}[fg];[bg][fg]overlay=0:${PY}[v0];[v0][1:v]overlay=0:0:shortest=1,setpts=PTS-STARTPTS${caps},fade=t=in:d=0.2,fade=t=out:st=${(d - 0.3).toFixed(3)}:d=0.3,format=yuv420p[v]`,
       '-map', '[v]', '-map', '0:a?', '-af', `afade=t=in:d=0.1,afade=t=out:st=${(d - 0.3).toFixed(3)}:d=0.3`, '-t', d.toFixed(3),
       '-r', String(plan.fps), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', out], `short ${k + 1}`);
-    rmSync(png, { force: true });
+    rmSync(png, { force: true }); rmSync(ass, { force: true });
     files.push({ file: out, from: +s.from.toFixed(1), to: +s.to.toFixed(1), title: s.title });
     log(`  -> ${relative(ROOT, out)}  ${fmt(s.from)}–${fmt(s.to)}  "${s.title}"`);
   }
