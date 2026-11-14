@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Stacks 3D: amounts as stacks of chips or coins</title>
+<script type="importmap">{ "imports": { "three": "/node_modules/three/build/three.module.js" } }</script>
+</head>
+<body>
+<script type="module">
+// 3D insert: a bar chart you can feel. Each amount is a stack of chips (or coins) that drops in piece by
+// piece when the speaker names it; the camera arcs around them; labels and counting values ride above each
+// stack. Real figures only; put the source in "source".
+// Data: dur, kicker, headline, accent, bars: "Rent=42; Food=27; Taxes=18" (or [{label,value}]), unit,
+//   prop: chip | coin, highlight (label; default the biggest), source
+import { stage, THREE, chip, coin, floor, camPath, schedule, prog, ease, clamp, hudTitle, hudText, vignette, FONT, rng } from './kit3d.js';
+
+const S = await stage({ dur: 7, kicker: 'BY THE NUMBERS', headline: 'Where it stacks up', accent: 'stacks', bars: 'Example A=42; Example B=27; Example C=18; Example D=13', unit: '%', prop: 'chip', highlight: '', source: '' });
+const { D, th, scene, camera } = S;
+const BARS = Array.isArray(D.bars) ? D.bars : String(D.bars).split(';').filter((p) => p.trim()).map((p) => { const [l, v] = p.split('='); return { label: l.trim(), value: Number(v) }; });
+const n = BARS.length, max = Math.max(...BARS.map((b) => b.value)), top = D.highlight || BARS.find((b) => b.value === max).label;
+const MAXN = 24, PR = 0.32, PH = D.prop === 'coin' ? 0.045 : 0.052, GAPX = Math.min(1.7, 7.6 / n);
+const AT = schedule(D, BARS.map((b) => b.label), { start: 0.7, end: D.dur - 2.4, gap: 0.5 });
+const unit = D.unit === 'none' ? '' : D.unit;
+
+scene.add(floor());
+const R = rng(11);
+const stacks = BARS.map((b, i) => {
+  const count = Math.max(1, Math.round((b.value / max) * MAXN)), x = (i - (n - 1) / 2) * GAPX, hot = b.label === top;
+  const pieces = Array.from({ length: count }, (_, k) => {
+    const m = D.prop === 'coin' ? coin({ r: PR, h: PH, color: hot ? '#F2B93B' : '#8C96A8' }) : chip(hot ? th.color : '#5A667C', { r: PR, h: PH });
+    m.userData = { x: x + (R() - 0.5) * 0.025, z: (R() - 0.5) * 0.025, y: PH / 2 + k * PH, rot: R() * 6.28 };
+    scene.add(m); return m;
+  });
+  return { ...b, x, hot, count, pieces, h: count * PH };
+});
+const lamp = new THREE.PointLight(th.color, 0, 8); lamp.position.set(stacks.find((s) => s.hot).x, 2.6, 0.9); scene.add(lamp);
+S.key.intensity = 3.2; scene.add(new THREE.AmbientLight('#ffffff', 0.35));
+
+const cam = camPath([
+  { t: 0, pos: [-3.0, 2.1, 6.4], look: [0, 1.05, 0] },
+  { t: D.dur * 0.55, pos: [0.4, 1.9, 6.6], look: [0, 1.05, 0] },
+  { t: D.dur, pos: [2.8, 1.7, 6.0], look: [0.1, 1.0, 0] },
+]);
+const DROP = 0.5, EACH = 0.045;
+
+S.run({
+  sfx: [...AT.map((at) => ({ at, name: D.prop === 'coin' ? 'coin' : 'tick', volume: 0.5 })), { at: AT[n - 1] + 1.2, name: 'chime', volume: 0.5 }],
+  update(t) {
+    cam(camera, t);
+    stacks.forEach((s, i) => s.pieces.forEach((m, k) => {
+      const k0 = clamp((t - AT[i] - k * EACH) / DROP), e = ease.outBounce(k0);
+      m.visible = k0 > 0;
+      m.position.set(m.userData.x, m.userData.y + (1 - e) * 1.1, m.userData.z);
+      m.rotation.y = m.userData.rot + (1 - k0) * 2;
+    }));
+    lamp.intensity = 10 * prog(t, AT[stacks.findIndex((s) => s.hot)] + 0.6, 0.6);
+  },
+  hud(c, t) {
+    vignette(c, 0.55);
+    hudTitle(c, t, D, th);
+    stacks.forEach((s, i) => {
+      const grown = clamp((t - AT[i]) / (s.count * EACH + DROP));
+      if (grown <= 0) return;
+      const p = S.project([s.x, s.h * Math.min(1, grown * 1.05) + 0.12, 0]);
+      const v = Number.isInteger(s.value) ? Math.round(s.value * ease.outCubic(grown)) : (s.value * ease.outCubic(grown)).toFixed(1);
+      hudText(c, `${v}${unit}`, p.x, p.y - 14, { font: `800 ${s.hot ? 64 : 50}px ${FONT.display}`, color: s.hot ? th.color : th.ink, align: 'center', alpha: prog(t, AT[i], 0.3) });
+      const q = S.project([s.x, 0, 0.7]);
+      hudText(c, s.label, q.x, q.y + 46, { font: `600 ${n > 5 ? 28 : 34}px ${FONT.display}`, color: s.hot ? th.ink : th.muted, align: 'center', alpha: prog(t, AT[i], 0.3) });
+    });
+    if (D.source) hudText(c, D.source, 120, 1030, { font: `600 22px ${FONT.mono}`, color: th.muted, alpha: 0.8 * prog(t, 1, 0.4), shadow: false });
+  },
+});
+</script>
+</body>
+</html>

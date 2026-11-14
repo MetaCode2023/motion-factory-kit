@@ -22,7 +22,8 @@
     "zod": "^4.6.7"
   },
   "optionalDependencies": {
-    "playwright-core": "^1.48.0"
+    "playwright-core": "^1.48.0",
+    "three": "^0.170.0"
   },
   "bin": {
     "motion-factory-mcp": "mcp/server.mjs"

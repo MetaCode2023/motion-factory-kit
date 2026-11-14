@@ -93,7 +93,7 @@ async function buildInsert(ins, plan, dir, accent, log, R) {
   if (ins.kind === 'animation') {
     const data = animData(ins, R);
     const f = renderScene(ins.scene, data, plan.fps, ins.id, log);
-    if (plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, data)).filter((x) => x.at < ins.dur - 0.1);
+    if (plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, data, plan.fps)).filter((x) => x.at < ins.dur - 0.1);
     const p = probe(f);
     if (p.width !== W || p.height !== H) log(`  ! ${ins.id}: scene is ${p.width}x${p.height}; use M.setup({ preset: 'youtube' }) for 16:9`);
     fit(f);
@@ -111,7 +111,11 @@ async function buildInsert(ins, plan, dir, accent, log, R) {
 }
 // The sound effects a scene declares in M.setup({ sfx }) (each template times its own: pops, ticks, the hit
 // on the reveal), so animations arrive with their sound design. Cached like the render.
-async function sceneSfx(scene, data) {
+async function sceneSfx(scene, data, fps = 30) {
+  if (is3d(scene)) {   // written next to the render by render3d.mjs
+    const f = join(CACHE, sceneKey(scene, data, fps) + '.mp4.sfx.json');
+    return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')).map((x) => ({ at: +x.at, name: x.name, volume: x.volume ?? 0.6 })) : [];
+  }
   const key = hash('sfx', readFileSync(scene, 'utf8'), readSceneLibs(scene), data);
   const f = join(CACHE, key + '.sfx.json');
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'));
@@ -127,19 +131,28 @@ async function sceneSfx(scene, data) {
   return sfx;
 }
 
+// 3D scenes (scenes/longform/3d/*.html, three.js) render through headless Chrome instead of skia.
+const is3d = (scene) => /[\\/]3d[\\/]/.test(scene);
+const sceneKey = (scene, data, fps) => hash('anim', readFileSync(scene, 'utf8'), readSceneLibs(scene), data, fps, kitStamp());
+
 // A scene rendered once per (code, data, fps) and cached; returns the silent MP4.
 function renderScene(scene, data, fps, label, log) {
-  const key = hash('anim', readFileSync(scene, 'utf8'), readSceneLibs(scene), data, fps, kitStamp());
+  const key = sceneKey(scene, data, fps);
   return cached(key, '.mp4', (file) => {
     const dj = join(CACHE, key + '.data.json');
     writeFileSync(dj, JSON.stringify(data));
-    log(`  rendering ${label} (${relative(ROOT, scene)}, ${data.dur}s)`);
+    log(`  rendering ${label} (${relative(ROOT, scene)}, ${data.dur}s${is3d(scene) ? ', 3D' : ''})`);
+    if (is3d(scene)) {
+      const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'longform', 'render3d.mjs'), scene, '--out', file, '--data', dj, '--dur', String(data.dur), '--fps', String(fps)], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+      if (r.status !== 0) throw new Error(`3D render failed for ${label}: ${(r.stderr || r.stdout).slice(-600)}`);
+      return;
+    }
     const r = spawnSync(process.execPath, [join(ROOT, 'render.mjs'), scene, '--out', file, '--data', dj, '--to', String(data.dur), '--fps', String(fps)], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
     if (r.status !== 0) throw new Error(`render failed for ${label}: ${(r.stderr || r.stdout).slice(-800)}`);
   });
 }
 // Shared scripts next to a scene (lf.js, poker.js) are part of its cache key.
-const readSceneLibs = (scene) => [...readFileSync(scene, 'utf8').matchAll(/<script src="([^"]+)"/g)].map((m) => join(scene, '..', m[1])).filter((f) => !f.includes('/kit/') && existsSync(f)).map((f) => readFileSync(f, 'utf8').length + ':' + statSync(f).mtimeMs).join('|');
+const readSceneLibs = (scene) => [...readFileSync(scene, 'utf8').matchAll(/<script src="([^"]+)"|from '(\.\/[^']+)'/g)].map((m) => join(scene, '..', m[1] || m[2])).filter((f) => !f.includes('/kit/') && existsSync(f)).map((f) => readFileSync(f, 'utf8').length + ':' + statSync(f).mtimeMs).join('|');
 
 let _stamp;
 const kitStamp = () => (_stamp ??= ['kit/motion.js', 'kit/fx.js', 'kit/blocks.js', 'brand.js'].map((f) => existsSync(join(ROOT, f)) ? statSync(join(ROOT, f)).mtimeMs : 0).join('|'));
@@ -383,7 +396,7 @@ export async function remix(planFile, { voice = true, log = console.log } = {}) 
   const dir = join(ROOT, 'out', 'longform', plan.name), video = join(dir, `${plan.name}.mp4`);
   const voiceWav = join(dir, 'stems', 'voice.wav');
   if (!existsSync(video) || !existsSync(voiceWav)) return { ok: false, errors: ['build the plan first'] };
-  for (const ins of R.inserts) if (ins.kind === 'animation' && plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, animData(ins, R))).filter((x) => x.at < ins.dur - 0.1);
+  for (const ins of R.inserts) if (ins.kind === 'animation' && plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, animData(ins, R), plan.fps)).filter((x) => x.at < ins.dur - 0.1);
   const tag = voice ? 'remix' : 'novoice';
   const mix = join(dir, 'stems', `${tag}.wav`);
   mixAudio(R, plan, voiceWav, mix, join(dir, 'stems', '.tmp'));

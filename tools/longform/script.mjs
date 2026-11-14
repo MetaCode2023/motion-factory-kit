@@ -26,7 +26,8 @@ import { ROOT, bare, fmt, seconds } from './common.mjs';
 
 const VISUAL = new Set(['anim', 'stock', 'clip', 'broll', 'image']);
 const OPTION_KEYS = new Set(['dur', 'layout', 'offset', 'id', 'note', 'sfx', 'max_dur']);
-export const sceneFor = (kind) => { const f = join(ROOT, 'scenes', 'longform', `${kind}.html`); return existsSync(f) ? f : null; };
+// A cue name is a scene file: scenes/longform/<name>.html (2D) or scenes/longform/3d/<name>.html (3D, three.js).
+export const sceneFor = (kind) => ['', '3d/'].map((d) => `scenes/longform/${d}${kind}.html`).find((f) => existsSync(join(ROOT, f))) || null;
 
 function parseValue(v) {
   v = v.trim();
@@ -64,7 +65,7 @@ export function parseCue(raw) {
   let kind = kind0, scene = null;
   if (kind0 === 'anim') { scene = arg; kind = 'anim'; }
   else if (!['stock', 'clip', 'pull', 'broll', 'image', 'face', 'music', 'sfx', 'chapter'].includes(kind0)) {
-    scene = sceneFor(kind0) ? `scenes/longform/${kind0}.html` : null; kind = 'anim';
+    scene = sceneFor(kind0); kind = 'anim';
     if (!scene) return { kind: 'unknown', name: kind0, raw };
   }
   if (kind === 'pull') kind = 'clip';
@@ -291,7 +292,7 @@ export async function tryScenes(text, { log = () => {} } = {}) {
   const { open } = await import('../../engines/skia.mjs');
   const S = parseScript(text), errors = [];
   for (const c of S.cues) {
-    if (c.kind !== 'anim' || !c.scene || !existsSync(join(ROOT, c.scene))) continue;
+    if (c.kind !== 'anim' || !c.scene || !existsSync(join(ROOT, c.scene)) || /[\\/]3d[\\/]/.test(c.scene)) continue;   // 3D scenes need Chrome: checked at build
     const dur = Number(c.opts.dur) || 6;
     try {
       const e = await open(join(ROOT, c.scene), { data: { ...(S.meta.theme || {}), ...c.data, dur } });

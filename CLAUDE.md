@@ -94,7 +94,8 @@ the goal is a 10-minute video they can post without touching it.
    Hook in the first 10 s, 4-6 chapters (`##`), ~1,400-1,600 words for 10 min, written to be said out loud.
    **Put a visual cue every ~15 s** (every ~35-40 words): animations for ideas (`stat`, `term`, `compare`,
    `steps`, `bars`, `quote`, `line`, `share`, `flow`, `timeline`, `story`, `count`, or a new scene that declares its own `sfx`), `stock` for scenes, `clip` for outside proof, `[[face]]` when the
-   speaker should be seen. **Show, don't write**: prefer `story` (drawn objects on their words, `scenes/longform/props-gallery.html`) and
+   speaker should be seen. 3D scenes (`scenes/longform/3d/`: `table3d`, `stacks3d`; three.js via `kit3d.js`, checked with
+   `node tools/longform/render3d.mjs <scene> --still t`) for objects and places with depth. **Show, don't write**: prefer `story` (drawn objects on their words, `scenes/longform/props-gallery.html`) and
    `count` over text cards; at most ~1 in 4 visuals should be mostly words. Label items with the words the script
    says, so they land on them. Vary them; never two of the same template in a row. Figures only from your research,
    with `source:`. Run `node longform.mjs script` and fix every error and cadence warning.

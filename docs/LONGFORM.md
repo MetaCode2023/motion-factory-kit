@@ -63,6 +63,8 @@ base: backdrop                                      // optional: never show the 
 |---|---|
 | `[[story beats: bank=The Fed - creates money; coin=New dollars; person=You \| flow: coin \| layout: row/loop]]` | **Show it, don't write it.** Drawn objects pop in on the words that name them, joined by arrows with things flowing along them; the camera travels to follow. Objects: see `scenes/longform/props-gallery.html` (44: bank, ballot, camera, barrel, hospital, person, crowd, coin, chip, card, atom, eye...) |
 | `[[count prop: card \| total: 221 \| highlight: 1 \| value: 1 in 221 \| label: ..]]` | A grid of objects; the ones that matter light up on the spoken number |
+| `[[table3d board: Ks 9h 4d Jc \| river: Qs \| mark.flipAt: boom \| reveal: false]]` | **3D.** A poker table: the board is dealt and turned on its words, the camera drops in on the river |
+| `[[stacks3d bars: Rent=42; Food=27 \| prop: chip/coin \| unit: %]]` | **3D.** Amounts as stacks of chips or coins dropping in piece by piece, camera arcing around them |
 | `[[stat value: .. \| label: .. \| sub: .. \| source: ..]]` | One big number counting up |
 | `[[quote text: .. \| highlight: words \| by: ..]]` | A line, written big, key words lit (`by` only for a real quote) |
 | `[[term term: .. \| definition: .. \| plain: ..]]` | A definition with an everyday translation |
@@ -105,6 +107,21 @@ the jump cuts), so the cadence of cues decides how often you're on screen. With 
 **Retakes.** Flub a line and re-read it from the start of the sentence. The aligner keeps the last take and
 cuts the earlier one. Ums and dead air come out automatically. Unscripted lines are kept and listed, so you
 can drop any with `tighten.drop`/`cut` in the plan.
+
+## 3D scenes
+
+Scenes in `scenes/longform/3d/` are real 3D (three.js): lit objects, shadows, a camera that moves through
+the space. They use the same cues, the same word timing and the same sound declarations as the 2D ones; the
+build renders them through headless Chrome instead of the 2D engine.
+
+- `kit3d.js` is the stage: lights, backdrop and camera paths, drawn-in-code playing cards, chips, coins, a felt
+  table and a studio floor, plus a 2D HUD for titles and labels pinned to 3D points (`S.project`).
+- A scene is one page: `const S = await stage(defaults)`, build objects, `S.run({ update(t), hud(c, t), sfx })`.
+  `update` is a pure function of `t`. Copy `table3d.html` or `stacks3d.html` to start a new one.
+- Check a frame: `node tools/longform/render3d.mjs scenes/longform/3d/table3d.html --still 6`.
+- Needs Chrome (or Edge) installed, or `npx playwright install chromium`, and `npm install` (three is included).
+  Software rendering works anywhere at roughly half a second per frame; set `MF_GPU=1` to use the graphics card.
+- Use 3D where depth is the point (objects, places, things you could pick up); keep 2D for charts and words.
 
 ## Setup
 

@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Table 3D: the board, dealt and turned in 3D</title>
+<script type="importmap">{ "imports": { "three": "/node_modules/three/build/three.module.js" } }</script>
+</head>
+<body>
+<script type="module">
+// 3D insert: a poker table. The board is dealt face down, the flop, turn and river turn over on the words
+// that name them, and the camera drops in on the river as it flips. The opponent's two cards stay face
+// down and glowing the whole time: the thing nobody can see.
+// Data: dur, kicker, headline, accent, board: "Ks 9h 4d Jc" (flop + turn), river: "Qs", hole: "Ah Ad" (yours,
+//   optional), say: "flop; turn; river" (trigger words), flipAt (seconds; overrides the river's time), label,
+//   reveal: false keeps the river face down (the camera still drops in on it: the moment before)
+import { stage, THREE, card, poseCard, chip, table, camPath, schedule, prog, ease, clamp, hudTitle, hudText, vignette, FONT, rng, parseCard } from './kit3d.js';
+
+const S = await stage({ dur: 8, kicker: 'THE BOARD', headline: 'Five cards. One still hidden.', accent: 'hidden', board: 'Ks 9h 4d Jc', river: 'Qs', hole: '', say: 'flop; turn; river', label: 'THE RIVER' });
+const { D, th, scene, camera } = S;
+const list = (v) => (Array.isArray(v) ? v : String(v).split(/[\s,]+/).filter(Boolean));
+const BOARD = [...list(D.board).slice(0, 4), D.river], HOLE = list(D.hole || '');
+const SAY = String(D.say).split(';').map((x) => x.trim());
+let [T_FLOP, T_TURN, T_RIVER] = schedule(D, SAY, { start: 1.0, end: D.dur - 2.2, gap: 0.9 });
+if (D.flipAt != null) T_RIVER = Math.max(T_TURN + 0.6, Number(D.flipAt));
+const REVEAL = D.reveal !== false && D.reveal !== 'false';
+const FLIP = [T_FLOP, T_FLOP + 0.14, T_FLOP + 0.28, T_TURN, REVEAL ? T_RIVER : 1e9];
+
+scene.add(table());
+const X = (i) => -1.72 + i * 0.86;
+const cards = BOARD.map((s) => { const c = card(s); scene.add(c); return c; });
+const opp = [card('2c'), card('2d')].map((c) => { scene.add(c); return c; });
+const mine = HOLE.map((s) => { const c = card(s); scene.add(c); return c; });
+// The pot: a few uneven stacks.
+const R = rng(7), COLS = ['#E5484D', '#2F6FED', '#1E1F26', '#2FA36B'];
+for (let s = 0; s < 5; s++) { const n = 3 + Math.floor(R() * 7), x = -0.9 + s * 0.45 + (R() - 0.5) * 0.1, z = -1.25 + (R() - 0.5) * 0.3; for (let k = 0; k < n; k++) { const c = chip(COLS[s % COLS.length]); c.position.set(x + (R() - 0.5) * 0.02, 0.017 + k * 0.034, z + (R() - 0.5) * 0.02); c.rotation.y = R() * 6; scene.add(c); } }
+const glow = new THREE.PointLight(th.color, 0, 6); glow.position.set(0, 0.9, -2.3); scene.add(glow);
+const hot = new THREE.PointLight(th.warm, 0, 5); hot.position.set(X(4), 0.8, 0.2); scene.add(hot);
+
+const cam = camPath([
+  { t: 0, pos: [0.6, 5.6, 7.4], look: [0, 0, -0.3] },
+  { t: Math.max(1.5, T_RIVER - 1.4), pos: [-1.8, 4.3, 6.4], look: [0.2, 0, -0.2] },
+  { t: T_RIVER + 0.5, pos: [X(4) + 0.5, 1.9, 3.3], look: [X(4) - 0.9, 0.1, -0.5] },
+  { t: D.dur, pos: [X(4) + 0.2, 1.6, 2.9], look: [X(4) - 0.8, 0.1, -0.5] },
+]);
+
+S.run({
+  sfx: [...[0, 1, 2].map((i) => ({ at: FLIP[i], name: 'tap', volume: 0.6 })), { at: T_TURN, name: 'tap', volume: 0.6 },
+    { at: Math.max(0, T_RIVER - 1.2), name: 'riser', volume: 0.4 }, ...(REVEAL ? [{ at: T_RIVER + 0.2, name: 'hit', volume: 0.8 }, { at: T_RIVER + 0.9, name: 'chime', volume: 0.5 }] : [])],
+  update(t) {
+    cam(camera, t);
+    cards.forEach((c, i) => {
+      const deal = prog(t, 0.2 + i * 0.1, 0.45);                       // slide out from the dealer
+      const flip = ease.inOutCubic(clamp((t - FLIP[i]) / 0.5));
+      poseCard(c, { x: X(i) * deal, z: -3.2 * (1 - deal), flip, yaw: (1 - deal) * 0.8, y: 0.02 + 0.0005 * i });
+      c.visible = deal > 0;
+    });
+    opp.forEach((c, i) => poseCard(c, { x: -0.36 + i * 0.72, z: -2.35, flip: 0, yaw: (i - 0.5) * 0.25 }));
+    mine.forEach((c, i) => poseCard(c, { x: -0.36 + i * 0.72, z: 2.25, flip: 1, yaw: (0.5 - i) * 0.2 }));
+    glow.intensity = 14 + 8 * Math.sin(t * 2.4);
+    hot.intensity = (REVEAL ? 9 : 5) * ease.outCubic(clamp((t - T_RIVER - (REVEAL ? 0.2 : -0.6)) / 0.4)) * (0.75 + 0.25 * Math.sin(t * (REVEAL ? 3 : 5)));
+    if (!REVEAL) hot.color.set(th.color);
+  },
+  hud(c, t) {
+    vignette(c, 0.55);
+    hudTitle(c, t, D, th);
+    const r = S.project([X(4), 0.02, 0.66]);
+    hudText(c, D.label, r.x, r.y + 30, { font: `600 30px ${FONT.mono}`, color: REVEAL ? th.warm : th.color, align: 'center', alpha: prog(t, T_RIVER + (REVEAL ? 0.6 : -0.2), 0.4) });
+    const fl = REVEAL ? clamp(1 - Math.abs(t - T_RIVER - 0.25) / 0.16) : 0;
+    if (fl > 0) { c.fillStyle = `rgba(255,255,255,${0.35 * fl})`; c.fillRect(0, 0, 1920, 1080); }
+  },
+});
+</script>
+</body>
+</html>
