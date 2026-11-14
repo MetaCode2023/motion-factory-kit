@@ -214,15 +214,17 @@ function mixAudio(R, plan, voice, out, stemsDir) {
   }
   f.push('[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]');
   const parts = ['[voice]'];
+  const noVoice = plan.voice === false;   // a version without the voice: music up, no ducking
+  if (noVoice) parts[0] = '[vmute]', f.push('[voice]volume=0[vmute]');
   if (beds.length) {
-    f.push(`${beds.join('')}amix=inputs=${beds.length}:normalize=0:duration=longest,apad[bed]`);
-    f.push('[bed][key]sidechaincompress=threshold=0.025:ratio=10:attack=15:release=450:makeup=1[ducked]');
-    parts.push('[ducked]');
+    f.push(`${beds.join('')}amix=inputs=${beds.length}:normalize=0:duration=longest,apad${noVoice ? ',volume=2.4' : ''}[bed]`);
+    if (noVoice) { f.push('[key]anullsink'); parts.push('[bed]'); }
+    else { f.push('[bed][key]sidechaincompress=threshold=0.025:ratio=10:attack=15:release=450:makeup=1[ducked]'); parts.push('[ducked]'); }
   } else f.push('[key]anullsink');
   if (fx.length) { f.push(`${fx.join('')}amix=inputs=${fx.length}:normalize=0,apad[fx]`); parts.push('[fx]'); }
   f.push(`${parts.join('')}amix=inputs=${parts.length}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[out]`);
   ff([...inputs, '-filter_complex', f.join(';'), '-map', '[out]', '-t', R.total.toFixed(3), '-c:a', 'pcm_s16le', out], 'mix');
-  copyFileSync(voice, join(stemsDir, 'voice.wav'));
+  if (plan.voice !== false && !stemsDir.endsWith('.tmp')) copyFileSync(voice, join(stemsDir, 'voice.wav'));
 }
 
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
@@ -357,6 +359,25 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });
   log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md)`);
   return { ok: true, video, dir, report: join(dir, 'REPORT.md'), sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
+}
+
+// Same picture, new sound (e.g. no voice): re-mix and lay it under the already-built video.
+export async function remix(planFile, { voice = true, log = console.log } = {}) {
+  const plan = loadPlan(planFile);
+  plan.voice = voice;
+  const R = resolvePlan(plan);
+  if (R.errors.length) return { ok: false, errors: R.errors };
+  const dir = join(ROOT, 'out', 'longform', plan.name), video = join(dir, `${plan.name}.mp4`);
+  const voiceWav = join(dir, 'stems', 'voice.wav');
+  if (!existsSync(video) || !existsSync(voiceWav)) return { ok: false, errors: ['build the plan first'] };
+  for (const ins of R.inserts) if (ins.kind === 'animation' && plan.scene_sfx !== false) ins.sceneSfx = (await sceneSfx(ins.scene, { ...ins.data, dur: ins.dur })).filter((x) => x.at < ins.dur - 0.1);
+  const tag = voice ? 'remix' : 'novoice';
+  const mix = join(dir, 'stems', `${tag}.wav`);
+  mixAudio(R, plan, voiceWav, mix, join(dir, 'stems', '.tmp'));
+  const out = join(dir, `${plan.name}.${tag}.mp4`);
+  ff(['-i', video, '-i', mix, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-shortest', out], 'remix');
+  log(`  -> ${relative(ROOT, out)}`);
+  return { ok: true, video: out };
 }
 
 export function check(planFile) {

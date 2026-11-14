@@ -21,7 +21,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
-import { build, check } from './tools/longform/build.mjs';
+import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
@@ -108,6 +108,11 @@ try {
     if (chk.ok && rest.includes('--build')) built = await build(out, { log });
     emit({ ok: chk.ok && (!built || built.ok), plan: out, clip: clip.id, align: report, check: chk, build: built });
     if (!chk.ok) process.exitCode = 1;
+  } else if (cmd === 'remix') {
+    // node longform.mjs remix <plan> --no-voice : the built video with music + effects only
+    const r = await remix(args[0], { voice: !rest.includes('--no-voice'), log });
+    if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
+    emit(r);
   } else if (cmd === 'stock' || cmd === 'pull') {
     const r = await (cmd === 'stock' ? stock : pull)(args[0], { log });
     if (!json) (r.skipped || []).forEach((f) => console.log('skipped ' + f));
