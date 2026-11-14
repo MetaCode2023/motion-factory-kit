@@ -3,7 +3,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
@@ -137,29 +137,48 @@ let _stamp;
 const kitStamp = () => (_stamp ??= ['kit/motion.js', 'kit/fx.js', 'kit/blocks.js', 'brand.js'].map((f) => existsSync(join(ROOT, f)) ? statSync(join(ROOT, f)).mtimeMs : 0).join('|'));
 
 // ---- picture: inserts over the A-roll ------------------------------------------------------------
-function composite(R, plan, aroll, mix, out, accent, assFile = null) {
-  const SIDE = sideBox(plan);
-  const inputs = ['-i', aroll.video];
-  const chains = [];
-  let last = '[0:v]';
-  R.inserts.forEach((ins, k) => {
-    inputs.push('-i', ins.media);
-    const n = k + 1, fade = Math.min(0.18, ins.dur / 4);
-    const fades = `fade=t=in:st=0:d=${fade}:alpha=1,fade=t=out:st=${(ins.dur - fade).toFixed(3)}:d=${fade}:alpha=1`;
-    if (ins.layout === 'side') {
-      const b = SIDE.border, col = accent.replace('#', '0x');
-      chains.push(`[${n}:v]scale=${SIDE.w - 2 * b}:${SIDE.h - 2 * b},pad=${SIDE.w}:${SIDE.h}:${b}:${b}:color=${col},format=yuva420p,${fades},setpts=PTS-STARTPTS+${ins.at.toFixed(3)}/TB[i${n}]`);
-      chains.push(`${last}[i${n}]overlay=${SIDE.x}:${SIDE.y}:eof_action=pass:enable='between(t,${ins.at.toFixed(3)},${(ins.at + ins.dur).toFixed(3)})'[v${n}]`);
+// The picture is built in chunks: plain stretches of the A-roll, and one chunk per insert (the insert over
+// its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
+// uses no more memory than a 1-minute one. Captions are drawn per chunk at the right times; the chunks are
+// joined without re-encoding and the mix is laid under them.
+function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}) {
+  const SIDE = sideBox(plan), fps = plan.fps;
+  const N = Math.round(R.total * fps);
+  const parts = [];
+  let f = 0;
+  for (const ins of R.inserts) {
+    const a = Math.max(f, Math.round(ins.at * fps)), z = Math.min(N, Math.round((ins.at + ins.dur) * fps));
+    if (z <= a) continue;
+    if (a > f) parts.push({ from: f, to: a });
+    parts.push({ from: a, to: z, ins });
+    f = z;
+  }
+  if (f < N) parts.push({ from: f, to: N });
+  const esc = (p) => p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'");
+  const caps = (start) => (assFile ? `,setpts=PTS+${(start / fps).toFixed(4)}/TB,ass='${esc(assFile)}':fontsdir='${esc(join(ROOT, 'fonts'))}',setpts=PTS-STARTPTS` : '');
+  const tmp = join(dirname(out), '.chunks');
+  rmSync(tmp, { recursive: true, force: true });
+  mkdirSync(tmp, { recursive: true });
+  const files = parts.map((p, k) => {
+    const file = join(tmp, `${String(k).padStart(4, '0')}.mp4`), n = p.to - p.from, ss = (p.from / fps).toFixed(4);
+    if (!p.ins) {
+      ff(['-ss', ss, '-i', aroll.video, '-frames:v', String(n), '-vf', `setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p`, '-an', ...VENC(fps, 19), file], `chunk ${k}`);
     } else {
-      chains.push(`[${n}:v]format=yuva420p,${fades},setpts=PTS-STARTPTS+${ins.at.toFixed(3)}/TB[i${n}]`);
-      chains.push(`${last}[i${n}]overlay=0:0:eof_action=pass:enable='between(t,${ins.at.toFixed(3)},${(ins.at + ins.dur).toFixed(3)})'[v${n}]`);
+      const ins = p.ins, d = n / fps, fade = Math.min(0.18, d / 4);
+      const fades = `fade=t=in:st=0:d=${fade}:alpha=1,fade=t=out:st=${(d - fade).toFixed(3)}:d=${fade}:alpha=1`;
+      const b = SIDE.border, col = accent.replace('#', '0x');
+      const fg = ins.layout === 'side'
+        ? `[1:v]scale=${SIDE.w - 2 * b}:${SIDE.h - 2 * b},pad=${SIDE.w}:${SIDE.h}:${b}:${b}:color=${col},format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=${SIDE.x}:${SIDE.y}:eof_action=pass`
+        : `[1:v]format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=0:0:eof_action=pass`;
+      ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-filter_complex', `${fg}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
     }
-    last = `[v${n}]`;
+    if ((k + 1) % 20 === 0) log(`  picture ${k + 1}/${parts.length}`);
+    return file;
   });
-  inputs.push('-i', mix);
-  if (assFile) { chains.push(`${last}ass='${assFile.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'")}':fontsdir='${join(ROOT, 'fonts').replace(/\\/g, '/').replace(/:/g, '\\:')}'[vcap]`); last = '[vcap]'; }
-  const map = chains.length ? ['-filter_complex', chains.join(';'), '-map', last] : ['-map', '0:v'];
-  ff([...inputs, ...map, '-map', `${R.inserts.length + 1}:a`, ...VENC(plan.fps, 19), '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-shortest', out], 'composite');
+  const list = join(tmp, 'list.txt');
+  writeFileSync(list, files.map((x) => `file '${x.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n'));
+  ff(['-f', 'concat', '-safe', '0', '-i', list, '-i', mix, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-shortest', out], 'join picture and sound');
+  rmSync(tmp, { recursive: true, force: true });
 }
 
 // ---- sound: voice + music that ducks under it + effects, loudness for YouTube --------------------
@@ -285,7 +304,7 @@ function report(R, plan, files) {
   pass(early <= 20, early <= 20 ? `first visual at ${fmt(early)}` : 'nothing but the talking head for the first 20 s (open with a visual)');
   const pulls = R.inserts.filter((i) => i.kind === 'pull').length;
   pass(!pulls, pulls ? `${pulls} clip(s) still to pull: see PULL-LIST.md` : 'no placeholders left');
-  const longPull = R.inserts.filter((i) => i.kind === 'pull' && i.dur > 10);
+  const longPull = R.inserts.filter((i) => (i.kind === 'pull' || i.pulled) && !i.stock && i.dur > 10);   // stock is licensed; outside clips stay short
   if (longPull.length) pass(false, `borrowed clips over 10 s (${longPull.map((i) => i.id).join(', ')}): trim them and talk over them`);
   pass(R.chapters.length >= 3, R.chapters.length >= 3 ? `${R.chapters.length} chapters` : 'add 3+ chapters for YouTube');
   lines.push('## Checks', '', ...checks, '', '## Timeline', '', '| Time | Insert | Kind | Layout | Length | Note |', '|---|---|---|---|---|---|');
@@ -312,7 +331,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
   const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
-  composite(R, plan, aroll, mix, video, accent, ass);
+  composite(R, plan, aroll, mix, video, accent, ass, log);
 
   const files = [relative(ROOT, video)];
   const write = (name, text) => { const f = join(dir, name); writeFileSync(f, text); files.push(relative(ROOT, f)); return f; };

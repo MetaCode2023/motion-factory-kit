@@ -199,7 +199,7 @@ export function resolvePlan(plan, lib = loadLibrary()) {
   inserts.forEach((ins, k) => {
     if (ins.auto) {
       const next = inserts[k + 1]?.at ?? total;
-      const cap = ins.maxDur ?? plan.auto_max ?? (voiceOnly ? 12 : ins.kind === 'animation' ? 7 : 5);
+      const cap = ins.maxDur ?? (ins.kind === 'pull' && !ins.stock ? 8 : null) ?? plan.auto_max ?? (voiceOnly ? 12 : ins.kind === 'animation' ? 7 : 5);
       ins.dur = +Math.max(2, Math.min(cap, next - ins.at - 0.25)).toFixed(2);
       if (next - ins.at < 2.25) warnings.push(`${ins.where}: only ${(next - ins.at).toFixed(1)} s before the next visual; move one cue`);
     }
