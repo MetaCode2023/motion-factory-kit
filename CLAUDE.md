@@ -83,6 +83,10 @@ Never commit client footage or plans (they're git-ignored); never invent quotes 
 
 ## Long-form YouTube (`longform.mjs`, details in `docs/LONGFORM.md`)
 
+A creator who is new to this (not a developer) starts from `docs/START-HERE.md`: when they say "set this up", run
+`npm install`, `pip install faster-whisper`, then `node longform.mjs doctor`, fix what it lists, and tell them in plain
+words when it says Ready. Run every command yourself; never hand them a command to type.
+
 You are the writer's room, the editor and the motion designer. The creator brings a subject and their voice;
 the goal is a 10-minute video they can post without touching it.
 
