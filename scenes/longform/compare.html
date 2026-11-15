@@ -22,7 +22,7 @@ const AT = LF.schedule(D, [...LI, ...RI], { start: 0.95, gap: 0.22 });
 const LT = AT.slice(0, LI.length), RT = AT.slice(LI.length);
 const LA = Math.max(0.6, (LT[0] ?? 0.95) - 0.35), RA = Math.max(LA + 0.4, (RT[0] ?? 1.45) - 0.35);
 const items = (times) => times.map((at) => ({ at, name: 'pop', volume: 0.45 }));
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [...items(LT), { at: RA - 0.1, name: 'hit', volume: 0.5 }, ...items(RT), ...(D.verdict ? [{ at: Math.min(D.dur - 1.5, 2.6), name: 'chime', volume: 0.6 }] : [])] });
 const toneCol = (tone) => (tone === 'bad' ? th.bad : tone === 'good' ? th.good : tone === 'warm' ? th.warm : th.color);
 function side(c, t, s, x, at, times) {

@@ -217,6 +217,12 @@ async function prerender(R, plan, log) {
   await run(todo.filter((j) => is3d(j.scene)), Math.min(P, 2));
 }
 
+// How visuals arrive and leave. plan.transitions: 'fade' for plain fades everywhere, or your own list to cycle
+// through; "transition" on one insert overrides it. Names are ffmpeg xfade transitions.
+const TRANSITION = 0.4;
+const TRANSITIONS = ['smoothleft', 'slideup', 'circleopen', 'hblur', 'smoothup', 'slideleft'];
+const XFADE = new Set(['fade', 'dissolve', 'fadeblack', 'smoothleft', 'smoothright', 'smoothup', 'smoothdown', 'slideleft', 'slideright', 'slideup', 'slidedown', 'wipeleft', 'wiperight', 'wipeup', 'wipedown', 'circleopen', 'circleclose', 'zoomin', 'radial', 'hblur', 'pixelize', 'circlecrop', 'rectcrop', 'diagtl', 'diagbr', 'squeezeh', 'squeezev']);
+
 // ---- picture: inserts over the A-roll ------------------------------------------------------------
 // The picture is built in chunks: plain stretches of the A-roll, and one chunk per insert (the insert over
 // its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
@@ -228,13 +234,27 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
   const parts = [];
   let f = 0;
   for (const ins of R.inserts) {
-    const a = Math.max(f, Math.round(ins.at * fps)), z = Math.min(N, Math.round((ins.at + ins.dur) * fps));
+    const a = Math.max(f, Math.round(ins.at * fps));
+    let z = Math.min(N, Math.round((ins.at + ins.dur) * fps));
+    const nextA = R.inserts[R.inserts.indexOf(ins) + 1] ? Math.round(R.inserts[R.inserts.indexOf(ins) + 1].at * fps) : null;
+    if (nextA != null && nextA - z > 0 && nextA - z <= 2) z = nextA;   // a frame or two of rounding is not a gap
     if (z <= a) continue;
     if (a > f) parts.push({ from: f, to: a });
     parts.push({ from: a, to: z, ins });
     f = z;
   }
   if (f < N) parts.push({ from: f, to: N });
+  // Which transition each full-frame visual uses, and whether it follows another one directly.
+  const cycle = Array.isArray(plan.transitions) && plan.transitions.length ? plan.transitions : plan.transitions === 'fade' ? ['fade'] : TRANSITIONS;
+  let nth = 0;
+  parts.forEach((p, i) => {
+    if (!p.ins || p.ins.layout === 'side') return;
+    const t = p.ins.src?.transition;
+    p.transition = XFADE.has(t) ? t : cycle[nth++ % cycle.length];
+    const before = parts[i - 1], after = parts[i + 1];
+    if (before?.ins && before.ins.layout !== 'side' && before.to === p.from && before.ins.media) p.prev = before.ins;
+    if (after?.ins && after.ins.layout !== 'side' && after.from === p.to) p.next = true;
+  });
   const esc = (p) => p.replace(/\\/g, '/').replace(/:/g, '\\:').replace(/'/g, "\\'");
   const caps = (start) => (assFile ? `,setpts=PTS+${(start / fps).toFixed(4)}/TB,ass='${esc(assFile)}':fontsdir='${esc(join(ROOT, 'fonts'))}',setpts=PTS-STARTPTS` : '');
   const tmp = join(dirname(out), '.chunks');
@@ -245,31 +265,50 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
     if (!p.ins) {
       ff(['-ss', ss, '-i', aroll.video, '-frames:v', String(n), '-vf', `setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p`, '-an', ...VENC(fps, 19), file], `chunk ${k}`);
     } else {
-      const ins = p.ins, d = n / fps, fade = Math.min(0.18, d / 4);
-      const fades = `fade=t=in:st=0:d=${fade}:alpha=1,fade=t=out:st=${(d - fade).toFixed(3)}:d=${fade}:alpha=1`;
+      const ins = p.ins, D = n / fps;
       const b = SIDE.border, col = accent.replace('#', '0x');
-      const fx = Math.min(1, Math.max(0, plan.face?.x ?? 0.5));   // where the speaker sits across the frame (0 left, 1 right)
-      if (ins.layout === 'pip' && pip) {
-        // The visual fills the frame; the speaker stays in a circle in the corner.
-        const D = pip.d, m = pip.margin, rx = W - D - 2 * pip.ring - m, ry = H - D - 2 * pip.ring - m;
-        const g = `[0:v]setpts=PTS-STARTPTS,split[bg][f0];[f0]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${D}:${D},format=rgba[f1];[2:v]format=gray[m];[f1][m]alphamerge[face];` +
-          `[1:v]setpts=PTS-STARTPTS[an];[an][3:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring},format=yuva420p,${fades}[i];[bg][i]overlay=0:0:eof_action=pass`;
-        ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile, '-filter_complex', `${g}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
-        return file;
+      if (ins.layout === 'side') {
+        // A box beside the speaker: it fades in and out over them.
+        const fade = Math.min(0.18, D / 4), fades = `fade=t=in:st=0:d=${fade}:alpha=1,fade=t=out:st=${(D - fade).toFixed(3)}:d=${fade}:alpha=1`;
+        const fg = `[1:v]scale=${SIDE.w - 2 * b}:${SIDE.h - 2 * b},pad=${SIDE.w}:${SIDE.h}:${b}:${b}:color=${col},format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=${SIDE.x}:${SIDE.y}:eof_action=pass`;
+        ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-filter_complex', `${fg}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
+      } else {
+        // A full-frame visual (full, pip, split) arrives and leaves with a real transition. Straight after
+        // another visual it transitions from that one's last frame, not from the speaker in between.
+        const NORM = `fps=${fps},format=yuv420p,settb=AVTB,setsar=1`;
+        const fx = Math.min(1, Math.max(0, plan.face?.x ?? 0.5));
+        const d = Math.min(TRANSITION, D / 4), name = p.transition;
+        const inputs = ['-ss', ss, '-i', aroll.video, '-i', ins.media], g = [];
+        let nIn = 2;
+        const needs = { in: !p.prev, out: !p.next, face: ins.layout === 'pip' || ins.layout === 'split' };
+        const outs = [needs.in && 'bgA', needs.out && 'bgB', needs.face && 'bgF'].filter(Boolean);
+        g.push(outs.length ? `[0:v]setpts=PTS-STARTPTS,${NORM}${outs.length > 1 ? `,split=${outs.length}` : ''}${outs.map((o) => `[${o}]`).join('')}` : '[0:v]nullsink');
+        if (ins.layout === 'pip' && pip) {
+          const Dp = pip.d, rx = W - Dp - 2 * pip.ring - pip.margin, ry = H - Dp - 2 * pip.ring - pip.margin;
+          inputs.push('-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile);
+          g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
+            `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          nIn += 2;
+        } else if (ins.layout === 'split') {
+          const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
+          g.push(`[bgF]crop=${hw}:${H}:(iw-${hw})*${fx}:0[L]`,
+            `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr]`,
+            `[L][Rr]hstack,drawbox=x=${hw - 3}:y=0:w=6:h=${H}:color=${col}:t=fill,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+        } else {
+          if (needs.face) g.push('[bgF]nullsink');
+          g.push(`[1:v]setpts=PTS-STARTPTS,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+        }
+        if (p.prev) {
+          // the last frame of the visual before this one, held for the length of the transition
+          const still = join(tmp, `${String(k).padStart(4, '0')}-prev.png`);
+          ff(['-ss', Math.max(0, p.prev.dur - 2 / fps).toFixed(3), '-i', p.prev.media, '-frames:v', '1', still], `last frame of ${p.prev.id}`);
+          inputs.push('-loop', '1', '-t', (d + 1).toFixed(2), '-i', still);
+          g.push(`[${nIn}:v]${NORM}[from]`); nIn++;
+        }
+        g.push(`[${p.prev ? 'from' : 'bgA'}][vis]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=0[x1]`);
+        if (needs.out) g.push(`[bgB]trim=start=${(D - d).toFixed(3)},setpts=PTS-STARTPTS,${NORM}[tail]`, `[x1][tail]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=${(D - d).toFixed(3)}[x2]`);
+        ff([...inputs, '-filter_complex', `${g.join(';')};[${needs.out ? 'x2' : 'x1'}]setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
       }
-      if (ins.layout === 'split') {
-        // Speaker on the left half, the visual on the right half over a blurred copy of itself.
-        const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
-        const g = `[0:v]setpts=PTS-STARTPTS,split[bg][f0];[f0]crop=${hw}:${H}:(iw-${hw})*${fx}:0[L];` +
-          `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr];` +
-          `[L][Rr]hstack,drawbox=x=${hw - 3}:y=0:w=6:h=${H}:color=${col}:t=fill,format=yuva420p,${fades}[i];[bg][i]overlay=0:0:eof_action=pass`;
-        ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-filter_complex', `${g}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
-        return file;
-      }
-      const fg = ins.layout === 'side'
-        ? `[1:v]scale=${SIDE.w - 2 * b}:${SIDE.h - 2 * b},pad=${SIDE.w}:${SIDE.h}:${b}:${b}:color=${col},format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=${SIDE.x}:${SIDE.y}:eof_action=pass`
-        : `[1:v]format=yuva420p,${fades},setpts=PTS-STARTPTS[i];[0:v]setpts=PTS-STARTPTS[bg];[bg][i]overlay=0:0:eof_action=pass`;
-      ff(['-ss', ss, '-i', aroll.video, '-i', ins.media, '-filter_complex', `${fg}${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
     }
     if ((k + 1) % 20 === 0) log(`  picture ${k + 1}/${parts.length}`);
     return file;

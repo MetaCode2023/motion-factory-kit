@@ -145,6 +145,26 @@ where the speaker sits across the frame if they're off-centre; `"pip": { "size":
 circle. In voice-only videos there is no picture of the speaker, so `pip` and `split` become `full`. The Premiere
 timeline shows them as full-frame clips.
 
+## Transitions and camera
+
+Full-frame visuals arrive and leave with a real transition instead of a fade, cycling through soft wipes,
+slides, a circle open and a blur whip. When one visual runs straight into the next, it transitions from the
+old picture to the new one (no flash of the speaker or backdrop in between); an `auto` length now runs right
+up to the next full-frame visual for that reason.
+
+- `"transitions": "fade"` in a plan (or `transitions: fade` in a script header) goes back to plain fades;
+  `"transitions": ["smoothleft", "slideup"]` cycles your own list.
+- `transition: circleopen` on one cue (or `"transition"` on one insert) sets that one. Names are ffmpeg
+  xfade transitions (`smoothleft/right/up/down`, `slideleft/right/up/down`, `wipeleft/…`, `circleopen`,
+  `circleclose`, `hblur`, `dissolve`, `fadeblack`, `zoomin`, `radial`, `pixelize`).
+- `side` boxes still fade.
+
+Every 2D template shares one camera (`LF.drift` in `lf.js`): it lands (arrives slightly close and settles),
+pushes in slowly, and can go to a point when it matters (`focus: [{ at, x, y, zoom, hold }]`; `stat` pushes in
+on the number while it counts, `line` goes to where the line ends). The first half second of every animation
+is rendered with motion blur (`LF.blur`). New scenes: call `LF.drift` after the backdrop and add
+`motionBlur: LF.blur` to `M.setup`.
+
 ## Looks
 
 One word restyles the whole video: every animation and the voice-only backdrop. In a script's header write

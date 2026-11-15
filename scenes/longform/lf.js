@@ -161,10 +161,27 @@
 
   // ---- never freeze ---------------------------------------------------------------------------------
   // A slow push-in across the whole insert plus a gentle drift: after the last reveal the frame still moves.
-  LF.drift = (c, t, D, { zoom = 0.05, x = 18, y = 10 } = {}) => {
+  // The camera every template shares. It lands (arrives a little close and settles in under a second), pushes in
+  // slowly for the whole insert, drifts, and can go to a point when it matters:
+  //   focus: [{ at, x, y, zoom = 1.14, hold = 1.6 }]  -> push toward (x, y) at `at`, hold, ease back.
+  LF.drift = (c, t, D, { zoom = 0.05, x = 18, y = 10, land = 0.07, focus = null } = {}) => {
     const k = M.ease.inOutCubic(M.clamp(t / (D.dur || 6)));
-    return FX.camera(c, t, { zoom: 1 + zoom * k, x: x * Math.sin(t * 0.35), y: y * Math.cos(t * 0.28) });
+    let z = 1 + zoom * k + land * (1 - M.ease.outCubic(M.clamp(t / 0.9)));
+    let px = x * Math.sin(t * 0.35), py = y * Math.cos(t * 0.28);
+    for (const f of focus || []) {
+      const w = M.ease.inOutCubic(M.clamp((t - f.at) / 0.7)) * (1 - M.ease.inOutCubic(M.clamp((t - f.at - (f.hold ?? 1.6)) / 0.9)));
+      if (w <= 0) continue;
+      const fz = 1 + ((f.zoom ?? 1.14) - 1) * w;
+      z *= fz;
+      // keep the point where it is while zooming, then pull it a third of the way to the centre
+      px += (LF.W / 2 - f.x) * ((fz - 1) + 0.33 * w * (fz - 1) * 3);
+      py += (LF.H / 2 - f.y) * ((fz - 1) + 0.33 * w * (fz - 1) * 3);
+    }
+    const mx = (z - 1) * LF.W / 2, my = (z - 1) * LF.H / 2;   // never show past the edge of the frame
+    return FX.camera(c, t, { zoom: z, x: M.clamp(px, -mx - x, mx + x), y: M.clamp(py, -my - y, my + y) });
   };
+  // Motion blur where things move fastest: the first moments of every insert (the landing and the entrances).
+  LF.blur = { samples: 4, around: [0.3], window: 0.55 };
   LF.pulse = (t, speed = 2, phase = 0) => 0.5 + 0.5 * Math.sin(t * speed + phase);
 
   window.LF = LF;

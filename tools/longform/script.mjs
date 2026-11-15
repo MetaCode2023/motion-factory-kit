@@ -25,7 +25,7 @@ import { basename, join } from 'node:path';
 import { ROOT, bare, fmt, seconds } from './common.mjs';
 
 const VISUAL = new Set(['anim', 'stock', 'clip', 'broll', 'image']);
-const OPTION_KEYS = new Set(['dur', 'layout', 'offset', 'id', 'note', 'sfx', 'max_dur']);
+const OPTION_KEYS = new Set(['dur', 'layout', 'offset', 'id', 'note', 'sfx', 'max_dur', 'transition']);
 // A cue name is a scene file: scenes/longform/<name>.html (2D) or scenes/longform/3d/<name>.html (3D, three.js).
 export const sceneFor = (kind) => ['', '3d/'].map((d) => `scenes/longform/${d}${kind}.html`).find((f) => existsSync(join(ROOT, f))) || null;
 
@@ -268,11 +268,13 @@ export function planFromScript(text, clip, { name } = {}) {
   const adlibs = runs.filter((r) => !r.retake && !r.edge && r.to - r.from >= 2);
 
   const theme = themeOf(S.meta.theme);
+  const transitions = typeof S.meta.transitions === 'string' && S.meta.transitions.includes(',') ? S.meta.transitions.split(',').map((x) => x.trim()) : S.meta.transitions;
   const plan = {
     name: name || S.meta.name || (S.meta.title ? S.meta.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : clip.id),
     title: S.meta.title || clip.id,
     from_script: true,
     ...(theme ? { theme } : {}),
+    ...(transitions ? { transitions } : {}),
     ...(S.meta.base ? { base: S.meta.base } : {}),
     a_roll: [{ clip: clip.id, from: +Math.max(0, first.s - 0.3).toFixed(3), to: +Math.min(clip.duration, last.e + 0.4).toFixed(3) }],
     tighten: { fillers: true, max_pause: S.meta.max_pause ?? 0.45, cut },
@@ -285,7 +287,7 @@ export function planFromScript(text, clip, { name } = {}) {
     const what = `[[${c.raw.trim().slice(0, 40)}]]`;
     const at = anchor(c.word, what);
     if (!at) continue;
-    const common = { at, offset: c.opts.offset ?? -0.12, ...(c.opts.layout ? { layout: c.opts.layout } : {}), ...(c.opts.note ? { note: c.opts.note } : {}), ...(c.opts.sfx !== undefined ? { sfx: c.opts.sfx } : {}) };
+    const common = { at, offset: c.opts.offset ?? -0.12, ...(c.opts.layout ? { layout: c.opts.layout } : {}), ...(c.opts.note ? { note: c.opts.note } : {}), ...(c.opts.transition ? { transition: c.opts.transition } : {}), ...(c.opts.sfx !== undefined ? { sfx: c.opts.sfx } : {}) };
     const dur = c.opts.dur ?? 'auto';
     const id = c.opts.id || `${String(++n).padStart(2, '0')}-${c.kind === 'anim' ? basename(c.scene || 'anim', '.html') : c.kind}`;
     // mark.<key>: <word> -> that spoken word (the first after the cue) sets data.<key> in seconds into the animation.

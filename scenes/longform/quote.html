@@ -18,10 +18,10 @@ const th = LF.theme(D);
 // Light up the highlighted words as they appear in the text (with their punctuation).
 const want = new Set(String(D.highlight).toLowerCase().split(/\s+/).filter(Boolean));
 const ACCENT = String(D.text).split(/\s+/).filter((w) => want.has(w.toLowerCase().replace(/[^a-z0-9']/g, ''))).join(' ');
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', sfx: [{ at: 0.15, name: 'tap', volume: 0.6 }, ...(D.by ? [{ at: 1.2, name: 'pop', volume: 0.6 }] : [])] });
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur, sfx: [{ at: 0.15, name: 'tap', volume: 0.6 }, ...(D.by ? [{ at: 1.2, name: 'pop', volume: 0.6 }] : [])] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
-  const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });
+  const end = LF.drift(c, t, D, { zoom: 0.035, x: 10, y: 6 });
   if (D.by) M.text(c, '“', 150, 380, { font: `800 300px ${LF.F.display}`, color: FX.alpha(th.color, 0.25), alpha: M.prog(t, 0, 0.4) });
   if (D.kicker) FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
   const size = D.text.length > 90 ? 70 : D.text.length > 50 ? 86 : 104;

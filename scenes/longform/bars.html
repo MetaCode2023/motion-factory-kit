@@ -18,7 +18,7 @@ const D = M.data({ dur: 6, kicker: 'BY THE NUMBERS', headline: 'Where the money 
 const th = LF.theme(D);
 const max = Math.max(...D.bars.map((b) => b.value));
 const AT = LF.schedule(D, D.bars.map((b) => b.label), { start: 0.7 });
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [...AT.map((at) => ({ at, name: 'tick', volume: 0.45 })), { at: AT[AT.length - 1] + 0.9, name: 'chime', volume: 0.55 }] });
 const top = D.bars.find((x) => String(x.label) === String(D.highlight))?.label ?? D.bars.reduce((a, b) => (b.value > a.value ? b : a)).label;
 function draw(c, t) {

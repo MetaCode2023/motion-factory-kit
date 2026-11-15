@@ -205,7 +205,10 @@ export function resolvePlan(plan, lib = loadLibrary()) {
     if (ins.auto) {
       const next = inserts[k + 1]?.at ?? total;
       const cap = ins.maxDur ?? (ins.kind === 'pull' && !ins.stock ? 8 : null) ?? plan.auto_max ?? (voiceOnly ? 12 : ins.kind === 'animation' ? 7 : 5);
-      ins.dur = +Math.max(2, Math.min(cap, next - ins.at - 0.25)).toFixed(2);
+      // Straight into another full-frame visual: run right up to it, so one transitions into the next
+      // (no flash of the speaker or backdrop in between). Otherwise leave a beat before the next thing.
+      const nx = inserts[k + 1], butt = nx && nx.kind !== 'face' && nx.layout !== 'side' && ins.layout !== 'side' && ins.kind !== 'face';
+      ins.dur = +Math.max(2, Math.min(cap, next - ins.at - (butt ? 0 : 0.25))).toFixed(butt ? 3 : 2);
       if (next - ins.at < 2.25) warnings.push(`${ins.where}: only ${(next - ins.at).toFixed(1)} s before the next visual; move one cue`);
     }
     if (ins.kind === 'face') return;

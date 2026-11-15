@@ -18,7 +18,7 @@ const th = LF.theme(D);
 const n = D.steps.length, X0 = 220, X1 = 1700, Y = 600;
 // Each step lands when it is said (its title, else its body); unsaid ones spread between.
 const AT = D.stepAt || LF.schedule(D, D.steps.map((s) => [s.title, s.body]), { start: 0.8 });
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: AT.map((at, i) => ({ at, name: i === AT.length - 1 ? 'success' : 'pop', volume: 0.55 })) });
 function draw(c, t) {
   LF.backdrop(c, t, th);

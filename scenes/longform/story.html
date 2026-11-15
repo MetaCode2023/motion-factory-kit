@@ -33,7 +33,7 @@ const STEP = 560, ROWY = D.headline ? 560 : 520;
 const POS = B.map((_, i) => LOOP ? [960 + 560 * Math.cos(-Math.PI / 2 + (i / n) * Math.PI * 2), 560 + 300 * Math.sin(-Math.PI / 2 + (i / n) * Math.PI * 2)] : [i * STEP, ROWY]);
 const SPAN = (n - 1) * STEP, FITS = LOOP || SPAN <= 1300;
 const SIZE = LOOP ? 170 : 220;
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: AT.flatMap((at, i) => [{ at, name: 'pop', volume: 0.55 }, ...(!FITS && i > 0 ? [{ at: at - 0.35, name: 'whoosh', volume: 0.25 }] : [])]) });
 
 function camX(t) {   // world x at the screen centre

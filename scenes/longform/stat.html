@@ -19,12 +19,13 @@ const N = LF.parseNumber(D.value);
 const SAID = LF.when(D, [D.value, D.label], 0);
 const COUNT = Math.min(Math.max(0.8, (SAID ?? 1.6) - 0.25), D.dur * 0.5);   // finish counting as it is said
 // Sound: a pop as the number lands, ticks while it counts, a chime (or coins for money) when it settles.
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [{ at: 0.2, name: 'pop' }, ...(N ? [0.45, 0.75, 1.05].filter((x) => x < 0.25 + COUNT).map((at) => ({ at, name: 'tick', volume: 0.5 })) : []), { at: 0.25 + COUNT, name: /[$\u20ac\u00a3]/.test(D.value) ? 'coin' : 'chime' }] });
 const SIZE = Math.min(240, Math.floor(1500 / Math.max(3, String(D.value).length) * 1.7));
 function draw(c, t) {
   LF.backdrop(c, t, th);
-  const end = FX.camera(c, t, { zoom: 1 + 0.03 * M.clamp(t / D.dur) });
+  // the camera pushes in on the number while it counts, and eases back as the label arrives
+  const end = LF.drift(c, t, D, { zoom: 0.03, x: 8, y: 5, focus: [{ at: 0.15, x: 960, y: 500, zoom: 1.12, hold: Math.max(0.5, COUNT - 0.2) }] });
   FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 32px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
   const k = M.ease.outCubic(M.clamp((t - 0.25) / COUNT));
   const shown = N ? LF.formatNumber(N, N.num * k) : D.value;

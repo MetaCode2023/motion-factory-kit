@@ -22,7 +22,7 @@ const LB = Array.isArray(D.labels) ? D.labels : String(D.labels || '').split(';'
 const n = N.length, BW = Math.min(330, 1500 / n - 50), BH = 210, GAP = (1680 - n * BW) / Math.max(1, n - 1), Y = 470;
 const bx = (i) => 120 + i * (BW + GAP);
 const AT = LF.schedule(D, N.map((x) => [x.title, x.body]), { start: 0.6, end: D.dur - 2, gap: 0.55 });
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [...AT.map((at) => ({ at, name: 'pop', volume: 0.5 })), ...(D.loop ? [{ at: AT[n - 1] + 0.6, name: 'whoosh', volume: 0.4 }] : [])] });
 function arrow(c, t, x1, y1, x2, y2, k, label) {
   if (k <= 0) return;

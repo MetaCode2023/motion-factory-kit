@@ -17,11 +17,11 @@ const D = M.data({ dur: 6, kicker: 'DEFINITION', term: 'Superposition', pronounc
 const th = LF.theme(D);
 // The everyday translation appears when the speaker gets to it (its words), else ~2 s in.
 const PLAIN = Math.min(D.dur - 1.2, LF.when(D, String(D.plain).replace(/^in [a-z ]+terms:?/i, ''), 1.2) ?? Math.min(D.dur - 1.6, 2.2));
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [{ at: 0.2, name: 'type', volume: 0.6 }, { at: 0.6, name: 'tick', volume: 0.5 }, ...(D.plain ? [{ at: PLAIN, name: 'pop', volume: 0.6 }] : [])] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
-  const end = FX.camera(c, t, { zoom: 1 + 0.025 * M.clamp(t / D.dur) });
+  const end = LF.drift(c, t, D, { zoom: 0.025, x: 8, y: 5 });
   FX.text(c, t, String(D.kicker).toUpperCase(), 160, 220, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: 1400 });
   FX.text(c, t, D.term, 160, 270, { at: 0.2, mode: 'mask', font: `800 ${D.term.length > 16 ? 110 : 140}px ${LF.F.display}`, color: th.ink, maxWidth: 1600 });
   if (D.pronounce) M.text(c, `/ ${D.pronounce} /`, 164, 490, { font: `500 32px ${LF.F.mono}`, color: th.muted, alpha: M.prog(t, 0.7, 0.4) });

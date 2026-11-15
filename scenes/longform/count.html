@@ -25,7 +25,7 @@ const R = FX.rng(N + HL), PICK = new Set();
 while (PICK.size < HL) PICK.add(HL === 1 ? Math.floor(N * 0.62) : Math.floor(R() * N));
 const FILL = Math.min(1.4, D.dur * 0.25);
 const HIT = Math.max(FILL + 0.2, LF.when(D, D.say || D.value, 0) ?? D.dur * 0.45);
-M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
   sfx: [{ at: 0.1, name: 'riser', volume: 0.3 }, { at: HIT, name: HL === 1 ? 'hit' : 'chime', volume: 0.6 }] });
 function draw(c, t) {
   LF.backdrop(c, t, th);
