@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Place: a drawn establishing shot</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+<script src="props.js"></script>
+</head>
+<body>
+<script>
+// A drawn establishing shot in place of stock footage: one building in a street, in layers that move at
+// different speeds as the camera pushes in. People walk past; small objects can rise out of the building.
+// Data: place (bank | capitol | hospital | factory | school | house; any prop name works),
+//       kicker, headline, accent, people (0-6 walking past), rise (a prop that floats up from it, e.g. coin, ballot, cash),
+//       caption (one line under the building, appears on its word), say (words that trigger the building and the caption),
+//       dur, style / color / tint
+const D = M.data({ dur: 7, place: 'bank', kicker: 'Where it starts', headline: 'A bank, on an ordinary street', accent: 'bank', people: 3, rise: 'coin', caption: '', say: '' });
+const th = LF.theme(D);
+const SAY = String(D.say || '').split(';').map((s) => s.trim());
+const AT = LF.schedule(D, [SAY[0] || D.place, SAY[1] || D.caption || null], { start: 0.35, gap: 0.8 });
+const N = Math.max(0, Math.min(6, +D.people || 0));
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
+  sfx: [{ at: AT[0], name: 'hit', volume: 0.45 }, ...(D.rise ? [{ at: AT[0] + 0.9, name: 'pop', volume: 0.45 }] : []), ...(D.caption ? [{ at: AT[1], name: 'tick', volume: 0.5 }] : [])] });
+
+const GROUND = 820, HERO = 470;
+const R = FX.rng(21);
+const FAR = Array.from({ length: 26 }, (_, i) => ({ x: -200 + i * 92 + R() * 30, w: 60 + R() * 60, h: 90 + R() * 240 }));
+const SIDE = ['house', 'school', 'factory', 'hospital', 'house', 'capitol'].filter((n) => n !== D.place);
+
+function draw(c, t) {
+  LF.backdrop(c, t, th, { particles: false });
+  const k = M.ease.inOutCubic(M.clamp(t / D.dur));
+  const endCam = LF.drift(c, t, D, { zoom: 0.07, x: 10, y: 6, focus: [{ at: AT[0] + 0.2, x: 960, y: GROUND - HERO * 0.45, zoom: 1.06, hold: 1.4 }] });
+
+  // sky: a low disc of light behind the street
+  const sun = c.createRadialGradient(1320, GROUND - 330, 20, 1320, GROUND - 330, 520);
+  sun.addColorStop(0, FX.alpha(th.color, th.light ? 0.22 : 0.3)); sun.addColorStop(1, FX.alpha(th.color, 0));
+  c.fillStyle = sun; c.fillRect(0, 0, 1920, 1080);
+
+  // far skyline (slowest layer)
+  c.save(); c.translate(-50 * k, 0); c.fillStyle = th.light ? FX.alpha(th.ink, 0.1) : FX.alpha(th.color, 0.1);
+  for (const b of FAR) { c.fillRect(b.x, GROUND - b.h, b.w, b.h); }
+  c.fillStyle = th.light ? FX.alpha(th.ink, 0.05) : FX.alpha(th.color, 0.07);
+  for (const b of FAR) for (let wy = GROUND - b.h + 18; wy < GROUND - 20; wy += 34) c.fillRect(b.x + 10, wy, b.w - 20, 8);
+  c.restore();
+
+  // the street's other buildings (middle layer)
+  c.save(); c.translate(-110 * k, 0);
+  [[150, 260, 0], [470, 220, 1], [1470, 240, 2], [1790, 280, 3], [2090, 230, 4]].forEach(([x, s, i]) => PR.draw(c, SIDE[i % SIDE.length], x, GROUND - s * 0.42, s, { color: th.light ? th.muted : FX.alpha(th.color, 0.55), alpha: 0.5, shadow: false }));
+  c.restore();
+
+  // ground
+  const g = c.createLinearGradient(0, GROUND, 0, 1080); g.addColorStop(0, th.light ? '#D9CFBB' : FX.alpha(th.tint, 0.95)); g.addColorStop(1, th.deep);
+  c.fillStyle = g; c.fillRect(-100, GROUND, 2200, 300);
+  c.fillStyle = LF.w(th, 0.16); c.fillRect(-100, GROUND, 2200, 3);
+  c.save(); c.translate(-170 * k, 0); c.fillStyle = LF.w(th, 0.2);
+  for (let x = -100; x < 2400; x += 170) c.fillRect(x, GROUND + 150, 90, 8);
+  c.restore();
+
+  // the building: rises out of the ground on its word
+  const pop = M.ease.outBack(M.clamp((t - AT[0]) / 0.6));
+  if (pop > 0) {
+    c.save(); c.translate(960, GROUND); c.scale(1, pop); c.translate(-960, -GROUND);
+    PR.draw(c, D.place, 960, GROUND - HERO * 0.44, HERO, { color: th.color });
+    c.restore();
+  }
+  // things rising out of it
+  if (D.rise && PR.names.includes(D.rise)) for (let i = 0; i < 5; i++) {
+    const ph = ((t - AT[0] - 0.9) * 0.28 + i / 5); if (t < AT[0] + 0.9 + i * 0.25) continue;
+    const u = ph % 1, x = 960 + (i - 2) * 80 + 22 * Math.sin(u * 6 + i), y = GROUND - HERO * 0.8 - u * 130;   // stays under the headline
+    PR.draw(c, D.rise, x, y, 64 + 14 * Math.sin(i * 2.1), { color: th.warm, alpha: Math.sin(u * Math.PI), shadow: false, rot: 0.3 * Math.sin(u * 5 + i) });
+  }
+
+  // people walking past (front layer, fastest)
+  for (let i = 0; i < N; i++) {
+    const dir = i % 2 ? -1 : 1, speed = 46 + 14 * ((i * 37) % 5), x0 = dir > 0 ? -160 - i * 210 : 2080 + i * 190;
+    const x = x0 + dir * speed * (t + 2.5) * 1.6 - 170 * k, bob = 5 * Math.abs(Math.sin(t * (5 + i * 0.4) + i));
+    PR.draw(c, 'person', x, GROUND + 26 + (i % 3) * 22 - bob, 128 + (i % 3) * 16, { color: i === 0 ? th.color : th.light ? th.muted : '#8792A8', alpha: M.prog(t, 0.2, 0.4) });
+  }
+
+  if (D.caption) {
+    const a = M.prog(t, AT[1], 0.4);
+    if (a > 0) { c.save(); c.globalAlpha = a; c.font = `700 46px ${LF.F.display}`; const w = c.measureText(D.caption).width + 70; LF.card(c, 960 - w / 2, GROUND + 78 + 14 * (1 - a), w, 84, th); M.text(c, D.caption, 960, GROUND + 135 + 14 * (1 - a), { font: `700 46px ${LF.F.display}`, color: th.ink, align: 'center' }); c.restore(); }
+  }
+  LF.title(c, t, D, th);
+  endCam();
+  LF.vignette(c, th, 0.5);
+}
+</script>
+</body>
+</html>

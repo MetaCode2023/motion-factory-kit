@@ -165,6 +165,21 @@ on the number while it counts, `line` goes to where the line ends). The first ha
 is rendered with motion blur (`LF.blur`). New scenes: call `LF.drift` after the backdrop and add
 `motionBlur: LF.blur` to `M.setup`.
 
+## Drawn places, lit objects, carried figures
+
+- **`place`**: a drawn establishing shot instead of stock footage: one building (`place: bank | capitol |
+  hospital | factory | school | house`, or any prop name) on a street, in layers that slide at different speeds as
+  the camera pushes in. People walk past (`people: 0-6`), a prop can rise out of the building (`rise: coin`,
+  `ballot`, `cash`…), and a one-line `caption` lands on its word. Use it where you would reach for a stock shot
+  of "a bank" or "the capitol".
+- **Objects are lit.** Every prop in `props.js` is painted once into a sprite with light from the top left, shade
+  at the lower right, soft shadows between its parts and a contact shadow under it. `flat: true` in `PR.draw`
+  gives the old plain drawing.
+- **Carried figures.** When a `stat`, `count` or `share` (with a `center`) is followed directly by another 2D
+  visual, its number is still on screen when the next one starts, then shrinks into a chip in the top-right corner
+  and stays for that visual. The two cross-dissolve so the number appears to stay put. `carry: false` on the
+  second cue turns it off.
+
 ## Looks
 
 One word restyles the whole video: every animation and the voice-only backdrop. In a script's header write

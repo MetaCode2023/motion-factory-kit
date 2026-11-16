@@ -63,12 +63,39 @@
   };
   PR.names = Object.keys(D);
 
-  PR.draw = (c, name, x, y, size, { color = '#3CE0FF', alpha = 1, glow = 0, rot = 0, shadow = true } = {}) => {
-    const f = D[name] || D.document;
-    c.save(); c.translate(x, y); c.rotate(rot); c.scale(size / 100, size / 100); c.globalAlpha *= alpha;
+  // Each prop is painted once into a sprite and lit: its shapes cast soft shadows on each other, light falls
+  // from the top left, the lower right goes into shade. Drawn with a contact shadow under it.
+  const SPRITES = {};
+  function sprite(name, color) {
+    const key = name + '|' + color;
+    if (SPRITES[key]) return SPRITES[key];
+    const S = 512, L = FX.layer('prop:' + key, S, S), x = L.ctx;
+    x.setTransform(1, 0, 0, 1, 0, 0); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; x.clearRect(0, 0, S, S);
+    x.save(); x.translate(S / 2, S / 2); x.scale(S / 120, S / 120);
+    x.shadowColor = 'rgba(0,0,0,0.30)'; x.shadowBlur = 12; x.shadowOffsetY = 6;
+    (D[name] || D.document)(x, color);
+    x.restore();
+    x.globalCompositeOperation = 'source-atop';
+    const g = x.createLinearGradient(S * 0.18, S * 0.08, S * 0.82, S * 0.92);
+    g.addColorStop(0, 'rgba(255,255,255,0.34)'); g.addColorStop(0.42, 'rgba(255,255,255,0)'); g.addColorStop(0.58, 'rgba(0,0,20,0)'); g.addColorStop(1, 'rgba(0,0,20,0.36)');
+    x.fillStyle = g; x.fillRect(0, 0, S, S);
+    x.globalCompositeOperation = 'source-over';
+    return (SPRITES[key] = L.canvas);
+  }
+
+  PR.draw = (c, name, x, y, size, { color = '#3CE0FF', alpha = 1, glow = 0, rot = 0, shadow = true, flat = false } = {}) => {
+    c.save(); c.translate(x, y); c.rotate(rot); c.globalAlpha *= alpha;
+    if (flat) {   // the plain drawing, no lighting (tiny repeats, where a sprite per colour isn't worth it)
+      c.scale(size / 100, size / 100);
+      if (shadow) { c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 18; c.shadowOffsetY = 8; }
+      (D[name] || D.document)(c, color); c.restore(); return;
+    }
+    if (shadow && !glow) {   // where it meets the ground
+      c.save(); c.globalAlpha *= 0.5; c.fillStyle = 'rgba(0,0,0,0.9)'; c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = size * 0.12;
+      c.beginPath(); c.ellipse(0, size * 0.43, size * 0.34, size * 0.04, 0, 0, Math.PI * 2); c.fill(); c.restore();
+    }
     if (glow > 0) { c.shadowColor = color; c.shadowBlur = 50 * glow; }
-    else if (shadow) { c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 18; c.shadowOffsetY = 8; }
-    f(c, color);
+    c.drawImage(sprite(name, color), -size * 0.6, -size * 0.6, size * 1.2, size * 1.2);
     c.restore();
   };
 

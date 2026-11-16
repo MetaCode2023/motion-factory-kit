@@ -221,3 +221,14 @@ test('pip and split are layouts, and fall back to full when there is no picture 
   lib.clips.a.height = 0;
   assert.equal(resolvePlan(plan, lib).inserts[0].layout, 'full');
 });
+
+test('a visual right after a stat inherits its figure; one after a gap does not', async () => {
+  const { animData } = await import('../tools/longform/build.mjs');
+  const stat = { kind: 'animation', scene: '/x/scenes/longform/stat.html', layout: 'full', at: 0, dur: 5, data: { value: '1,326', label: 'ways' } };
+  const next = { kind: 'animation', scene: '/x/scenes/longform/bars.html', layout: 'full', at: 5, dur: 5, data: {} };
+  const later = { kind: 'animation', scene: '/x/scenes/longform/bars.html', layout: 'full', at: 11, dur: 4, data: {} };
+  const R = { inserts: [stat, next, later], words: [] };
+  assert.deepEqual(animData(next, R).carry, { value: '1,326', label: 'ways' });
+  assert.equal(next.carried, true);
+  assert.equal(animData(later, R).carry, undefined);
+});

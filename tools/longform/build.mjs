@@ -100,7 +100,23 @@ async function pipAssets(media, accent, plan) {
 // ({ w, t } with t in seconds from the insert's start), so its beats can land on the words.
 export function animData(ins, R) {
   const words = R.words.filter((w) => w.s >= ins.at - 0.05 && w.s < ins.at + ins.dur).map((w) => ({ w: w.w, t: +(w.s - ins.at).toFixed(3) }));
-  return { ...ins.data, dur: ins.dur, words };
+  return { ...ins.data, dur: ins.dur, words, ...carryFor(ins, R) };
+}
+// The figure a visual inherits from the one right before it (see LF.carry): only when the two are back to back,
+// both full-frame, and the earlier one ends on a single big number.
+function carryFor(ins, R) {
+  const i = R.inserts.indexOf(ins), prev = R.inserts[i - 1];
+  ins.carried = false;
+  if (!prev || prev.kind !== 'animation' || !prev.data || ins.layout === 'side' || prev.layout === 'side' || ins.data?.carry === false) return {};
+  if (Math.abs(prev.at + prev.dur - ins.at) > 0.08) return {};
+  const name = (prev.scene || '').replace(/^.*[\\/]/, '').replace('.html', '');
+  const d = prev.data;
+  const c = name === 'stat' ? { value: d.value, label: d.label }
+    : name === 'count' ? { value: d.value, label: d.label, x: 1220, y: 480, size: String(d.value).length > 8 ? 96 : 120, align: 'left' }
+    : name === 'share' && d.center ? { value: d.center, label: d.headline } : null;
+  if (!c || c.value == null || String(c.value).length > 12 || is3d(ins.scene)) return {};
+  ins.carried = true;
+  return { carry: { ...c, value: String(c.value), label: c.label ? String(c.label).slice(0, 34) : '' } };
 }
 
 async function buildInsert(ins, plan, dir, accent, log, R) {
@@ -250,7 +266,7 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
   parts.forEach((p, i) => {
     if (!p.ins || p.ins.layout === 'side') return;
     const t = p.ins.src?.transition;
-    p.transition = XFADE.has(t) ? t : cycle[nth++ % cycle.length];
+    p.transition = XFADE.has(t) ? t : p.ins.carried ? 'dissolve' : cycle[nth++ % cycle.length];   // a carried figure stays put while the rest changes
     const before = parts[i - 1], after = parts[i + 1];
     if (before?.ins && before.ins.layout !== 'side' && before.to === p.from && before.ins.media) p.prev = before.ins;
     if (after?.ins && after.ins.layout !== 'side' && after.from === p.to) p.next = true;

@@ -16,6 +16,7 @@
     terminal:  { color: '#3DFF8B', tint: '#06210F', deep: '#020603', ink: '#E6FFE9', muted: '#6FA882' },
   };
   LF.theme = (D) => {
+    LF._D = D;   // the scene's data, for the pieces every template gets without asking (the carried figure)
     const style = LF.STYLES[D.style] ? D.style : 'aurora', S = LF.STYLES[style];
     return { style, light: !!S.light, color: D.color || S.color, tint: D.tint || S.tint, deep: S.deep, ink: S.ink, muted: S.muted,
       good: D.good || (S.light ? '#1E9E63' : '#3DDC97'), bad: D.bad || (S.light ? '#D0342C' : '#FF4D5E'), warm: D.warm || (S.light ? '#C98A00' : '#FFC23D') };
@@ -71,6 +72,7 @@
   };
 
   LF.backdrop = (c, t, th, { particles = true } = {}) => {
+    LF._t = t;
     if (th.style && th.style !== 'aurora') {
       LF.ground(c, (t / 12) * Math.PI * 2, th);
       if (particles && !th.light) FX.particles(c, t, { count: 40, opacity: 0.14, color: th.color, size: 1.1 });
@@ -85,7 +87,40 @@
 
   // White-on-dark hairlines and tracks flip to ink on a light look; the vignette backs off.
   LF.w = (th, a) => (th.light ? `rgba(20,18,14,${a})` : `rgba(255,255,255,${a})`);
-  LF.vignette = (c, th, strength = 0.45) => { if (!th.light) FX.vignette(c, { strength }); };
+  LF.vignette = (c, th, strength = 0.45) => { if (!th.light) FX.vignette(c, { strength }); LF.carry(c, th); };
+
+  // Carry-over: when this visual follows one that ended on a big figure (D.carry = { value, label }, filled in by
+  // the build), that figure is still on screen where it was when this one starts, then shrinks into a chip in
+  // the top-right corner and stays: the number the viewer just learned travels with them.
+  LF.carry = (c, th) => {
+    const D = LF._D, t = LF._t ?? 0;
+    if (!D || !D.carry || !D.carry.value) return;
+    const v = String(D.carry.value), k = M.ease.inOutCubic(M.clamp((t - 0.25) / 0.75));
+    // where and how big the figure was on the last frame of the visual before (that one ended pushed in ~3%)
+    const Z = 1.03, big = (D.carry.size || Math.min(240, Math.floor(1500 / Math.max(3, v.length) * 1.7))) * Z, small = 54;
+    const size = M.lerp(big, small, k);
+    c.save();
+    c.font = `800 ${small}px ${LF.F.display}`;
+    const wv = c.measureText(v).width, pad = 26, lab = D.carry.label ? String(D.carry.label) : '';
+    c.font = `600 24px ${LF.F.display}`;
+    const wl = lab ? Math.min(360, c.measureText(lab).width) : 0, w = Math.max(wv, wl) + pad * 2, h = lab ? 118 : 86;
+    const bx = LF.W - 100 - w, by = 78;
+    if (k > 0.55) {   // the chip forms behind it as it lands
+      c.globalAlpha = M.clamp((k - 0.55) / 0.45);
+      M.roundRect(c, bx, by, w, h, 20); c.fillStyle = th.light ? '#FFFDF8' : 'rgba(10,14,22,0.72)'; c.fill();
+      c.strokeStyle = FX.alpha(th.color, 0.55); c.lineWidth = 2; c.stroke();
+      if (lab) M.text(c, lab, bx + w / 2, by + 98, { font: `600 24px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 360 });
+      c.globalAlpha = 1;
+    }
+    c.font = `800 ${big}px ${LF.F.display}`;
+    const sx0 = (D.carry.x ?? LF.W / 2) + (D.carry.align === 'left' ? c.measureText(v).width / (2 * Z) : 0), sy0 = D.carry.y ?? 540;
+    const sx = LF.W / 2 + (sx0 - LF.W / 2) * Z, sy = LF.H / 2 + (sy0 - LF.H / 2) * Z;
+    const x = M.lerp(sx, bx + w / 2, k), y = M.lerp(sy, by + 60, k);
+    c.font = `800 ${size}px ${LF.F.display}`; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.shadowColor = FX.alpha(th.color, 0.6 * (1 - k)); c.shadowBlur = 40 * (1 - k);
+    c.fillStyle = k < 1 ? th.color : th.ink; c.fillText(v, x, y);
+    c.restore();
+  };
 
   LF.title = (c, t, { kicker, headline, accent }, th, { x = 120, y = 110, width = 1500, at = 0 } = {}) => {
     if (kicker) FX.text(c, t, String(kicker).toUpperCase(), x, y, { at: at + 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: width });
