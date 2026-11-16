@@ -38,7 +38,7 @@ function draw(c, t) {
   const endCam = LF.drift(c, t, D, { zoom: 0.035 });
   LF.title(c, t, D, th);
   N.forEach((node, i) => {
-    const a = M.ease.outBack(M.clamp((t - AT[i]) / 0.45));
+    const a = LF.E.enter(M.clamp((t - AT[i]) / 0.45));
     if (i > 0) arrow(c, t, bx(i - 1) + BW + 10, Y + BH / 2, bx(i) - 10, Y + BH / 2, M.ease.outCubic(M.clamp((t - AT[i] + 0.3) / 0.35)), LB[i - 1]);
     if (a <= 0) return;
     c.save(); c.translate(bx(i) + BW / 2, Y + BH / 2); c.scale(a, a); c.translate(-(bx(i) + BW / 2), -(Y + BH / 2));

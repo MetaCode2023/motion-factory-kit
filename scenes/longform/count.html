@@ -43,13 +43,13 @@ function draw(c, t) {
   for (const i of PICK) {
     const cx = X0 + (i % cols + 0.5) * cell, cy = Y0 + (Math.floor(i / cols) + 0.5) * cell;
     if (t < 0.15 + (i / N) * FILL) continue;
-    const grow = HL === 1 ? 1 + 2.2 * M.ease.outBack(M.clamp((t - HIT) / 0.6)) : 1 + 0.3 * on;
+    const grow = HL === 1 ? 1 + 2.2 * LF.E.enter(M.clamp((t - HIT) / 0.6)) : 1 + 0.3 * on;
     if (on > 0 && HL <= 12) { c.save(); c.beginPath(); c.arc(cx, cy, cell * 0.5 * grow + 14 + 10 * LF.pulse(t, 4), 0, Math.PI * 2); c.strokeStyle = FX.alpha(th.color, 0.7 * on); c.lineWidth = 4; c.stroke(); c.restore(); }
     PR.draw(c, D.prop, cx, cy, cell * 0.78 * grow, { color: on > 0 ? th.color : '#5B6478', glow: on, shadow: false });
   }
   end();
   FX.text(c, t, String(D.kicker).toUpperCase(), 1220, 330, { at: 0.1, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: 620 });
-  const vk = M.ease.outBack(M.clamp((t - HIT) / 0.5));
+  const vk = LF.E.enter(M.clamp((t - HIT) / 0.5));
   if (vk > 0) {
     c.save(); c.translate(1220, 480); c.scale(vk, vk);
     FX.glow(c, () => M.text(c, D.value, 0, 0, { font: `800 ${String(D.value).length > 8 ? 96 : 120}px ${LF.F.display}`, color: th.ink }), { color: th.color, blur: 40, strength: 0.5 });

@@ -86,11 +86,12 @@ Motion
 Phone
 - The meaning is clear at 320 px wide; the active thing is obvious; lines are thick enough to read.
 
-## Where the kit does not meet this yet
+## Where the kit stands
 
-Known gaps, so nobody mistakes current behaviour for the standard:
-- Many long-form templates pop elements in with an overshoot (`outBack`) and put a glow on headline numbers.
-  New scenes should use the `enter` / `resolve` curves and reserve overshoot for physical impacts.
-- Props bob gently when idle in `story`; under these rules idle objects hold still.
-- Green and red are used by meaning in `compare` and `sim-poker`, but the accent colour is sometimes used
-  for "resolved". Prefer green for the settled state.
+- Long-form templates arrive on the `enter` curve; overshoot remains only where cards are physically dealt
+  (`collapse`, `superposition`, `table3d`). `PR.pop(t, at, dur, true)` gives an impact when one is earned.
+- Props hold still when idle (`PR.idle = true` in a scene brings the bob back).
+- Glow is kept on the single hero number of a visual (`stat`, `journey`, the simulation's result) and on the
+  line of a chart; it is not used to signal state.
+- Still open: the accent colour is sometimes used where green ("resolved") is meant; the short-form ad
+  templates in `scenes/templates/` have not been reviewed against these rules.

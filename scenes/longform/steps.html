@@ -30,7 +30,7 @@ function draw(c, t) {
   D.steps.forEach((s, i) => { const k = M.ease.inOutCubic(M.clamp((t - AT[i] + 0.35) / 0.35)); if (k > 0) reached = Math.max(reached, i ? xs[i - 1] + (xs[i] - xs[i - 1]) * k : X0 + (xs[0] - X0) * k); });
   FX.glow(c, () => { c.strokeStyle = th.color; c.lineWidth = 6; c.beginPath(); c.moveTo(X0, Y); c.lineTo(reached, Y); c.stroke(); }, { color: th.color, blur: 24, strength: 0.7 });
   D.steps.forEach((s, i) => {
-    const k = M.ease.outBack(M.clamp((t - AT[i]) / 0.45)), on = t >= AT[i];
+    const k = LF.E.enter(M.clamp((t - AT[i]) / 0.45)), on = t >= AT[i];
     c.save(); c.translate(xs[i], Y); c.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
     c.beginPath(); c.arc(0, 0, 38, 0, Math.PI * 2); c.fillStyle = on ? th.color : '#11131A'; c.fill();
     c.lineWidth = 4; c.strokeStyle = on ? th.color : LF.w(th, 0.25); c.stroke();

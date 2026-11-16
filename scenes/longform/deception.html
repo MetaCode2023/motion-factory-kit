@@ -56,7 +56,7 @@ function panel(c, t, x, side, i) {
   FX.glow(c, () => { M.roundRect(c, x + 60, y + 430, Math.max(22, (w - 120) * 0.86 * mk), 22, 11); c.fillStyle = C; c.fill(); }, { color: C, blur: 20, strength: 0.6 });
   M.text(c, D.reading, x + w - 60, y + 410, { font: '700 24px "JetBrains Mono"', color: C, align: 'right', alpha: mk });
   // The truth, after the reveal.
-  const tk = M.ease.outBack(M.clamp((t - REVEAL - 0.35 - i * 0.15) / 0.45));
+  const tk = LF.E.enter(M.clamp((t - REVEAL - 0.35 - i * 0.15) / 0.45));
   if (tk > 0) {
     const weak = side.tone ? side.tone === 'bad' : /^(AIR|NOTHING|KING HIGH|ACE HIGH|BLUFF)/i.test(side.truth);
     const col = weak ? D.bad : D.good, label = `${D.prefix === 'none' ? '' : D.prefix}${side.truth}`;

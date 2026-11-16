@@ -67,7 +67,7 @@ function draw(c, t) {
   c.setLineDash([]);
   STOPS.forEach((s, i) => {
     const since = t - AT[i]; if (since < -0.25 && i > 0) return;
-    const pop = i === 0 ? M.ease.outBack(M.clamp((t - 0.3) / 0.5)) : M.ease.outBack(M.clamp((since + 0.25) / 0.55));
+    const pop = i === 0 ? LF.E.enter(M.clamp((t - 0.3) / 0.5)) : LF.E.enter(M.clamp((since + 0.25) / 0.55));
     c.save(); c.translate(s.x, s.y); c.rotate(s.r);
     // a ring it lands on, the number of the stop behind it
     c.globalAlpha = 0.5 * M.clamp(pop); c.strokeStyle = FX.alpha(th.color, 0.4); c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 560, 0, Math.PI * 2); c.stroke();

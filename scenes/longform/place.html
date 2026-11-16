@@ -62,7 +62,7 @@ function draw(c, t) {
   c.restore();
 
   // the building: rises out of the ground on its word
-  const pop = M.ease.outBack(M.clamp((t - AT[0]) / 0.6));
+  const pop = LF.E.enter(M.clamp((t - AT[0]) / 0.6));
   if (pop > 0) {
     c.save(); c.translate(960, GROUND); c.scale(1, pop); c.translate(-960, -GROUND);
     PR.draw(c, D.place, 960, GROUND - HERO * 0.44, HERO, { color: th.color });

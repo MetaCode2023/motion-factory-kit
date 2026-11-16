@@ -29,7 +29,7 @@ function draw(c, t) {
   FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 32px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
   const k = M.ease.outCubic(M.clamp((t - 0.25) / COUNT));
   const shown = N ? LF.formatNumber(N, N.num * k) : D.value;
-  const pop = M.ease.outBack(M.clamp((t - 0.2) / 0.5));
+  const pop = LF.E.enter(M.clamp((t - 0.2) / 0.5));
   c.save(); c.translate(960, 540); c.scale(pop, pop);
   const font = `800 ${SIZE}px ${LF.F.display}`;
   FX.glow(c, () => FX.gradientText(c, shown, 0, 0, { font, colors: [th.ink, th.color], align: 'center', t }), { color: th.color, blur: 50, strength: 0.6 });

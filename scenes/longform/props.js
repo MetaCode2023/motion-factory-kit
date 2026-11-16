@@ -99,9 +99,12 @@
     c.restore();
   };
 
-  // Pop in with overshoot at `at` (k: 0..1+) and bob gently afterwards. Returns the scale used.
-  PR.pop = (t, at, dur = 0.45) => M.ease.outBack(M.clamp((t - at) / dur));
-  PR.bob = (t, seed = 0, amp = 6) => amp * Math.sin(t * 1.6 + seed * 1.7);
+  // Arrival and idle motion for props.
+  // Arrive on the `enter` curve: decisive, no overshoot (design/MOTION-RULES.md). PR.pop(t, at, dur, true) keeps
+  // the old overshoot for something that physically lands (a coin dropped, a stamp).
+  PR.pop = (t, at, dur = 0.45, impact = false) => { const k = M.clamp((t - at) / dur); return impact ? M.ease.outBack(k) : (window.LF && LF.E ? LF.E.enter(k) : M.ease.outCubic(k)); };
+  // Idle objects hold still (one active idea at a time). Set PR.idle = true in a scene to bring the gentle bob back.
+  PR.bob = (t, seed = 0, amp = 6) => (PR.idle ? amp * Math.sin(t * 1.6 + seed * 1.7) : 0);
 
   window.PR = PR;
 })();

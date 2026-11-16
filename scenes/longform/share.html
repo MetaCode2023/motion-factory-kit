@@ -42,7 +42,7 @@ function draw(c, t) {
     M.text(c, `${s.value}${D.unit === "none" ? "" : D.unit}`, 1780, y - 4, { font: `700 40px ${LF.F.mono}`, color: th.ink, align: 'right' });
     c.restore();
   });
-  const ck = M.ease.outBack(M.clamp((t - AT[0] - 0.3) / 0.5));
+  const ck = LF.E.enter(M.clamp((t - AT[0] - 0.3) / 0.5));
   if (ck > 0) { c.save(); c.translate(cx, cy); c.scale(ck, ck); M.text(c, D.center || `${S[0].value}${D.unit === "none" ? "" : D.unit}`, 0, 28, { font: `800 96px ${LF.F.display}`, color: th.ink, align: 'center' }); if (!D.center) M.text(c, S[0].label, 0, 82, { font: `600 30px ${LF.F.display}`, color: th.muted, align: 'center' }); c.restore(); }
   if (D.source) M.text(c, D.source, 120, 1030, { font: `600 22px ${LF.F.mono}`, color: th.muted, alpha: 0.8 * M.prog(t, 1, 0.4) });
   endCam();

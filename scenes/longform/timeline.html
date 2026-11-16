@@ -32,7 +32,7 @@ function draw(c, t) {
   E.forEach((e, i) => {
     const x = ox + 300 + i * STEP;
     if (x < -300 || x > 2300) return;
-    const on = t >= AT[i], k = M.ease.outBack(M.clamp((t - AT[i]) / 0.45));
+    const on = t >= AT[i], k = LF.E.enter(M.clamp((t - AT[i]) / 0.45));
     c.beginPath(); c.arc(x, Y, on ? 16 : 10, 0, Math.PI * 2); c.fillStyle = on ? th.color : LF.w(th, 0.3); c.fill();
     if (k <= 0) return;
     const latest = i === cur, up = i % 2 === 0;
