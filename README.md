@@ -11,6 +11,8 @@ Exact timing, no timeline editor.
 
 **[See the examples with sound →](https://metacode2023.github.io/motion-factory-kit/)**
 
+**Posting every week for a business?** [docs/CONTENT.md](docs/CONTENT.md): a brand folder, a weekly plan, one approval page, then your scheduler. Works for any brand; yours stays private.
+
 **New here and want a 10-minute YouTube video?** [docs/START-HERE.md](docs/START-HERE.md): setup in plain English, then you just talk to Claude.
 
 **Check the editor in one command, no API keys:** `npm install && npm run demo` runs the full footage pipeline

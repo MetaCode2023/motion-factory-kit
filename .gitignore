@@ -20,3 +20,7 @@ assets/broll/*
 !assets/broll/.gitkeep
 scripts/*
 !scripts/README.md
+
+# Content engine: every brand stays private; only the example is shared
+brands/*
+!brands/example/

@@ -39,6 +39,16 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
 6. **Hand over** the MP4 path(s) with one or two lines on what's in it and anything the user must
    supply (e.g. "drop your clip at assets/higgsfield/talking-head.mp4 and re-run").
 
+## Posting on a schedule (`content.mjs`, details in `docs/CONTENT.md`)
+
+When someone wants regular content for a business (not one video): a brand folder (`brands/<name>/`, git-ignored;
+`node content.mjs init <name>`, then fill in `brand.json` with them), an idea inbox, and one plan per week.
+`plan` makes the week's slots; you choose ideas, write each hook, build each video with the tools below in the
+brand's look, write captions, `mark … built`, `check`, then `review` writes one approval page. **Schedule or post
+only what the owner approved** (`apply` their decisions, `queue` lists what's cleared; use their scheduler, e.g.
+Buffer if connected). Record results in `brands/<name>/results.md` and read it before the next plan. Never put a
+real brand's details in a committed file; `brands/example/` is the only one in git.
+
 ## Make it look expensive (`kit/fx.js`, all on `FX`)
 
 Default to this for explainers and motion graphics; flat backgrounds look cheap.

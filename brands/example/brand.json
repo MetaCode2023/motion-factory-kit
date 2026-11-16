@@ -1,0 +1,20 @@
+{
+  "name": "Example Co",
+  "one_line": "What the business does, in one plain sentence.",
+  "audience": "Who the posts are for and what they already know.",
+  "voice": "How it sounds: plain, dry, direct. Two or three sentences, with one example line.",
+  "never": ["words, claims or topics this brand does not post"],
+  "cta": "What a viewer should do next (visit example.com, book a call).",
+  "look": { "theme": "aurora", "accent": "#3CE0FF" },
+  "pillars": [
+    { "name": "teach", "about": "Explain one idea the audience needs", "share": 0.5 },
+    { "name": "proof", "about": "A result, a demo, a customer story", "share": 0.3 },
+    { "name": "behind", "about": "How the work gets done", "share": 0.2 }
+  ],
+  "channels": [
+    { "name": "linkedin", "format": "short", "per_week": 2 },
+    { "name": "instagram", "format": "short", "per_week": 2 },
+    { "name": "youtube", "format": "long", "per_week": 0 }
+  ],
+  "scheduler": "buffer"
+}
