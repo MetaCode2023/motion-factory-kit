@@ -217,6 +217,15 @@
   };
   // Motion blur where things move fastest: the first moments of every insert (the landing and the entrances).
   LF.blur = { samples: 4, around: [0.3], window: 0.55 };
+  // The named curves from design/MOTION-RULES.md: LF.E.enter(k), .move, .resolve, .exit (k in 0..1).
+  // Use these for new work; keep overshoot (outBack) for physical impacts only.
+  const bez = (x1, y1, x2, y2) => (k) => {
+    k = M.clamp(k); if (k <= 0 || k >= 1) return k;
+    let u = k;                                        // solve x(u) = k, then return y(u)
+    for (let i = 0; i < 6; i++) { const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u - k, dx = 3 * (1 - u) * (1 - u) * x1 + 6 * (1 - u) * u * (x2 - x1) + 3 * u * u * (1 - x2); if (Math.abs(dx) < 1e-6) break; u = M.clamp(u - x / dx); }
+    return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u;
+  };
+  LF.E = { enter: bez(0.16, 1, 0.3, 1), move: bez(0.2, 0.8, 0.2, 1), resolve: bez(0.22, 1, 0.36, 1), exit: bez(0.4, 0, 1, 1) };
   LF.pulse = (t, speed = 2, phase = 0) => 0.5 + 0.5 * Math.sin(t * speed + phase);
 
   window.LF = LF;

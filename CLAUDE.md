@@ -21,7 +21,8 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
    - *Creator-native organic posts* (a spoken list over pictures, an idea explained over the thing itself,
      a meme line over a clip) → `rapid-list`, `title-explainer`, `meme-caption`: plain look, one-word captions,
      title pill, quiet music, no effects.
-   - Read `design/DESIGN.md` either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
+   - Read `design/DESIGN.md` and `design/MOTION-RULES.md` (how things move: one idea at a time, timing, easing, no bounce or glow
+     for decoration, the checklist) either way. Check `brand.js`; if it still says "Your Brand", ask once for name, colours and URL, or carry on with the defaults and say so.
 2. **Plan beats before code.** 4–6 beats, one short line each (≤ 7 words on screen), cut times,
    15–30 s total. For ads: hook (0–3 s), problem, show it, proof, CTA. Write 2–3 hook options with
    `M.pick([...])` unless the user wants one.
