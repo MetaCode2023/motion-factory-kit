@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Journey: one continuous world, the camera flies from idea to idea</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+<script src="props.js"></script>
+</head>
+<body>
+<script>
+// Several ideas laid out in one big space. Nothing cuts: the camera pulls back, travels along a path, turns
+// and pushes in on the next idea as the speaker gets to it.
+// Data: stops: "1,326=ways to be dealt two cards=card; 169=hands that play differently=dice; …"
+//         (value = label = prop from props.js; numbers count up on arrival)
+//       say: "ways; hands; aces" (the word that sends the camera to each stop; default: its label)
+//       kicker (small line that stays in the corner), dur, style / color / tint
+const D = M.data({ dur: 20, kicker: 'The deck', stops: '1,326=ways to be dealt two cards=card; 169=hands that play differently=dice; 1 in 221=hands is pocket aces=coin; 1 in 5=times aces lose to kings=scale', say: '' });
+const th = LF.theme(D);
+const STOPS = (Array.isArray(D.stops) ? D.stops : String(D.stops).split(';')).map((s) => String(s).split('=').map((x) => x.trim())).filter((s) => s[0]).map(([value, label = '', prop = ''], i) => ({
+  value, label, prop, num: LF.parseNumber(value),
+  x: i * 2100, y: 620 * Math.sin(i * 1.35 + 0.4), r: 0.2 * Math.sin(i * 2.3 + 1),
+}));
+const SAY = String(D.say || '').split(';').map((s) => s.trim());
+const AT = LF.schedule(D, STOPS.map((s, i) => SAY[i] || s.label || s.value), { start: 0.5, end: D.dur - 2.2, gap: 2.4 });
+AT[0] = 0.5;
+const TRAVEL = 1.3;                                   // seconds on the move before each arrival
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic',
+  motionBlur: { samples: 6, around: [0.3, ...AT.slice(1).map((a) => a - TRAVEL / 2)], window: TRAVEL / 2 + 0.15 },
+  sfx: [{ at: 0.4, name: 'hit', volume: 0.5 }, ...AT.slice(1).flatMap((a) => [{ at: a - TRAVEL, name: 'whoosh', volume: 0.5 }, { at: a, name: 'pop', volume: 0.55 }])] });
+
+// Camera: where it is, how far back, and how it's turned at time t.
+function cam(t) {
+  let i = 0; while (i < STOPS.length - 1 && t >= AT[i + 1] - TRAVEL) i++;
+  const a = STOPS[i];
+  if (i === 0 || t >= AT[i]) {                        // resting on stop i: a slow push and drift
+    const since = t - AT[i];
+    return { x: a.x + 14 * Math.sin(t * 0.5), y: a.y + 8 * Math.cos(t * 0.4), z: 1 + 0.035 * Math.min(1, since / 4), r: a.r, i, k: 1 };
+  }
+  const from = STOPS[i - 1], k = M.ease.inOutCubic(M.clamp((t - (AT[i] - TRAVEL)) / TRAVEL));
+  const rest = 1 + 0.035 * Math.min(1, (AT[i] - TRAVEL - AT[i - 1]) / 4);
+  return { x: M.lerp(from.x, a.x, k), y: M.lerp(from.y, a.y, k) - 140 * Math.sin(k * Math.PI), z: M.lerp(rest, 1, k) - 0.52 * Math.sin(k * Math.PI), r: M.lerp(from.r, a.r, k), i, k };
+}
+
+function draw(c, t) {
+  LF.backdrop(c, t, th, { particles: false });
+  const C = cam(t);
+  // a far layer of dots that moves less than the world: depth
+  c.save(); c.translate(960, 540); c.scale(0.6 + 0.4 * C.z, 0.6 + 0.4 * C.z); c.rotate(-C.r * 0.6); c.translate(-C.x * 0.35, -C.y * 0.35);
+  c.fillStyle = FX.alpha(th.color, th.light ? 0.16 : 0.2);
+  const gx = Math.floor((C.x * 0.35) / 160) * 160, gy = Math.floor((C.y * 0.35) / 160) * 160;
+  for (let x = gx - 2080; x <= gx + 2080; x += 160) for (let y = gy - 1440; y <= gy + 1440; y += 160) { c.beginPath(); c.arc(x, y, 3, 0, Math.PI * 2); c.fill(); }
+  c.restore();
+
+  c.save(); c.translate(960, 540); c.scale(C.z, C.z); c.rotate(-C.r); c.translate(-C.x, -C.y);
+  // the road between ideas, drawn as far as the camera has got
+  c.strokeStyle = FX.alpha(th.color, 0.5); c.lineWidth = 6; c.setLineDash([26, 22]); c.lineCap = 'round';
+  for (let i = 1; i < STOPS.length; i++) {
+    const a = STOPS[i - 1], b = STOPS[i], k = i < C.i ? 1 : i === C.i ? C.k : 0; if (k <= 0) continue;
+    c.beginPath();
+    for (let u = 0; u <= k + 1e-6; u += 0.02) { const x = M.lerp(a.x + 520, b.x - 620, u), y = M.lerp(a.y, b.y, u) - 140 * Math.sin(u * Math.PI); u ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.stroke();
+  }
+  c.setLineDash([]);
+  STOPS.forEach((s, i) => {
+    const since = t - AT[i]; if (since < -0.25 && i > 0) return;
+    const pop = i === 0 ? M.ease.outBack(M.clamp((t - 0.3) / 0.5)) : M.ease.outBack(M.clamp((since + 0.25) / 0.55));
+    c.save(); c.translate(s.x, s.y); c.rotate(s.r);
+    // a ring it lands on, the number of the stop behind it
+    c.globalAlpha = 0.5 * M.clamp(pop); c.strokeStyle = FX.alpha(th.color, 0.4); c.lineWidth = 3; c.beginPath(); c.arc(0, 0, 560, 0, Math.PI * 2); c.stroke();
+    M.text(c, String(i + 1).padStart(2, '0'), -560, -420, { font: `800 150px ${LF.F.display}`, color: FX.alpha(th.color, 0.16) });
+    c.globalAlpha = 1;
+    const hasProp = PR.names.includes(s.prop), tx = hasProp ? 150 : 0;
+    if (hasProp) PR.draw(c, s.prop, -430, -10 + PR.bob(t, i, 8), 330 * pop, { color: th.color, rot: -0.08 });
+    const cnt = M.ease.outCubic(M.clamp((since - 0.05) / 1.1)), shown = s.num && i ? LF.formatNumber(s.num, s.num.num * (since < 0 ? 0 : cnt)) : s.value;
+    const size = Math.min(250, Math.floor(1050 / Math.max(3, s.value.length) * 1.7));
+    c.save(); c.translate(tx, 0); c.scale(pop, pop);
+    FX.glow(c, () => FX.gradientText(c, shown, 0, 30, { font: `800 ${size}px ${LF.F.display}`, colors: [th.ink, th.color], align: 'center', t }), { color: th.color, blur: 46, strength: 0.6 });
+    c.restore();
+    const la = M.prog(t, AT[i] + 0.35, 0.4);
+    if (la > 0) LF.para(c, s.label, tx, 80 + 18 * (1 - la), { font: `700 60px ${LF.F.display}`, color: th.ink, width: 900, align: 'center', alpha: la });
+    c.restore();
+  });
+  c.restore();
+
+  // fixed to the screen: the kicker and where we are
+  if (D.kicker) M.text(c, String(D.kicker).toUpperCase(), 120, 120, { font: `600 30px ${LF.F.mono}`, color: th.color, alpha: M.prog(t, 0.2, 0.4) });
+  STOPS.forEach((s, i) => { c.beginPath(); c.arc(124 + i * 34, 968, i === C.i ? 9 : 6, 0, Math.PI * 2); c.fillStyle = i <= C.i ? th.color : LF.w(th, 0.25); c.fill(); });
+  LF.vignette(c, th, 0.5);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Simulation: deal the hands and watch the odds settle</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="poker.js"></script>
+</head>
+<body>
+<script>
+// The picture is the math running. Part 1 deals two-card hands from a shuffled deck, tens of thousands of them,
+// and counts how often pocket aces come up. Part 2 plays aces against kings to the river, thousands of times,
+// with a real hand evaluator. Every number on screen is counted from the hands dealt (seeded, so each render
+// is identical); the exact odds are shown beside them.
+// Data: dur, deals (hands in part 1), runs (showdowns in part 2), seed, split (0-1: where part 2 starts),
+//       say: "aces; kings" (the words that start each part), style / color / tint
+const D = M.data({ dur: 20, deals: 30000, runs: 4000, seed: 7, split: 0.52, say: '' });
+const th = LF.theme(D);
+const rnd = FX.rng(+D.seed || 7);
+const RANKS = '23456789TJQKA', SUITS = 'shdc';
+const deck = () => Array.from({ length: 52 }, (_, i) => i);
+const draw2 = (d, n) => { for (let i = 0; i < n; i++) { const j = i + Math.floor(rnd() * (d.length - i)); [d[i], d[j]] = [d[j], d[i]]; } return d.slice(0, n); };
+const R = (c) => c >> 2, S = (c) => c & 3, show = (c) => ({ rank: RANKS[R(c)] === 'T' ? '10' : RANKS[R(c)], suit: SUITS[S(c)] });
+
+// ---- part 1: deal hands, count pocket aces ------------------------------------------------------------
+const DEALS = Math.max(1000, +D.deals), HANDS = [], ACE_AT = [];
+for (let n = 0; n < DEALS; n++) { const h = draw2(deck(), 2); if (n % 97 === 0 || (R(h[0]) === 12 && R(h[1]) === 12)) HANDS.push({ n, h }); if (R(h[0]) === 12 && R(h[1]) === 12) ACE_AT.push(n); }
+const acesBy = (n) => { let lo = 0, hi = ACE_AT.length; while (lo < hi) { const m = (lo + hi) >> 1; ACE_AT[m] < n ? (lo = m + 1) : (hi = m); } return lo; };
+
+// ---- part 2: aces against kings, all five cards, a real evaluator -------------------------------------
+function score(cards) {                                // best five of seven, as one comparable number
+  const cnt = new Array(13).fill(0), su = [0, 0, 0, 0]; cards.forEach((c) => { cnt[R(c)]++; su[S(c)]++; });
+  const fs = su.findIndex((x) => x >= 5);
+  const straight = (has) => { for (let hi = 12; hi >= 3; hi--) { let ok = true; for (let k = 0; k < 5; k++) { const r = hi - k; if (!has(r < 0 ? 12 : r)) { ok = false; break; } } if (ok) return hi; } return -1; };
+  const pack = (cat, ks) => ks.concat([0, 0, 0, 0, 0]).slice(0, 5).reduce((a, k) => a * 14 + k + 1, cat);
+  if (fs >= 0) { const fr = new Array(13).fill(false); cards.forEach((c) => { if (S(c) === fs) fr[R(c)] = true; }); const sf = straight((r) => fr[r]); if (sf >= 0) return pack(8, [sf]); }
+  const by = (n) => { const o = []; for (let r = 12; r >= 0; r--) if (cnt[r] === n) o.push(r); return o; };
+  const q = by(4), tr = by(3), p = by(2), s1 = by(1);
+  if (q.length) return pack(7, [q[0], Math.max(...[...tr, ...p, ...s1])]);
+  if (tr.length && (tr.length > 1 || p.length)) return pack(6, [tr[0], Math.max(tr[1] ?? -1, p[0] ?? -1)]);
+  if (fs >= 0) { const fl = cards.filter((c) => S(c) === fs).map(R).sort((a, b) => b - a); return pack(5, fl); }
+  const st = straight((r) => cnt[r] > 0); if (st >= 0) return pack(4, [st]);
+  if (tr.length) return pack(3, [tr[0], ...s1]);
+  if (p.length > 1) return pack(2, [p[0], p[1], Math.max(p[2] ?? -1, s1[0] ?? -1)]);
+  if (p.length) return pack(1, [p[0], ...s1]);
+  return pack(0, s1);
+}
+const AA = [12 * 4 + 0, 12 * 4 + 1], KK = [11 * 4 + 2, 11 * 4 + 3];
+const RUNS = Math.max(200, +D.runs), OUT = [], BOARDS = [];
+let w = 0;
+for (let n = 0; n < RUNS; n++) {
+  const rest = deck().filter((c) => !AA.includes(c) && !KK.includes(c)), b = draw2(rest, 5);
+  const a = score([...AA, ...b]), k = score([...KK, ...b]);
+  w += a > k ? 1 : a === k ? 0.5 : 0; OUT.push(w);
+  if (n % 23 === 0 || n === RUNS - 1) BOARDS.push({ n, b, win: a > k ? 1 : a === k ? 0 : -1 });
+}
+
+const SAY = String(D.say || '').split(';').map((s) => s.trim());
+const T1 = 0.6, T2 = Math.max(T1 + 4, LF.when(D, SAY[1] || 'kings', 2) ?? D.dur * (+D.split || 0.52)), END1 = T2 - 0.9, END2 = D.dur - 1.6;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: { samples: 4, around: [0.3, T2], window: 0.5 },
+  sfx: [{ at: 0.3, name: 'riser', volume: 0.3 }, ...Array.from({ length: 10 }, (_, i) => ({ at: T1 + 0.3 + i * (END1 - T1) / 12, name: 'tick', volume: 0.3 })), { at: END1, name: 'chime', volume: 0.5 }, { at: T2 - 0.3, name: 'whoosh', volume: 0.45 }, { at: END2, name: 'success', volume: 0.5 }] });
+
+const fmtN = (n) => Math.round(n).toLocaleString('en-US');
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const two = t >= T2 - 0.35;
+  const end = LF.drift(c, t - (two ? T2 - 0.35 : 0), { dur: two ? D.dur - T2 : T2 }, { zoom: 0.04, x: 10, y: 6 });
+  const fadeA = 1 - M.prog(t, T2 - 0.6, 0.3), fadeB = M.prog(t, T2 - 0.2, 0.4);
+
+  if (fadeA > 0) {
+    c.save(); c.globalAlpha = fadeA;
+    LF.title(c, t, { kicker: 'Simulated, not quoted', headline: 'Deal the hands. Count the aces.', accent: 'aces' }, th);
+    // the hands go by faster and faster: slow enough to read at first, a blur of thousands by the end
+    const u = M.clamp((t - T1) / (END1 - T1)), n = Math.floor(DEALS * Math.pow(u, 2.6)), aces = acesBy(n + 1);
+    let hi = HANDS.length - 1; while (hi > 0 && HANDS[hi].n > n) hi--;
+    for (let k = 0; k < 6; k++) {
+      const H = HANDS[hi - k]; if (!H || t < T1) break;
+      const isA = R(H.h[0]) === 12 && R(H.h[1]) === 12, x = 250 + k * 250, a = 1 - k * 0.15;
+      H.h.forEach((cd, j) => P.card(c, x + j * 62, 470 + (k ? 0 : -14), 118, { ...show(cd), alpha: a, rot: (j ? 0.07 : -0.07), glow: isA ? 1 : 0, glowColor: th.warm }));
+    }
+    // counted from the hands above
+    M.text(c, 'HANDS DEALT', 250, 720, { font: `600 28px ${LF.F.mono}`, color: th.muted });
+    M.text(c, fmtN(n), 250, 810, { font: `800 92px ${LF.F.display}`, color: th.ink });
+    M.text(c, 'POCKET ACES', 760, 720, { font: `600 28px ${LF.F.mono}`, color: th.muted });
+    M.text(c, fmtN(aces), 760, 810, { font: `800 92px ${LF.F.display}`, color: th.warm });
+    M.text(c, 'ONE IN', 1180, 720, { font: `600 28px ${LF.F.mono}`, color: th.muted });
+    FX.glow(c, () => M.text(c, aces ? fmtN(n / aces) : '…', 1180, 810, { font: `800 92px ${LF.F.display}`, color: th.color }), { color: th.color, blur: 30, strength: 0.6 });
+    M.text(c, 'exact: 1 in 221', 1184, 860, { font: `600 26px ${LF.F.mono}`, color: th.muted });
+    // the running answer, settling on the exact line
+    const X0 = 250, X1 = 1670, Y = 960, Hh = 70, yOf = (v) => Y - Hh * M.clamp((v - 100) / 300);
+    c.strokeStyle = LF.w(th, 0.25); c.setLineDash([8, 8]); c.lineWidth = 2; c.beginPath(); c.moveTo(X0, yOf(221)); c.lineTo(X1, yOf(221)); c.stroke(); c.setLineDash([]);
+    c.strokeStyle = th.color; c.lineWidth = 4; c.lineJoin = 'round'; c.beginPath();
+    let started = false;
+    for (let s = 0; s <= 200; s++) { const m = Math.floor((DEALS * s) / 200); if (m > n) break; const k = acesBy(m + 1); if (k < 2) continue; const x = X0 + (X1 - X0) * (s / 200), y = yOf(m / k); started ? c.lineTo(x, y) : c.moveTo(x, y); started = true; }
+    c.stroke();
+    c.restore();
+  }
+
+  if (fadeB > 0) {
+    c.save(); c.globalAlpha = fadeB;
+    LF.title(c, t - (T2 - 0.2), { kicker: 'Aces against kings', headline: 'Run it to the river. Again and again.', accent: 'Again and again.' }, th);
+    const u = M.clamp((t - T2) / (END2 - T2)), n = Math.max(1, Math.floor(RUNS * Math.pow(u, 2.2))), wins = OUT[Math.min(RUNS, n) - 1], pct = (wins / n) * 100;
+    let bi = BOARDS.length - 1; while (bi > 0 && BOARDS[bi].n > n - 1) bi--;
+    const B = BOARDS[bi];
+    AA.forEach((cd, j) => P.card(c, 300 + j * 96, 480, 150, { ...show(cd), rot: j ? 0.06 : -0.06, glow: B.win > 0 ? 0.8 : 0, glowColor: th.good }));
+    KK.forEach((cd, j) => P.card(c, 1524 + j * 96, 480, 150, { ...show(cd), rot: j ? 0.06 : -0.06, glow: B.win < 0 ? 0.8 : 0, glowColor: th.bad }));
+    B.b.forEach((cd, j) => P.card(c, 700 + j * 130, 480, 112, show(cd)));
+    M.text(c, B.win > 0 ? 'ACES HOLD' : B.win < 0 ? 'KINGS WIN' : 'SPLIT', 960, 640, { font: `700 30px ${LF.F.mono}`, color: B.win > 0 ? th.good : B.win < 0 ? th.bad : th.muted, align: 'center' });
+    // the tally
+    const X0 = 250, Wd = 1420, Y = 760, Hb = 54, wa = Wd * (pct / 100);
+    M.roundRect(c, X0, Y, Wd, Hb, 27); c.fillStyle = FX.alpha(th.bad, 0.85); c.fill();
+    c.save(); M.roundRect(c, X0, Y, Wd, Hb, 27); c.clip(); c.fillStyle = th.good; c.fillRect(X0, Y, wa, Hb); c.restore();
+    M.text(c, `Aces win ${pct.toFixed(1)}%`, X0, Y + 120, { font: `800 64px ${LF.F.display}`, color: th.ink });
+    M.text(c, `Kings win ${(100 - pct).toFixed(1)}%`, X0 + Wd, Y + 120, { font: `800 64px ${LF.F.display}`, color: th.ink, align: 'right' });
+    M.text(c, `${fmtN(n)} hands played out  ·  exact: about 81% to 19%`, 960, Y + 190, { font: `600 26px ${LF.F.mono}`, color: th.muted, align: 'center' });
+    c.restore();
+  }
+  end();
+  LF.vignette(c, th, 0.45);
+}
+</script>
+</body>
+</html>
