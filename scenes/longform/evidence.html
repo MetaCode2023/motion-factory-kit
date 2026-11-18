@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Evidence: real footage, framed and labelled</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A piece of real footage (an experiment, an archive clip) in a frame, with what it shows and
+// a credit line, so the viewer knows it is real and where it comes from.
+// Data: dur, kicker, headline, accent, file (video, relative to this scene), from (seconds into it),
+//       speed, caption (one line under it, lands on its words), credit (small print), color, tint
+const D = M.data({ dur: 6, kicker: 'THE REAL EXPERIMENT', headline: 'One electron at a time', accent: 'One electron',
+  file: '../../assets/broll/double-slit-buildup.mp4', from: 0, speed: 1, caption: '', credit: '' });
+const th = LF.theme(D);
+const clip = M.video(D.file, { trim: +D.from || 0, speed: +D.speed || 1, audio: false });
+const CAP = D.caption ? Math.min(D.dur - 1.5, LF.when(D, D.caption, 1.2) ?? 1.6) : null;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur,
+  sfx: [{ at: 0.2, name: 'tap', volume: 0.5 }, ...(CAP != null ? [{ at: CAP, name: 'pop', volume: 0.5 }] : [])] });
+const FX0 = 260, FY0 = 250, FW = 1400, FH = 560;
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  const end = LF.drift(c, t, D, { zoom: 0.03, x: 6, y: 4 });
+  FX.text(c, t, String(D.kicker).toUpperCase(), 960, 120, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
+  if (D.headline) M.headline(c, t, D.headline, 960, 160, { start: 0.1, accent: D.accent, accentColor: th.color, max: 66, width: 1500, align: 'center', lines: 1 });
+  const a = LF.E.enter(M.clamp((t - 0.15) / 0.5));
+  c.save(); c.globalAlpha = a; c.translate(0, (1 - a) * 30);
+  c.save(); M.roundRect(c, FX0, FY0, FW, FH, 26); c.clip();
+  c.fillStyle = '#000'; c.fillRect(FX0, FY0, FW, FH);
+  clip.draw(c, t, FX0, FY0, FW, FH, { zoom: 1 + 0.03 * (t / D.dur) });
+  c.restore();
+  c.strokeStyle = FX.alpha(th.color, 0.55); c.lineWidth = 3; M.roundRect(c, FX0, FY0, FW, FH, 26); c.stroke();
+  c.restore();
+  if (CAP != null) FX.text(c, t, D.caption, 960, 875, { at: CAP, mode: 'rise', font: `700 46px ${LF.F.display}`, color: th.ink, align: 'center', maxWidth: 1500 });
+  end();
+  if (D.credit) { // credit sits inside the frame's bottom edge, clear of burned-in captions
+    const ca = M.prog(t, 0.8, 0.4);
+    c.save(); c.globalAlpha = ca * 0.6; c.fillStyle = '#000'; c.fillRect(FX0 + 3, FY0 + FH - 40, FW - 6, 37); c.restore();
+    M.text(c, D.credit, 960, FY0 + FH - 14, { font: `600 18px ${LF.F.mono}`, color: '#d8dbe4', align: 'center', alpha: ca * 0.9, maxWidth: FW - 40 });
+  }
+  LF.vignette(c, th, 0.4);
+}
+</script>
+</body>
+</html>

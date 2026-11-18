@@ -367,7 +367,9 @@ function mixAudio(R, plan, voice, out, stemsDir) {
     f.push(`[${n}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=${ins.audio},afade=t=in:d=0.15,afade=t=out:st=${Math.max(0, ins.dur - 0.3).toFixed(3)}:d=0.3,adelay=${Math.round(ins.at * 1000)}:all=1[s${n}]`);
     fx.push(`[s${n}]`); n++;
   }
-  f.push('[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]');
+  // "voice_clean": true in the plan: rumble cut, broadband hiss down, gentle compression so quiet words carry.
+  const clean = plan.voice_clean ? 'highpass=f=80,afftdn=nr=12:nf=-30,acompressor=threshold=0.1:ratio=3:attack=8:release=120:makeup=1.6,' : '';
+  f.push(`[0:a]${clean}aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]`);
   const parts = ['[voice]'];
   const noVoice = plan.voice === false;   // a version without the voice: music up, no ducking
   if (noVoice) parts[0] = '[vmute]', f.push('[voice]volume=0[vmute]');
@@ -385,6 +387,7 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
 function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
+  R.pipUsed = R.inserts.some((i) => i.layout === 'pip');   // keep caption lines clear of the corner circle
   const EMPH = new Set((R.captions.emphasis || []).map(bare));
   const full = R.inserts.filter((i) => i.layout === 'full' || i.layout === 'pip').map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
@@ -409,14 +412,14 @@ function assCaptions(R, accent, file) {
       if (gapsOnly && covered(a, b)) return;
       // The word being said lights up; a key word (captions.emphasis) also pops up big as it is said.
       const text = ln.map((x, j) => (j !== k ? esc(x.w) : EMPH.has(bare(x.w))
-        ? `{\\c${bgr(accent)}\\fscx100\\fscy100\\t(0,110,\\fscx165\\fscy165)\\t(110,220,\\fscx150\\fscy150)}${esc(x.w)}{\\c&HFFFFFF&\\fscx100\\fscy100}`
+        ? `{\\c${bgr(accent)}\\fscx100\\fscy100\\t(0,120,\\fscx215\\fscy215)\\t(120,260,\\fscx185\\fscy185)}${esc(x.w)}{\\c&HFFFFFF&\\fscx100\\fscy100}`
         : `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}`)).join(' ');
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
   });
   const style = center
     ? 'Style: C,Plus Jakarta Sans,92,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,5,160,160,0,1'
-    : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
+    : `Style: C,Plus Jakarta Sans,62,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,${R.pipUsed ? 440 : 160},${R.pipUsed ? 440 : 160},70,1`;
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
     style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
