@@ -11,6 +11,7 @@
 //   node longform.mjs clip <id>                   # one clip's numbered sentences (path to its .md)
 //   node longform.mjs words <id> [#n]             # word timings (for exact anchors and cutting false starts)
 //   node longform.mjs check edits/longform/x.json # resolve the plan, list every problem, show the timeline
+//   node longform.mjs broll edits/longform/x.json # automatic B-roll: cut to free-license photos/clips of things named (no key)
 //   node longform.mjs stock edits/longform/x.json # download free stock B-roll for "stock" inserts (PEXELS_API_KEY)
 //   node longform.mjs build edits/longform/x.json # preview MP4 + Premiere XML + captions + chapters + report
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
@@ -29,6 +30,8 @@ import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
 import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
+import { autoBroll } from './tools/broll/index.mjs';
+import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
 import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
@@ -147,6 +150,19 @@ try {
     // node longform.mjs remix <plan> --no-voice : the built video with music + effects only
     const r = await remix(args[0], { voice: !rest.includes('--no-voice'), log });
     if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
+    emit(r);
+  } else if (cmd === 'broll') {
+    // Automatic B-roll: find the things named, place them in the gaps, fetch free-license media, lock the picks.
+    const plan = loadPlan(args[0]);
+    const R = resolvePlan(plan, undefined, { autoBroll: false });
+    if (R.errors.length) throw new Error(`fix the plan first:\n  ${R.errors.join('\n  ')}`);
+    R.resolveAt = (f) => { try { return resolveAt(f, R.cuts, R.lib, 'auto_broll.force'); } catch { return null; } };
+    const r = await autoBroll(plan, R, { dry: rest.includes('--dry'), offline: rest.includes('--offline'), log });
+    if (!json) {
+      if (r.off) console.log(r.note);
+      else console.log(`${r.moments} moments, ${r.placed} placed, ${r.ready} with media (${r.fetched} new) from ${r.sources.join(', ') || 'no source'}\n-> ${relative(ROOT, r.report)}\n-> ${relative(ROOT, r.lock)}`);
+      (r.problems || []).slice(0, 12).forEach((p) => console.log('  ! ' + p));
+    }
     emit(r);
   } else if (cmd === 'stock' || cmd === 'pull') {
     const r = await (cmd === 'stock' ? stock : pull)(args[0], { log });

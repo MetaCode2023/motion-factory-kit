@@ -115,7 +115,7 @@ server.registerTool('kit_overview', {
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
-    longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
+    longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_broll (automatic free-license cutaways), longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
     overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
   },
   templates: templates(),
@@ -340,6 +340,12 @@ server.registerTool('longform_pull', {
   description: 'For pull inserts that have a url (and from/to), download just that section with yt-dlp into assets/broll/<id>.mp4 (credited in assets/broll/CREDITS.md); the next build uses them. Only for clips the creator has chosen to use: keep them short and talked over.',
   inputSchema: { plan: z.string() },
 }, async ({ plan }) => text(await cli('longform.mjs', ['pull', inRepo(plan)])));
+
+server.registerTool('longform_broll', {
+  title: 'Automatic B-roll',
+  description: 'Finds the things the speaker names that can be shown (places, landmarks, settings, objects, historic scientists), places a 1.5-3 s cutaway in the gaps between the plan\'s own visuals (never over an animation, the hook or the ending), and fetches free-license photos for them from Openverse and Wikimedia Commons (no key; Pixabay/Pexels too if a key is set). Picks are locked in edits/longform/<name>.broll.lock.json and listed in out/longform/<name>/BROLL.md; edit the lockfile ("status": "drop" | "keep", a new "query", "pick": 2) and run again, then build. The build credits every pick in CREDITS.md. dry: list the moments without downloading.',
+  inputSchema: { plan: z.string(), dry: z.boolean().optional() },
+}, async ({ plan, dry }) => text(await cli('longform.mjs', ['broll', inRepo(plan), ...(dry ? ['--dry'] : [])])));
 
 server.registerTool('longform_stock', {
   title: 'Download stock B-roll',

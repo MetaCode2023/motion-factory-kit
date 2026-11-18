@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs';
 import { loadLibrary } from './library.mjs';
+import { lockedInserts } from '../broll/index.mjs';
 
 export const KINDS = ['animation', 'broll', 'pull', 'image', 'face'];
 // full: the visual fills the frame. side: a box beside the speaker. pip: the visual fills the frame and the
@@ -135,7 +136,7 @@ export function resolveAt(item, cuts, lib, where) {
 
 // Everything the build needs, resolved and checked. Problems are collected, not thrown, so the
 // agent sees all of them at once.
-export function resolvePlan(plan, lib = loadLibrary()) {
+export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}) {
   const errors = [], warnings = [];
   let cuts = [];
   try { cuts = cutList(plan, lib); } catch (e) { errors.push(e.message); return { errors, warnings }; }
@@ -219,6 +220,14 @@ export function resolvePlan(plan, lib = loadLibrary()) {
     }
   });
   for (let k = inserts.length - 1; k >= 0; k--) if (inserts[k].kind === 'face') inserts.splice(k, 1);
+  // Automatic B-roll (node longform.mjs broll): locked picks go into the gaps left between the plan's own visuals.
+  if (autoBroll) {
+    try {
+      const auto = lockedInserts(plan, { inserts, total, resolveAt, cuts, lib });
+      warnings.push(...auto.warnings);
+      if (auto.inserts.length) { inserts.push(...auto.inserts); inserts.sort((a, b) => a.at - b.at); }
+    } catch (e) { warnings.push(`automatic B-roll skipped: ${e.message}`); }
+  }
   for (const ins of inserts) if (ins.kind === 'animation' && ins.src.marks) for (const [key, spec] of Object.entries(ins.src.marks)) {
     if (ins.data[key] > ins.dur) warnings.push(`${ins.where}: mark ${key} lands at ${ins.data[key]}s, after the insert ends (${ins.dur}s)`);
   }

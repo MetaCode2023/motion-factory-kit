@@ -266,7 +266,7 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
   parts.forEach((p, i) => {
     if (!p.ins || p.ins.layout === 'side') return;
     const t = p.ins.src?.transition;
-    p.transition = XFADE.has(t) ? t : p.ins.carried ? 'dissolve' : cycle[nth++ % cycle.length];   // a carried figure stays put while the rest changes
+    p.transition = t === 'cut' ? 'cut' : XFADE.has(t) ? t : p.ins.carried ? 'dissolve' : cycle[nth++ % cycle.length];   // a carried figure stays put while the rest changes
     const before = parts[i - 1], after = parts[i + 1];
     if (before?.ins && before.ins.layout !== 'side' && before.to === p.from && before.ins.media) p.prev = before.ins;
     if (after?.ins && after.ins.layout !== 'side' && after.from === p.to) p.next = true;
@@ -293,10 +293,10 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
         // another visual it transitions from that one's last frame, not from the speaker in between.
         const NORM = `fps=${fps},format=yuv420p,settb=AVTB,setsar=1`;
         const fx = Math.min(1, Math.max(0, plan.face?.x ?? 0.5));
-        const d = Math.min(TRANSITION, D / 4), name = p.transition;
+        const d = Math.min(TRANSITION, D / 4), name = p.transition, cut = name === 'cut';   // cut: straight in and out (short cutaways)
         const inputs = ['-ss', ss, '-i', aroll.video, '-i', ins.media], g = [];
         let nIn = 2;
-        const needs = { in: !p.prev, out: !p.next, face: ins.layout === 'pip' || ins.layout === 'split' };
+        const needs = { in: !p.prev && !cut, out: !p.next && !cut, face: ins.layout === 'pip' || ins.layout === 'split' };
         const outs = [needs.in && 'bgA', needs.out && 'bgB', needs.face && 'bgF'].filter(Boolean);
         g.push(outs.length ? `[0:v]setpts=PTS-STARTPTS,${NORM}${outs.length > 1 ? `,split=${outs.length}` : ''}${outs.map((o) => `[${o}]`).join('')}` : '[0:v]nullsink');
         if (ins.layout === 'pip' && pip) {
@@ -314,16 +314,16 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
           if (needs.face) g.push('[bgF]nullsink');
           g.push(`[1:v]setpts=PTS-STARTPTS,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
         }
-        if (p.prev) {
+        if (p.prev && !cut) {
           // the last frame of the visual before this one, held for the length of the transition
           const still = join(tmp, `${String(k).padStart(4, '0')}-prev.png`);
           ff(['-ss', Math.max(0, p.prev.dur - 2 / fps).toFixed(3), '-i', p.prev.media, '-frames:v', '1', still], `last frame of ${p.prev.id}`);
           inputs.push('-loop', '1', '-t', (d + 1).toFixed(2), '-i', still);
           g.push(`[${nIn}:v]${NORM}[from]`); nIn++;
         }
-        g.push(`[${p.prev ? 'from' : 'bgA'}][vis]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=0[x1]`);
+        if (!cut) g.push(`[${p.prev ? 'from' : 'bgA'}][vis]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=0[x1]`);
         if (needs.out) g.push(`[bgB]trim=start=${(D - d).toFixed(3)},setpts=PTS-STARTPTS,${NORM}[tail]`, `[x1][tail]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=${(D - d).toFixed(3)}[x2]`);
-        ff([...inputs, '-filter_complex', `${g.join(';')};[${needs.out ? 'x2' : 'x1'}]setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
+        ff([...inputs, '-filter_complex', `${g.join(';')};[${cut ? 'vis' : needs.out ? 'x2' : 'x1'}]setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
       }
     }
     if ((k + 1) % 20 === 0) log(`  picture ${k + 1}/${parts.length}`);
@@ -384,7 +384,7 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
 function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
-  const full = R.inserts.filter((i) => i.layout === 'full' || i.layout === 'pip').map((i) => [i.at, i.at + i.dur]);
+  const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
   const center = R.voiceOnly;
   const bgr = (hex) => { const h = hex.replace('#', ''); return `&H${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
@@ -448,7 +448,7 @@ function report(R, plan, files) {
   const removed = R.source - R.total;
   const lines = [`# ${plan.title || plan.name}: build report`, '',
     `Length **${fmt(R.total)}** from ${fmt(R.source)} of talking (${fmt(removed)} of pauses and fillers removed, ${R.cuts.length} pieces).`,
-    `Inserts: ${R.inserts.length} (${['animation', 'broll', 'image', 'pull'].map((k) => `${R.inserts.filter((i) => i.kind === k).length} ${k}`).join(', ')}).`, ''];
+    `Inserts: ${R.inserts.length} (${['animation', 'broll', 'image', 'pull'].map((k) => `${R.inserts.filter((i) => i.kind === k).length} ${k}`).join(', ')}${R.inserts.some((i) => i.autoBroll) ? `; ${R.inserts.filter((i) => i.autoBroll).length} of them automatic B-roll, credited in CREDITS.md` : ''}).`, ''];
   const checks = [];
   const pass = (ok, text) => checks.push(`- ${ok ? 'PASS' : 'FIX '} ${text}`);
   pass(!R.warnings.length, R.warnings.length ? `warnings:\n${R.warnings.map((w) => `  - ${w}`).join('\n')}` : 'no plan warnings');
@@ -496,6 +496,8 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const write = (name, text) => { const f = join(dir, name); writeFileSync(f, text); files.push(relative(ROOT, f)); return f; };
   write(`${plan.name}.srt`, srt(R.words));
   if (R.chapters.length) write('CHAPTERS.txt', R.chapters.map((c) => `${fmtChapter(c.at)} ${c.title}`).join('\n') + '\n');
+  const auto = R.inserts.filter((i) => i.autoBroll);
+  if (auto.length) write('CREDITS.md', `# Credits: ${plan.title || plan.name}\n\nB-roll (paste into the video description):\n\n${[...new Set(auto.map((i) => `- ${i.credit}`))].join('\n')}\n`);
   const pl = pullList(R, plan);
   if (pl) write('PULL-LIST.md', pl);
   if (!previewOnly) {

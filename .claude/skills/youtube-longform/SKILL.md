@@ -16,6 +16,7 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
 4. They record from `scripts/<name>.read.txt`. Meanwhile write any new animation scenes (in parallel if you
    can) and check a still of each.
 5. `node longform.mjs from-script scripts/<name>.script.md <recording> ` → read the alignment report →
+   `broll` (automatic free-license cutaways; read BROLL.md, drop or re-search bad picks in the lockfile) →
    `stock` / `pull` → `build`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
