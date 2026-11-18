@@ -5,12 +5,13 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { checkPlan } from '../tools/plans.mjs';
 import { normalizeWords, parseCues, readSidecar, wordsFromCues } from '../tools/transcripts.mjs';
 
-const server = new URL('../mcp/server.mjs', import.meta.url).pathname;
+const server = fileURLToPath(new URL('../mcp/server.mjs', import.meta.url));
 
 test('MCP server lists its tools and answers kit_overview, check_plan and render_still', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'mfk-mcp-'));
