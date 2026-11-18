@@ -12,7 +12,8 @@
 // down and glowing the whole time: the thing nobody can see.
 // Data: dur, kicker, headline, accent, board: "Ks 9h 4d Jc" (flop + turn), river: "Qs", hole: "Ah Ad" (yours,
 //   optional), say: "flop; turn; river" (trigger words), flipAt (seconds; overrides the river's time), label,
-//   reveal: false keeps the river face down (the camera still drops in on it: the moment before)
+//   reveal: false keeps the river face down (the camera still drops in on it: the moment before),
+//   show: 3 turns over only the flop (0-5 cards; the rest stay face down)
 import { stage, THREE, card, poseCard, chip, table, camPath, schedule, prog, ease, clamp, hudTitle, hudText, vignette, FONT, rng, parseCard } from './kit3d.js';
 
 const S = await stage({ dur: 8, kicker: 'THE BOARD', headline: 'Five cards. One still hidden.', accent: 'hidden', board: 'Ks 9h 4d Jc', river: 'Qs', hole: '', say: 'flop; turn; river', label: 'THE RIVER' });
@@ -22,8 +23,9 @@ const BOARD = [...list(D.board).slice(0, 4), D.river], HOLE = list(D.hole || '')
 const SAY = String(D.say).split(';').map((x) => x.trim());
 let [T_FLOP, T_TURN, T_RIVER] = schedule(D, SAY, { start: 1.0, end: D.dur - 2.2, gap: 0.9 });
 if (D.flipAt != null) T_RIVER = Math.max(T_TURN + 0.6, Number(D.flipAt));
-const REVEAL = D.reveal !== false && D.reveal !== 'false';
-const FLIP = [T_FLOP, T_FLOP + 0.14, T_FLOP + 0.28, T_TURN, REVEAL ? T_RIVER : 1e9];
+const SHOW = D.show == null ? 5 : Math.max(0, Math.min(5, +D.show));   // show: 3 turns only the flop (the rest stay face down)
+const REVEAL = D.reveal !== false && D.reveal !== 'false' && SHOW >= 5;
+const FLIP = [T_FLOP, T_FLOP + 0.14, T_FLOP + 0.28, T_TURN, REVEAL ? T_RIVER : 1e9].map((x, i) => (i < SHOW ? x : 1e9));
 
 scene.add(table());
 const X = (i) => -1.72 + i * 0.86;
@@ -44,7 +46,7 @@ const cam = camPath([
 ]);
 
 S.run({
-  sfx: [...[0, 1, 2].map((i) => ({ at: FLIP[i], name: 'tap', volume: 0.6 })), { at: T_TURN, name: 'tap', volume: 0.6 },
+  sfx: [...[0, 1, 2].filter((i) => i < SHOW).map((i) => ({ at: FLIP[i], name: 'tap', volume: 0.6 })), ...(SHOW > 3 ? [{ at: T_TURN, name: 'tap', volume: 0.6 }] : []),
     { at: Math.max(0, T_RIVER - 1.2), name: 'riser', volume: 0.4 }, ...(REVEAL ? [{ at: T_RIVER + 0.2, name: 'hit', volume: 0.8 }, { at: T_RIVER + 0.9, name: 'chime', volume: 0.5 }] : [])],
   update(t) {
     cam(camera, t);

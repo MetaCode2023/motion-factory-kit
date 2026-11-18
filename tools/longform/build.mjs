@@ -5,7 +5,7 @@ import { cpus } from 'node:os';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
+import { FF, H, ROOT, W, bare, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
@@ -306,9 +306,10 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
             `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
           nIn += 2;
         } else if (ins.layout === 'split') {
-          const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
+          // split_crop: show only the middle of the visual (its width in px), bigger, for content that sits centred.
+          const hw = W / 2, cw = Math.max(hw, Math.min(W, +ins.src?.split_crop || W)), vh = Math.min(H, Math.round(hw * H / cw / 2) * 2);
           g.push(`[bgF]crop=${hw}:${H}:(iw-${hw})*${fx}:0[L]`,
-            `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr]`,
+            `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]crop=${cw}:${H}:${(W - cw) / 2}:0,scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr]`,
             `[L][Rr]hstack,drawbox=x=${hw - 3}:y=0:w=6:h=${H}:color=${col}:t=fill,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
         } else {
           if (needs.face) g.push('[bgF]nullsink');
@@ -366,7 +367,9 @@ function mixAudio(R, plan, voice, out, stemsDir) {
     f.push(`[${n}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=${ins.audio},afade=t=in:d=0.15,afade=t=out:st=${Math.max(0, ins.dur - 0.3).toFixed(3)}:d=0.3,adelay=${Math.round(ins.at * 1000)}:all=1[s${n}]`);
     fx.push(`[s${n}]`); n++;
   }
-  f.push('[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]');
+  // "voice_clean": true in the plan: rumble cut, broadband hiss down, gentle compression so quiet words carry.
+  const clean = plan.voice_clean ? 'highpass=f=80,afftdn=nr=12:nf=-30,acompressor=threshold=0.1:ratio=3:attack=8:release=120:makeup=1.6,' : '';
+  f.push(`[0:a]${clean}aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]`);
   const parts = ['[voice]'];
   const noVoice = plan.voice === false;   // a version without the voice: music up, no ducking
   if (noVoice) parts[0] = '[vmute]', f.push('[voice]volume=0[vmute]');
@@ -384,6 +387,8 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
 function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
+  R.pipUsed = R.inserts.some((i) => i.layout === 'pip');   // keep caption lines clear of the corner circle
+  const EMPH = new Set((R.captions.emphasis || []).map(bare));
   const full = R.inserts.filter((i) => i.layout === 'full' || i.layout === 'pip').map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
   const center = R.voiceOnly;
@@ -399,18 +404,22 @@ function assCaptions(R, accent, file) {
   });
   if (cur.length) lines.push(cur);
   const ev = [];
-  for (const ln of lines) {
-    const end = ln[ln.length - 1].e + 0.15;
+  lines.forEach((ln, li) => {
+    const nextStart = lines[li + 1]?.[0].s ?? Infinity;
+    const end = Math.min(ln[ln.length - 1].e + 0.15, nextStart);   // never two caption lines on screen at once
     ln.forEach((w, k) => {
       const a = w.s, b = k + 1 < ln.length ? ln[k + 1].s : end;
       if (gapsOnly && covered(a, b)) return;
-      const text = ln.map((x, j) => (j === k ? `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}` : esc(x.w))).join(' ');
+      // The word being said lights up; a key word (captions.emphasis) also pops up big as it is said.
+      const text = ln.map((x, j) => (j !== k ? esc(x.w) : EMPH.has(bare(x.w))
+        ? `{\\c${bgr(accent)}\\fscx100\\fscy100\\t(0,120,\\fscx215\\fscy215)\\t(120,260,\\fscx185\\fscy185)}${esc(x.w)}{\\c&HFFFFFF&\\fscx100\\fscy100}`
+        : `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}`)).join(' ');
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
-  }
+  });
   const style = center
     ? 'Style: C,Plus Jakarta Sans,92,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,5,160,160,0,1'
-    : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
+    : `Style: C,Plus Jakarta Sans,62,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,${R.pipUsed ? 440 : 160},${R.pipUsed ? 440 : 160},70,1`;
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
     style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
