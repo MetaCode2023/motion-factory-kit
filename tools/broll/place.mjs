@@ -12,6 +12,15 @@ export const PLACE = {
   end: 8,        // nothing in the last seconds (the call to action)
   gap: 0.5,      // clear space around existing inserts
   spacing: 6,    // minimum seconds between two cutaways
+  fill: false,   // true: each cutaway runs on until the next one (or the next visual), so B-roll covers the talk
+  hold: 8,       // with fill: the longest a single shot is held before the speaker shows again
+};
+
+// "mode": "throughout" (the default for long-form): B-roll under the whole talk, a new shot for every thing
+// named, each held until the next. "accent": the old behaviour, a short cutaway now and then.
+export const MODES = {
+  throughout: { every: 2, min: 1.2, max: 8, hook: 0, end: 0, spacing: 1.5, fill: true, hold: 8 },
+  accent: {},
 };
 
 /**
@@ -40,5 +49,12 @@ export function placeBroll(moments, inserts, total, opts = {}) {
     placed.push({ ...m, at, dur: +dur.toFixed(2) });
   }
   placed.sort((a, b) => a.at - b.at);
+  if (o.fill) {
+    // Hold each shot until the next cutaway or visual starts (up to `hold` seconds), so there's no gap to fill.
+    placed.forEach((p, k) => {
+      const next = Math.min(placed[k + 1]?.at ?? total, busy.find(([a]) => a >= p.at + 0.01)?.[0] ?? total, total);
+      p.dur = +Math.min(next - p.at, Math.max(p.dur, Math.min(o.hold, next - p.at))).toFixed(2);
+    });
+  }
   return { placed, skipped };
 }

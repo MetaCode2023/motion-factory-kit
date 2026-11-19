@@ -3572,6 +3572,124 @@
     "poker table cards chips",
     "poker game"
    ]
+  },
+  "electron": {
+   "type": "object",
+   "q": [
+    "electron microscope image",
+    "cathode ray tube glow"
+   ]
+  },
+  "electrons": {
+   "type": "object",
+   "q": [
+    "electron microscope image",
+    "cathode ray tube glow"
+   ]
+  },
+  "double slit": {
+   "type": "object",
+   "q": [
+    "double-slit experiment",
+    "double slit interference pattern"
+   ]
+  },
+  "double-slit": {
+   "type": "object",
+   "q": [
+    "double-slit experiment",
+    "double slit interference pattern"
+   ]
+  },
+  "two slits": {
+   "type": "object",
+   "q": [
+    "double-slit experiment",
+    "double slit interference pattern"
+   ]
+  },
+  "interference pattern": {
+   "type": "object",
+   "q": [
+    "double slit interference pattern",
+    "laser interference fringes"
+   ]
+  },
+  "photon": {
+   "type": "object",
+   "q": [
+    "laser beam lab",
+    "single photon detector"
+   ]
+  },
+  "photons": {
+   "type": "object",
+   "q": [
+    "laser beam lab",
+    "single photon detector"
+   ]
+  },
+  "laser": {
+   "type": "object",
+   "q": [
+    "laser beam lab",
+    "laser light optics table"
+   ]
+  },
+  "particle accelerator": {
+   "type": "setting",
+   "q": [
+    "particle accelerator tunnel",
+    "CERN LHC tunnel"
+   ]
+  },
+  "particle detector": {
+   "type": "setting",
+   "q": [
+    "CERN ATLAS detector",
+    "particle detector CERN"
+   ]
+  },
+  "large hadron collider": {
+   "type": "landmark",
+   "q": [
+    "CERN LHC tunnel",
+    "CERN ATLAS detector"
+   ]
+  },
+  "cern": {
+   "type": "landmark",
+   "q": [
+    "CERN LHC tunnel",
+    "CERN ATLAS detector"
+   ]
+  },
+  "transistor": {
+   "type": "object",
+   "q": [
+    "transistor macro",
+    "integrated circuit die"
+   ]
+  },
+  "transistors": {
+   "type": "object",
+   "q": [
+    "transistor macro",
+    "integrated circuit die"
+   ]
+  },
+  "quantum computer": {
+   "type": "object",
+   "q": [
+    "quantum computer cryostat",
+    "IBM quantum computer"
+   ]
+  },
+  "solvay conference": {
+   "type": "landmark",
+   "q": [
+    "Solvay conference 1927"
+   ]
   }
  }
 }

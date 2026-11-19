@@ -9,7 +9,7 @@ import { sentencesOf } from '../tools/longform/common.mjs';
 import { resolveAt, resolvePlan } from '../tools/longform/plan.mjs';
 import { findMoments } from '../tools/broll/find.mjs';
 import { placeBroll } from '../tools/broll/place.mjs';
-import { commonsLicenseOk, rank, search, tryOrder } from '../tools/broll/sources.mjs';
+import { commonsLicenseOk, download, rank, search, tryOrder } from '../tools/broll/sources.mjs';
 import { autoBroll, lockPath } from '../tools/broll/index.mjs';
 
 // Timed words from a sentence list, 0.3 s per word, 0.6 s between sentences.
@@ -84,8 +84,8 @@ test('ranking keeps the right shape and size, prefers matching tags and bigger f
   ];
   const r = rank(rs, { query: 'Shanghai skyline', used: new Set(['commons-e']) }).map((x) => x.id);
   assert.deepEqual(r, ['d', 'c']);
-  assert.deepEqual(tryOrder(['openverse', 'commons'], 'place'), [['openverse', 'photo'], ['commons', 'photo']]);
-  assert.deepEqual(tryOrder(['openverse', 'commons'], 'landmark')[0], ['commons', 'photo'], 'Commons first for named landmarks');
+  assert.deepEqual(tryOrder(['openverse', 'commons'], 'place'), [['commons', 'video'], ['openverse', 'photo'], ['commons', 'photo']], 'real footage first');
+  assert.deepEqual(tryOrder(['openverse', 'commons'], 'landmark')[0], ['commons', 'video'], 'Commons first for named landmarks');
 });
 
 // A stub of Openverse + Commons + file downloads.
@@ -129,7 +129,7 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   const dir = mkdtempSync(join(tmpdir(), 'broll-plan-'));
   const lib = fakeLib();
   const planFile = join(dir, 'vegas.json');
-  const plan = { name: 'vegas', fps: 30, _file: planFile, tighten: false, a_roll: [{ clip: 'rec' }], inserts: [], auto_broll: { every: 8, end: 3 } };
+  const plan = { name: 'vegas', fps: 30, _file: planFile, tighten: false, a_roll: [{ clip: 'rec' }], inserts: [], auto_broll: { mode: 'accent', every: 8, end: 3 } };
   writeFileSync(planFile, JSON.stringify(plan));
   const R = resolvePlan(plan, lib, { autoBroll: false });
   assert.deepEqual(R.errors, []);
@@ -167,4 +167,45 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   assert.ok(!resolvePlan(plan, lib).inserts.some((i) => i.autoBroll && /Vegas/.test(i.src.said)));
   // auto_broll: false turns it off without deleting anything.
   assert.ok(!resolvePlan({ ...plan, auto_broll: false }, lib).inserts.some((i) => i.autoBroll));
+});
+
+test('fill mode (auto_broll "throughout") holds each shot until the next, without overlapping visuals', () => {
+  const moments = [{ at: 1, end: 1.4, score: 3 }, { at: 5, end: 5.5, score: 3 }, { at: 30, end: 30.5, score: 3 }];
+  const { placed } = placeBroll(moments, [{ at: 12, dur: 5 }], 40, { every: 2, min: 1.2, max: 8, hook: 0, end: 0, spacing: 1.5, fill: true, hold: 8 });
+  assert.equal(placed.length, 3);
+  assert.equal(placed[0].dur, +(placed[1].at - placed[0].at).toFixed(2), 'runs up to the next shot');
+  assert.ok(placed[1].at + placed[1].dur <= 12 - 0.5 + 1e-6, 'stops before the next visual');
+  assert.equal(placed[2].dur, 8, 'never held longer than hold');
+});
+
+test('Commons video: keeps free licences and real-length clips, picks the 1080p transcode', async () => {
+  const page = (id, lic, dur, ders) => ({ pageid: id, index: id, title: `File:Clip ${id}.webm`, videoinfo: [{ duration: dur, descriptionurl: `https://commons.wikimedia.org/wiki/File:Clip_${id}.webm`, extmetadata: { LicenseShortName: { value: lic }, Artist: { value: '<a href="x">NASA</a>' } }, derivatives: ders }] });
+  const d = (h) => ({ src: `https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/Clip.webm/Clip.webm.${h}p.vp9.webm`, width: Math.round(h * 16 / 9), height: h, type: 'video/webm; codecs="vp9, opus"' });
+  const fetchImpl = async () => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ query: { pages: {
+    1: page(1, 'Public domain', 20, [d(360), d(720), d(1080)]),
+    2: page(2, 'CC BY-NC 4.0', 20, [d(1080)]),          // not commercial
+    3: page(3, 'CC BY 3.0', 3600, [d(1080)]),           // an hour-long lecture
+  } } }) });
+  const rs = await search('commons', 'video', 'double slit', { fetchImpl });
+  assert.deepEqual(rs.map((r) => r.id), ['1']);
+  assert.equal(rs[0].kind, 'video');
+  assert.equal(rs[0].h, 1080);
+  assert.equal(rs[0].author, 'NASA');
+  assert.equal(rs[0].ext, 'webm');
+});
+
+test('a rate-limited Openverse origin falls back to the Openverse image proxy', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'broll-dl-'));
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.includes('staticflickr')) return { ok: false, status: 429, headers: { get: (h) => (h === 'retry-after' ? '600' : null) }, arrayBuffer: async () => new ArrayBuffer(0) };
+    return { ok: true, status: 200, headers: { get: () => null }, arrayBuffer: async () => Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]).buffer };
+  };
+  const file = await download({ source: 'openverse', id: 'abc', ext: 'jpg', url: 'https://live.staticflickr.com/1/1_b.jpg' }, dir, { fetchImpl });
+  assert.ok(existsSync(file));
+  assert.equal(calls.length, 2, 'no retry loop against a 10-minute block');
+  assert.match(calls[1], /api\.openverse\.org\/v1\/images\/abc\/thumb\/\?full_size=true/);
+  // Other sources don't have a proxy: the block is reported so the next source is tried.
+  await assert.rejects(download({ source: 'commons', id: 'x', ext: 'jpg', url: 'https://live.staticflickr.com/2/2_b.jpg' }, dir, { fetchImpl }), /rate-limited/);
 });
