@@ -329,10 +329,13 @@ point it at the same files.
 
 ## Automatic B-roll
 
-When the speaker names something you can picture ("China", "Las Vegas", "a casino", "Heisenberg"), the video cuts
-to a 1.5-3 s photo of it while the voice carries on. Free-license sources only, no keys: Openverse (mostly Flickr)
-and Wikimedia Commons, keeping CC0, public domain, CC BY and CC BY-SA. Pixabay and Pexels are used too if
-`PIXABAY_API_KEY` / `PEXELS_API_KEY` is set.
+B-roll runs under the whole talk by default: every time the speaker names something you can picture ("China",
+"a casino", "Heisenberg", "two slits"), the video cuts to footage of it and holds that shot until the next one
+(at most 8 s), with a soft swipe on each cut. Real video comes first (Wikimedia Commons video: NASA, ESA, labs,
+museums), then photos with a slow push-in. Free-license sources only, no keys: Wikimedia Commons and Openverse
+(mostly Flickr), keeping CC0, public domain, CC BY and CC BY-SA. Pixabay and Pexels are used too if
+`PIXABAY_API_KEY` / `PEXELS_API_KEY` is set. `"auto_broll": { "mode": "accent" }` goes back to short 1.5-3 s
+cutaways now and then.
 
 ```
 node longform.mjs broll edits/longform/x.json --dry   # list the moments, download nothing
@@ -344,16 +347,18 @@ node longform.mjs build edits/longform/x.json         # the cutaways are in the 
   landmarks, settings, objects, a short list of historic scientists) matched longest phrase first. Lowercase
   place names ("fine china"), repeats within 60 s and words that could be a name ("Austin", "Jordan") are left out.
   Capitalised names the lexicon doesn't know are listed for review only.
-- **Placing them** (`tools/broll/place.mjs`): gaps only. Never over a visual, the first 3 s or the last 8 s; at least
-  6 s apart; one per 15 s on average; hard cuts in and out; captions stay on.
+- **Placing them** (`tools/broll/place.mjs`): gaps only, never over one of the plan's own visuals. `throughout`
+  (default): a shot for every moment at least 1.5 s apart, each held until the next. `accent`: never in the first 3 s
+  or the last 8 s, at least 6 s apart, one per 15 s on average. Hard cuts in and out; captions stay on.
 - **Reviewing**: `out/longform/<name>/BROLL.md` lists every moment, the search, the pick and why others were
   skipped. Change one in `edits/longform/<name>.broll.lock.json`: `"status": "drop"` or `"keep"`, a new `"query"`,
   or `"pick": 2`, then run `broll` again. Rebuilds use the locked picks.
-- **Settings** in the plan: `"auto_broll": { "every": 15, "min": 1.5, "max": 3, "skip": ["Vegas"], "layout": "full",
+- **Settings** in the plan: `"auto_broll": { "mode": "throughout", "hold": 8, "sfx": "swipe", "skip": ["Vegas"], "layout": "full",
   "force": [{ "at": "rec#41", "word": "Macau", "query": "Macau casino night" }] }`; `"auto_broll": false` turns it off.
 - Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in `assets/broll/stock/`.
-- Wikimedia rate-limits busy servers (cloud sessions especially): the tool waits and retries, and falls back to the next
-  source. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
+- Wikimedia rate-limits busy servers (cloud sessions especially). A short limit is waited out; a long block
+  (`Retry-After` of minutes) is not hammered: that source is skipped and the next one tried. Run `broll` on your
+  own computer if a cloud run comes back thin. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
 
 ## Outside clips
 
@@ -370,7 +375,7 @@ marker, so you can review them before you post.
 
 ## What it doesn't do (yet)
 
-- Automatic B-roll is photos only so far (with a slow push-in). Video from NASA, CERN, the Internet Archive and Commons is next.
+- Automatic B-roll video comes from Wikimedia Commons only (no key needed). YouTube and social clips are `clip` cues you validate and pull.
 - Animations render on your computer: a 10-minute video with ~40 visuals takes a few minutes the first time,
   and rebuilds reuse everything that didn't change.
 - No burned-in captions. Upload the `.srt` to YouTube instead.

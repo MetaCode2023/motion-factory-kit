@@ -4,6 +4,28 @@ The standing rules for making a series, not just one video. Claude reads this be
 again before handing a video over. The creator's own files (`scripts/VOICE.md`, `scripts/SERIES.md`) are
 git-ignored: they describe a person and a channel, not this repo.
 
+## 0. Depth: teach like a polymath, explain like a friend
+
+The creator doesn't want the explanation every other channel gives. Write as a cutting-edge educator who
+connects fields (physics to philosophy, history to economics, biology to the viewer's own life), and assume
+the viewer has never heard of any of it.
+
+- **Go to the idea that's actually profound**, not the textbook summary. Quantum mechanics is not "particles
+  are weird": it's superposition, what a measurement does, the collapse question, Copenhagen versus Many Worlds,
+  and what it means that the observer is part of the system. Find the version of the topic that changes how
+  the viewer sees themselves or the world, and build to it.
+- **Every term is earned before it's used.** Introduce the plain picture first, then name it ("a cloud of
+  maybe, called a superposition"). One new term per ~20 seconds at most. Never stack jargon.
+- **One concrete image per idea**, something the viewer can see (dots building stripes on a screen, a coin
+  still spinning), then the abstraction.
+- **Name the open question honestly.** Where experts disagree (interpretations, contested numbers), say so,
+  give the main positions in one sentence each, and don't pretend it's settled.
+- **No filler phrases** ("in today's world", "it's important to note", "mind-blowing"). Short sentences, said out loud.
+- **End on the turn back to the viewer**: what this means for them, in one line.
+
+Check a draft by reading it as someone who has never studied the subject: every sentence should be
+understandable on its own and lead to the next.
+
 ## 1. Voice (`scripts/VOICE.md`)
 
 `node longform.mjs voice` measures how the creator talks from their own indexed recordings: pace, sentence
@@ -55,13 +77,27 @@ Put the look in each script's header (`theme: paper`) so the build follows it.
 - Before recording, list for the creator: every claim you could not source, and every claim that is their
   opinion rather than a fact.
 
-## 4. Outside clips
+## 4. B-roll and outside clips
+
+**B-roll runs through the whole video** (`auto_broll` defaults to `mode: "throughout"`): every thing the
+speaker names gets a shot, held until the next one, and real footage is preferred over photos.
+
+- Free footage first: `node longform.mjs broll` searches Wikimedia Commons video (NASA, ESA, university labs,
+  museums) before photos, and credits every pick. Read `BROLL.md`: every shot must show **the actual subject**
+  of that line (a national park named = footage of that park, a real experiment = that experiment). Swap any
+  that are only loosely related (`"query"` or `"pick": 2` in the lockfile).
+- Where free footage can't show it, find a real clip on YouTube, TikTok, Instagram or a news site and add it
+  as a `clip` cue (exact URL, from, to). **Validate it before proposing it**: check the video's title,
+  channel and the frames at those timestamps really show the subject (pull it and look at stills; don't trust a
+  title alone). Pulls run on the creator's computer (`node longform.mjs pull`), where yt-dlp can reach the sites.
+
+Outside clips (someone else's video):
 
 - The creator decides what to use. Claude proposes: the exact URL, start and end, what it proves, and one
   line on why this clip and not another.
 - Short and talked over: under 10 s each (the build flags longer), the creator's voice continues over it,
   the clip's own sound low or off. A clip is evidence for a point the creator is making, never the content.
-- A few per video (2-5), from different sources. Credit every one in the description
+- As many as the points need, each one short and from a source you can name. Credit every one in the description
   (`assets/broll/CREDITS.md` collects them).
 - Don't propose: music videos or songs, full scenes from films and TV, sports broadcasts, another creator's
   video used as the backbone of this one, anything showing private people in distress, or footage whose

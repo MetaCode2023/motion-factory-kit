@@ -1,7 +1,7 @@
 // tools/broll/sources.mjs: free stock search behind one shape, so the picker doesn't care where media comes from.
 //
 //   Openverse  photos            no key   CC0 / PDM / CC BY / CC BY-SA (commercial use + changes allowed), mostly Flickr
-//   Commons    photos            no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only
+//   Commons    videos + photos   no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only (NASA, ESA, labs, museums)
 //   Pixabay    videos + photos   PIXABAY_API_KEY (optional)   Pixabay Content License
 //   Pexels     videos + photos   PEXELS_API_KEY  (optional; new keys are paused)   Pexels License
 //
@@ -18,7 +18,7 @@ export const SOURCES = {
   openverse: { key: null, kinds: ['photo'] },
   pixabay: { key: 'PIXABAY_API_KEY', kinds: ['video', 'photo'] },
   pexels: { key: 'PEXELS_API_KEY', kinds: ['video', 'photo'] },
-  commons: { key: null, kinds: ['photo'] },
+  commons: { key: null, kinds: ['video', 'photo'] },
 };
 
 // The sources that can run now (a key where one is needed), in the order asked for.
@@ -106,6 +106,29 @@ const ADAPTERS = {
     },
   },
   commons: {
+    // Real footage: Commons video (NASA, ESA, university labs, museums). Uses the transcoded copies (720p/1080p),
+    // which Wikimedia serves far more freely than the originals.
+    async video(q, _o, { fetchImpl }) {
+      const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:video`, gsrnamespace: '6', gsrlimit: '15', prop: 'videoinfo', viprop: 'url|size|extmetadata|mime|derivatives', origin: '*' });
+      const j = await getJSON(`https://commons.wikimedia.org/w/api.php?${p}`, { fetchImpl });
+      const pages = Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+      return pages.map((pg) => {
+        const vi = pg.videoinfo?.[0];
+        if (!vi) return null;
+        const m = vi.extmetadata || {};
+        const license = strip(m.LicenseShortName?.value || '');
+        if (!commonsLicenseOk(license)) return null;
+        const dur = Number(vi.duration) || 0;
+        if (dur < 2 || dur > 900) return null;   // stills and hour-long lectures aren't B-roll
+        const ders = (vi.derivatives || []).map((d) => ({ url: d.src, w: Number(d.width) || 0, h: Number(d.height) || 0, type: d.type || '' }))
+          .filter((d) => /webm|mp4|quicktime/.test(d.type) && d.h >= 300);
+        const f = pickFile(ders, 1920) || ders.sort((a, b) => b.h - a.h)[0];   // closest to 1080p, else the biggest there is
+        if (!f) return null;
+        return { source: 'commons', id: String(pg.pageid), kind: 'video', w: f.w, h: f.h, dur, url: f.url, ext: /mp4|quicktime/.test(f.type) ? (/quicktime/.test(f.type) ? 'mov' : 'mp4') : 'webm',
+          title: String(pg.title || '').replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, ''), page: vi.descriptionurl, author: strip(m.Artist?.value || 'unknown'), license,
+          tags: `${pg.title || ''} ${strip(m.ImageDescription?.value || '').slice(0, 200)}` };
+      }).filter(Boolean);
+    },
     async photo(q, _o, { fetchImpl }) {
       const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '15', prop: 'imageinfo', iiprop: 'url|size|extmetadata|mime', iiurlwidth: '1920', origin: '*' });
       const j = await getJSON(`https://commons.wikimedia.org/w/api.php?${p}`, { fetchImpl });
@@ -153,7 +176,7 @@ export function rank(results, { query, need = 2, portrait = false, used = new Se
   return results
     .map((r, k) => {
       const shapeOk = portrait ? r.h >= r.w * 0.9 || r.kind === 'photo' : r.w >= r.h;
-      const sizeOk = Math.max(r.w, r.h) >= (r.kind === 'photo' ? 1000 : 1280);
+      const sizeOk = Math.max(r.w, r.h) >= (r.kind === 'photo' ? 1000 : r.source === 'commons' ? 800 : 1280);   // Commons science footage is often 854 or 1200 wide
       const lenOk = r.kind === 'photo' || r.dur >= need + 0.5;
       const tags = (r.tags || '').toLowerCase();
       const overlap = words.filter((w) => tags.includes(w)).length;
