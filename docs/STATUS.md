@@ -77,3 +77,14 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
 - Made a video? Add `docs/runs/<date>-<name>.md`.
 - Learned something about the environment or a source? `docs/LESSONS.md`. A preference that generalises?
   `docs/TASTE.md`.
+
+## Titles 4a (added 2026-11-18)
+
+| Piece | Entry point | State |
+|---|---|---|
+| Opening, chapter and end cards | `kit/titles.js`, `scenes/longform/title.html` / `chapter.html` / `endcard.html` (docs/TITLES.md) | New; tested for text on screen and inside the YouTube safe zone, not yet judged by eye in a real build or against a real YouTube end screen |
+| `B.lowerThird` `maxW` | `kit/blocks.js` (docs/BLOCKS.md) | New; default unchanged |
+
+Handoff: lower third OVER the speaker (4b) waits for PR #3's alpha work (needs an `over` layout). `[[chapter ..]]` is a reserved
+cue word, so the chapter card is cued as `[[anim scenes/longform/chapter.html | ..]]`; making `chapter` a real card cue is a change to
+`tools/longform/script.mjs` that was not made.

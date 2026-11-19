@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Chapter: a numbered section card</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="../../kit/titles.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. A numbered chapter card between sections. Drawn by kit/titles.js (TT.chapter).
+// Data: dur, n (1 or "01"), title, style, color, tint
+const D = M.data({ dur: 4, n: 1, title: 'How a loan creates a deposit' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur, sfx: [{ at: 0.15, name: 'tap', volume: 0.6 }] });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  TT.chapter(c, t, { n: D.n, title: D.title }, th);
+  LF.vignette(c, th, 0.45);
+}
+</script>
+</body>
+</html>

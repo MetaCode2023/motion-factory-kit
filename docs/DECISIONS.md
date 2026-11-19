@@ -52,3 +52,12 @@ every file; Pexels/Pixabay only if a key is set. Copyrighted clips (news, YouTub
 **Decision.** Long-form defaults: burned captions with key words popped, no talking-head gap without a graphic
 (pip for full graphics, split otherwise). See `docs/TASTE.md`.
 **Why.** Owner's notes on Physics of Poker v1: first-time viewers need something to read and look at every second.
+
+## 2026-11-18: Title cards live in kit/titles.js; the lower third is extended, not duplicated
+**Decision.** The opening, chapter and end cards are drawing functions in `kit/titles.js` (global `TT`) taking an
+`LF.theme`-shaped theme, with thin scenes in `scenes/longform/`. `B.lowerThird` got a `maxW` option (default 940,
+unchanged) instead of a new block. The quote card and stat callout already existed and are not duplicated.
+**Why.** Drawing code in the kit works at any frame size and in short-form too (`TT.themeFromBrand()`); the scenes stay
+about 25 lines. Safe-zone checking already existed (skia `textOnly` plus `M.PRESETS.youtube.safe`), so the tests reuse it.
+The ideas are the owner's; the code is original (OpenShot is GPL-3.0, this repo is MIT, nothing was read or copied).
+**Would change if.** A second long-form look needs different layouts per card; then split `TT` per look.

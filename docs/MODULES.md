@@ -98,3 +98,9 @@ the kit's renderer (`make.mjs`); the layouts and timings are the part worth copy
 `npm install && npm run demo`: bundled synthetic street-poll footage (`examples/demo`) → finished ads,
 `DELIVERY.csv` and `review.html` in `out/demo/`, no keys. `npm test` runs the checks (the face test
 needs `pip install opencv-python-headless`). Any template builds with labelled placeholders until clips are added.
+
+### Title cards
+`kit/titles.js` (needs `kit/motion.js` and `kit/fx.js`; uses `scenes/longform/lf.js` curves when loaded):
+`TT.opening`, `TT.chapter`, `TT.endCard`, `TT.themeFromBrand()`. Plain canvas-2D functions of time that draw type and a
+rule inside the safe box at any frame size. Scenes: `scenes/longform/title.html`, `chapter.html`, `endcard.html`.
+See `docs/TITLES.md`.

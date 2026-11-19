@@ -40,3 +40,5 @@ Already have your own pipeline? `docs/MODULES.md` maps the pieces you can lift o
 Update `docs/STATUS.md` (and its handoff queue), add to `docs/DECISIONS.md` for choices a later agent might undo,
 write `docs/runs/<date>-<video>.md` for any video you made, and put lessons and preferences in `docs/LESSONS.md` /
 `docs/TASTE.md`. Footage, scripts, plans and brand data never go in git.
+
+Title cards (opening, chapter, end card) and their data keys: `kit/titles.js`, `docs/TITLES.md`.

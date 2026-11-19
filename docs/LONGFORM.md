@@ -70,6 +70,9 @@ base: backdrop                                      // optional: never show the 
 | `[[stacks3d bars: Rent=42; Food=27 \| prop: chip/coin \| unit: %]]` | **3D.** Amounts as stacks of chips or coins dropping in piece by piece, camera arcing around them |
 | `[[stat value: .. \| label: .. \| sub: .. \| source: ..]]` | One big number counting up |
 | `[[quote text: .. \| highlight: words \| by: ..]]` | A line, written big, key words lit (`by` only for a real quote) |
+| `[[title kicker: .. \| title: .. \| sub: ..]]` | The opening title card: a small label, the title, one line under it (`kit/titles.js`, docs/TITLES.md) |
+| `[[anim scenes/longform/chapter.html \| n: 2 \| title: ..]]` | A numbered chapter card. Written as `anim` because `[[chapter ..]]` is reserved for the `##` headings |
+| `[[endcard title: .. \| cta: .. \| url: ..]]` | The end card, with the right half left clear for YouTube end-screen elements (give it 5 to 20 s) |
 | `[[term term: .. \| definition: .. \| plain: ..]]` | A definition with an everyday translation |
 | `[[compare left.title: .. \| left.items: a; b \| left.tone: bad \| right...]]` | Two sides, with a verdict |
 | `[[steps steps: Title - body; Title - body]]` | A process building along a line |
