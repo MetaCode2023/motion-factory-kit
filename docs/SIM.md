@@ -63,6 +63,7 @@ stdout (progress goes to stderr). Set `SIM_AGENT` (e.g. `claude-code`, `codex`, 
 | `sim transcribe <job>` | Word-level transcript: `work/<job>/words.json` (`{"words":[{"w","s","e"}]}`) and `transcript.txt` (paragraphs, `[m:ss]` every ~30 s). Model downloads once from the k2-fsa/sherpa-onnx GitHub releases. |
 | `sim propose <job> --from plan.json` | Checks the plan and records each video as an output (`proposed`). `--force` accepts length warnings only. |
 | `sim build <job> [output]` | Builds every proposed output (or one, to rebuild): cuts the span from the proxy, runs the kit, uploads to `out/`, records the kit's FIX lines as events. |
+| `sim rate <job> [output] [--rater clef-omni]` | Scores each built short on hook, visuals, pacing and overall with Cloudflare Workers AI (`@cf/cloudflare/clef-omni`) and stores four rows per short in `ratings`, plus six yes/no checks. Stored only: nothing reads them yet. Safe to re-run (a short already rated at its current build is skipped). Needs the Workers AI permission on the API token. See docs/LEARNING.md. |
 | `sim review <job>` | Writes `out/<job>/REVIEW.md` (titles, descriptions, spans, chapters, FIX notes, 7-day links) and sets the job `in_review`. |
 | `sim approve <output>` | **Human only.** Asks you to type `approve`. |
 | `sim reject <output> --note "..."` | **Human only.** Asks you to type `reject`. The note is stored for the next agent. |
@@ -111,6 +112,7 @@ Times are **in the original recording**: seconds (`754.2`) or `m:ss` / `h:mm:ss`
   existing footage"): `theme`, `inserts` (anchor them as `"segment@<seconds into the segment>"`), `music`,
   `auto_broll: {...}` (off by default), `captions`, `thumbnail`. The segment is the clip `segment`.
 - Re-proposing replaces outputs that are still `proposed` or `rejected`; built, approved and posted ones are kept.
+- `sim build` records `build_id` (the sha256 of the built `video.mp4`) on the output, and re-proposing clears it, so ratings of an older cut are never taken for the new one.
 
 ## How a build works
 
