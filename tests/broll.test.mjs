@@ -9,7 +9,10 @@ import { sentencesOf } from '../tools/longform/common.mjs';
 import { resolveAt, resolvePlan } from '../tools/longform/plan.mjs';
 import { findMoments } from '../tools/broll/find.mjs';
 import { placeBroll } from '../tools/broll/place.mjs';
-import { commonsLicenseOk, rank, search, tryOrder } from '../tools/broll/sources.mjs';
+import { available, commonsLicenseOk, download, rank, search, tryOrder } from '../tools/broll/sources.mjs';
+import { checkSheet, validate } from '../tools/broll/validate.mjs';
+import { FF, frameAt, sheet } from '../tools/longform/common.mjs';
+import { spawnSync } from 'node:child_process';
 import { autoBroll, lockPath } from '../tools/broll/index.mjs';
 
 // Timed words from a sentence list, 0.3 s per word, 0.6 s between sentences.
@@ -84,8 +87,8 @@ test('ranking keeps the right shape and size, prefers matching tags and bigger f
   ];
   const r = rank(rs, { query: 'Shanghai skyline', used: new Set(['commons-e']) }).map((x) => x.id);
   assert.deepEqual(r, ['d', 'c']);
-  assert.deepEqual(tryOrder(['openverse', 'commons'], 'place'), [['openverse', 'photo'], ['commons', 'photo']]);
-  assert.deepEqual(tryOrder(['openverse', 'commons'], 'landmark')[0], ['commons', 'photo'], 'Commons first for named landmarks');
+  assert.deepEqual(tryOrder(['openverse', 'commons'], 'place'), [['commons', 'video'], ['openverse', 'photo'], ['commons', 'photo']], 'video first, then photos');
+  assert.deepEqual(tryOrder(['openverse', 'commons'], 'landmark')[1], ['commons', 'photo'], 'Commons is the first photo source for named landmarks');
 });
 
 // A stub of Openverse + Commons + file downloads.
@@ -135,7 +138,7 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   assert.deepEqual(R.errors, []);
   R.resolveAt = (f) => resolveAt(f, R.cuts, lib, 'force');
   const calls = [];
-  const r = await autoBroll(plan, R, { fetchImpl: stubFetch(calls), log: () => {}, stockDir: join(dir, 'stock'), cacheDir: join(dir, 'cache'), outDir: join(dir, 'out'), pause: 0 });
+  const r = await autoBroll(plan, R, { fetchImpl: stubFetch(calls), log: () => {}, stockDir: join(dir, 'stock'), cacheDir: join(dir, 'cache'), outDir: join(dir, 'out'), pause: 0, ytdlp: null });
   assert.ok(r.ok);
   assert.ok(r.ready >= 2, `two moments with media (got ${r.ready})`);
   const lock = JSON.parse(readFileSync(lockPath(plan), 'utf8'));
@@ -147,7 +150,7 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
 
   // A second run reuses the lock: no requests at all.
   const again = [];
-  await autoBroll(plan, R, { fetchImpl: stubFetch(again), log: () => {}, stockDir: join(dir, 'stock'), cacheDir: join(dir, 'cache'), outDir: join(dir, 'out'), pause: 0 });
+  await autoBroll(plan, R, { fetchImpl: stubFetch(again), log: () => {}, stockDir: join(dir, 'stock'), cacheDir: join(dir, 'cache'), outDir: join(dir, 'out'), pause: 0, ytdlp: null });
   assert.equal(again.length, 0);
 
   // The plan now carries the cutaways: photos as image inserts, hard cuts, credits, in gaps.
@@ -167,4 +170,101 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   assert.ok(!resolvePlan(plan, lib).inserts.some((i) => i.autoBroll && /Vegas/.test(i.src.said)));
   // auto_broll: false turns it off without deleting anything.
   assert.ok(!resolvePlan({ ...plan, auto_broll: false }, lib).inserts.some((i) => i.autoBroll));
+});
+
+// ---- video B-roll: reusable sources, the subject check, the check sheet ---------------------------------
+
+test('subject check: the name said must be in the result, and non-footage is refused', () => {
+  const yellowstone = { said: 'Yellowstone National Park', key: 'yellowstone national park', type: 'landmark', query: 'Yellowstone National Park geyser' };
+  assert.ok(validate({ kind: 'video', title: 'Old Faithful erupting, Yellowstone National Park', tags: 'geyser wyoming' }, yellowstone).ok);
+  const generic = validate({ kind: 'video', title: 'Beautiful national park drone footage', tags: 'nature mountains' }, yellowstone);
+  assert.ok(!generic.ok, 'a generic national park is not Yellowstone');
+  assert.match(generic.why, /yellowstone/);
+  assert.ok(validate({ kind: 'video', title: 'Grand Prismatic Spring', tags: 'hot spring', description: 'Filmed in Yellowstone National Park in 2019.' }, yellowstone).ok, 'the description counts');
+  assert.ok(!validate({ kind: 'video', title: 'Yellowstone National Park REACTION', tags: '' }, yellowstone).ok, 'reactions are refused');
+  assert.ok(!validate({ kind: 'video', title: 'Yellowstone National Park in Minecraft', tags: '' }, yellowstone).ok);
+  // A setting only needs the thing itself; plurals match.
+  const casino = { said: 'casino floor', key: 'casino floor', type: 'setting', query: 'casino floor slot machines' };
+  assert.ok(validate({ kind: 'video', title: 'Slot machines in a casino', tags: 'gambling' }, casino).ok);
+  assert.ok(!validate({ kind: 'video', title: 'City street at night', tags: 'cars lights' }, casino).ok);
+  // In the title scores above only in the tags.
+  const a = validate({ kind: 'video', title: 'Yellowstone National Park', tags: '' }, yellowstone), b = validate({ kind: 'video', title: 'Geysers', tags: 'yellowstone national park' }, yellowstone);
+  assert.ok(a.score > b.score);
+});
+
+// yt-dlp stand-in: search prints one JSON line per video; a download writes the output file.
+function stubYtdlp(calls, videos) {
+  return (bin, args) => {
+    calls.push(args);
+    if (args.includes('--dump-json')) return { status: 0, stdout: videos.map((v) => JSON.stringify(v)).join('\n'), stderr: '' };
+    writeFileSync(args[args.indexOf('-o') + 1], 'mp4');
+    return { status: 0, stdout: '', stderr: '' };
+  };
+}
+const YT = [
+  { id: 'cc1', title: 'Yellowstone National Park in 4K', description: 'Old Faithful and bison.', duration: 300, width: 1920, height: 1080, channel: 'Park Films', license: 'Creative Commons Attribution license (reuse allowed)', tags: ['yellowstone'] },
+  { id: 'std', title: 'Yellowstone National Park travel guide', duration: 600, width: 1920, height: 1080, channel: 'Some Vlogger', license: null },
+  { id: 'own', title: 'Our trip to Yellowstone National Park', duration: 240, width: 1920, height: 1080, channel: 'My Channel', uploader_id: '@mychannel', license: null },
+];
+
+test('YouTube: only Creative Commons videos or channels the plan lists; needs yt-dlp; downloads only the seconds used', async () => {
+  assert.ok(!available(undefined, {}, { ytdlp: null }).includes('youtube'), 'no yt-dlp, no YouTube');
+  assert.ok(available(undefined, {}, { ytdlp: 'yt-dlp' }).includes('youtube'));
+  const calls = [];
+  const cc = await search('youtube', 'video', 'Yellowstone National Park', { run: stubYtdlp(calls, YT), ytdlp: 'yt-dlp' });
+  assert.deepEqual(cc.map((r) => r.id), ['cc1'], 'the standard-licence videos are left out');
+  assert.match(cc[0].license, /Creative Commons/);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].at(-1), /sp=EgIwAQ/, 'searched with the Creative Commons filter');
+  const listed = await search('youtube', 'video', 'Yellowstone National Park', { run: stubYtdlp([], YT), ytdlp: 'yt-dlp', channels: ['@MyChannel'] });
+  assert.deepEqual(listed.map((r) => r.id).sort(), ['cc1', 'own']);
+  // Videos come before photos, and photos can be turned off.
+  const order = tryOrder(['openverse', 'commons', 'youtube'], 'landmark');
+  assert.deepEqual(order, [['commons', 'video'], ['youtube', 'video'], ['commons', 'photo'], ['openverse', 'photo']]);
+  assert.ok(tryOrder(['openverse', 'commons', 'youtube'], 'place', { photos: false }).every(([, k]) => k === 'video'));
+  const dir = mkdtempSync(join(tmpdir(), 'broll-yt-'));
+  const dl = [];
+  const file = await download({ ...cc[0], from: 60, take: 5 }, dir, { run: stubYtdlp(dl, YT), ytdlp: 'yt-dlp' });
+  assert.ok(existsSync(file));
+  assert.equal(dl[0][dl[0].indexOf('--download-sections') + 1], '*60.0-65.0');
+});
+
+test('broll prefers a validated video, skips a wrong one, and the build warns until it has been looked at', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'broll-vid-'));
+  const lib = fakeLib();
+  const planFile = join(dir, 'vegas.json');
+  const plan = { name: 'vegas', fps: 30, _file: planFile, tighten: false, a_roll: [{ clip: 'rec' }], inserts: [], auto_broll: { every: 8, end: 3, sources: ['youtube', 'openverse'] } };
+  writeFileSync(planFile, JSON.stringify(plan));
+  const R = resolvePlan(plan, lib, { autoBroll: false });
+  R.resolveAt = (f) => resolveAt(f, R.cuts, lib, 'force');
+  const vids = [
+    { id: 'wrong', title: 'Top 10 casinos compilation', duration: 500, width: 1920, height: 1080, channel: 'x', license: 'Creative Commons Attribution license (reuse allowed)' },
+    { id: 'vegas', title: 'Las Vegas Strip at night, aerial', duration: 200, width: 1920, height: 1080, channel: 'City Films', license: 'Creative Commons Attribution license (reuse allowed)' },
+  ];
+  const r = await autoBroll(plan, R, { fetchImpl: stubFetch([]), run: stubYtdlp([], vids), ytdlp: 'yt-dlp', sheets: false, log: () => {}, stockDir: join(dir, 'stock'), cacheDir: join(dir, 'cache'), outDir: join(dir, 'out'), pause: 0 });
+  const lock = JSON.parse(readFileSync(lockPath(plan), 'utf8'));
+  const vegas = lock.entries.find((e) => e.key === 'las vegas');
+  assert.equal(vegas.media.source, 'youtube');
+  assert.equal(vegas.media.id, 'vegas');
+  assert.equal(vegas.media.kind, 'video');
+  assert.equal(vegas.media.source_from, 40, 'a fifth of the way into a long video');
+  assert.equal(vegas.seen, false);
+  assert.ok(r.videos >= 1 && r.toCheck.length >= 1);
+  // The casino moment had no matching video (the compilation is refused), so it falls back to a photo.
+  const casino = lock.entries.find((e) => /casino/.test(e.key) && e.media);
+  assert.equal(casino.media.kind, 'photo');
+  const R2 = resolvePlan(plan, lib);
+  assert.ok(R2.inserts.some((i) => i.autoBroll && i.kind === 'broll'), 'the video is a clip insert');
+  assert.ok(R2.warnings.some((w) => /not looked at yet/.test(w)));
+  vegas.seen = true;
+  writeFileSync(lockPath(plan), JSON.stringify(lock));
+  assert.ok(!resolvePlan(plan, lib).warnings.some((w) => /not looked at yet/.test(w)));
+});
+
+test('check sheet: three frames of the seconds that will be used', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'broll-sheet-'));
+  const clip = join(dir, 'clip.mp4');
+  spawnSync(FF, ['-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=d=4:s=640x360:r=15', '-pix_fmt', 'yuv420p', clip]);
+  const out = await checkSheet(clip, { from: 1, dur: 2, kind: 'video', label: '"Las Vegas" at 0:12' }, join(dir, 'check', 'a.jpg'), { frameAt, sheet });
+  assert.ok(out && existsSync(out));
 });

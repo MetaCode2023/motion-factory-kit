@@ -16,14 +16,17 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
 4. They record from `scripts/<name>.read.txt`. Meanwhile write any new animation scenes (in parallel if you
    can) and check a still of each.
 5. `node longform.mjs from-script scripts/<name>.script.md <recording> ` → read the alignment report →
-   `broll` (automatic free-license cutaways; read BROLL.md, drop or re-search bad picks in the lockfile) →
+   `broll` (automatic cutaways to real, reusable footage of what's named, video first; look at every check sheet
+   in `broll-check/`, set `"seen": true` or re-pick/drop in the lockfile; read BROLL.md) →
    `stock` / `pull` → `build`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).
 
 Before drafting: read `docs/PLAYBOOK.md` plus `scripts/VOICE.md` / `scripts/SERIES.md` if present. `node longform.mjs script`
-prints a retention score with notes: fix them. On-camera layouts: `full`, `side`, `pip`, `split`.
+prints a retention score and a depth score with notes: fix them. Depth standard (PLAYBOOK "Depth"): header `thesis:` /
+`tension:` / `bridge:`, real ideas by name, how we know, competing views, the open question, what it means for the viewer.
+Sound: `music: calm | pulse | drive | wonder` and `sound: lively | calm | off` in the header. On-camera layouts: `full`, `side`, `pip`, `split`.
 
 Around the video:
 - New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).

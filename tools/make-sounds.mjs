@@ -229,6 +229,104 @@ const SFX = {
     }
     return fadeEdges(peakNorm(reverb(x, { mix: 0.2 }), 0.6), 0.002, 0.1);
   },
+  // ---- editing sounds: the small ones creators put under cuts, captions and pictures ----
+  // A page turning: a short rush of paper noise that brightens, then a soft flap as it lands.
+  page() {
+    const x = buf(0.42), f = svf(), g = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / 0.3;
+      const sweep = p < 1 ? f(rand(), 1800 + 5200 * p, 0.9).bp * Math.pow(Math.sin(Math.PI * Math.min(1, p)), 1.5) * (0.6 + 0.4 * Math.sin(TAU * 38 * t)) : 0;
+      const flap = t > 0.27 ? g(rand(), 900, 0.8).lp * env(t - 0.27, 0.002, 0.03) * 0.9 : 0;
+      x[n] = sweep * 0.8 + flap;
+    }
+    return fadeEdges(peakNorm(x, 0.6), 0.004, 0.03);
+  },
+  // Interface beep: one clean high tone.
+  beep() {
+    const x = buf(0.16);
+    for (let n = 0; n < x.length; n++) { const t = n / SR; x[n] = (Math.sin(TAU * 1320 * t) + 0.25 * Math.sin(TAU * 2640 * t)) * Math.min(1, t / 0.004) * (t > 0.11 ? Math.exp(-(t - 0.11) / 0.012) : 1); }
+    return fadeEdges(peakNorm(x, 0.45));
+  },
+  // Boop: a round low blip that dips in pitch (a word or label landing).
+  boop() {
+    const x = buf(0.2);
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) { const t = n / SR; ph += TAU * (330 + 190 * Math.exp(-t / 0.05)) / SR; x[n] = Math.sin(ph) * env(t, 0.004, 0.06); }
+    return fadeEdges(peakNorm(x, 0.55));
+  },
+  // Bop: the same family, pitched up and rising (the answer to a boop).
+  bop() {
+    const x = buf(0.18);
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) { const t = n / SR; ph += TAU * (520 + 260 * (1 - Math.exp(-t / 0.03))) / SR; x[n] = (Math.sin(ph) + 0.2 * Math.sin(2 * ph)) * env(t, 0.003, 0.045); }
+    return fadeEdges(peakNorm(x, 0.55));
+  },
+  // Swish: a quick, light pass of air for cutaways (shorter and brighter than whoosh).
+  swish() {
+    const x = buf(0.28), f = svf();
+    for (let n = 0; n < x.length; n++) { const t = n / SR, p = t / 0.28; x[n] = f(rand(), 1500 + 6000 * p * p, 1.8).bp * Math.pow(Math.sin(Math.PI * Math.pow(p, 0.6)), 3); }
+    return fadeEdges(peakNorm(x, 0.5));
+  },
+  // Mouse click: two tiny ticks, down and up.
+  click() {
+    const x = buf(0.09), f = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      const one = (d, lvl) => (t >= d ? (f(rand(), 3200, 1.2).bp * 0.7 + Math.sin(TAU * 2400 * (t - d))) * env(t - d, 0.0004, 0.003) * lvl : 0);
+      x[n] = one(0, 1) + one(0.045, 0.6);
+    }
+    return fadeEdges(peakNorm(x, 0.5));
+  },
+  // Ding: one bright bell note with a long tail (a point landing, a right answer).
+  ding() {
+    const x = buf(1.1), f0 = midi(88);
+    for (let n = 0; n < x.length; n++) { const t = n / SR; x[n] = (Math.sin(TAU * f0 * t) + 0.45 * Math.sin(TAU * f0 * 2.76 * t) * Math.exp(-t / 0.12) + 0.2 * Math.sin(TAU * f0 * 5.4 * t) * Math.exp(-t / 0.05)) * env(t, 0.001, 0.3); }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.22 }), 0.55), 0.002, 0.15);
+  },
+  // Camera shutter: two short mechanical clacks (a photo or clip arriving).
+  shutter() {
+    const x = buf(0.2), f = svf(), g = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      const clack = (d, fc, lvl) => (t >= d ? env(t - d, 0.0006, 0.012) * lvl : 0) * (fc > 2000 ? f(rand(), fc, 2).bp : g(rand(), fc, 2).bp);
+      x[n] = clack(0, 2600, 1) + clack(0.07, 1700, 0.85);
+    }
+    return fadeEdges(peakNorm(x, 0.55));
+  },
+  // Boom: a deep drop with a short sub tail, for the one line that should stop the scroll.
+  boom() {
+    const x = buf(1.3), f = svf();
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      ph += TAU * (38 + 90 * Math.exp(-t / 0.07)) / SR;
+      x[n] = Math.tanh(Math.sin(ph) * 2.2) * env(t, 0.003, 0.38) + f(rand(), 500, 0.7).lp * env(t, 0.001, 0.05) * 0.5;
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.12, size: 1.3 }), 0.85), 0.002, 0.25);
+  },
+  // Glitch: a stutter of digital fragments (a hard turn, "but that's wrong").
+  glitch() {
+    const x = buf(0.3);
+    let hold = 0, step = 0, fq = 800;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      if (n % 1470 === 0) { step++; fq = 300 + Math.abs(rand()) * 3200; }
+      if (n % (6 + (step % 4) * 9) === 0) hold = Math.sign(Math.sin(TAU * fq * t)) * 0.6 + rand() * 0.4;
+      x[n] = hold * (step % 3 === 2 ? 0.15 : 1) * Math.min(1, (0.3 - t) / 0.05);
+    }
+    return fadeEdges(peakNorm(x, 0.42));
+  },
+  // Sparkle: a quick run of high notes (an idea, a reveal).
+  sparkle() {
+    const x = buf(0.9), notes = [84, 88, 91, 96, 100];
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      let v = 0;
+      notes.forEach((m, k) => { const d = k * 0.055; if (t >= d) v += Math.sin(TAU * midi(m) * (t - d)) * env(t - d, 0.001, 0.09) * (1 - k * 0.1); });
+      x[n] = v;
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.3 }), 0.5), 0.002, 0.15);
+  },
 };
 
 // ---- music beds ---------------------------------------------------------------------------------
@@ -355,9 +453,19 @@ const MUSIC = {
     bass: { pattern: [0.5, 1.5, 2.5, 3.5], len: 0.45, decay: 0.12, down: 1 },
     pluck: { pattern: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5], level: 0.55 }, padLevel: 0.4, cutoff: 1800,
   }),
+  // Slow and open, 66 bpm, suspended chords that never quite resolve: for big ideas (science, philosophy, history).
+  wonder: () => bed({
+    bpm: 66, bars: 16,
+    chords: [[50, 57, 62, 64], [46, 53, 58, 60], [43, 50, 55, 57], [48, 55, 60, 62]],   // Dsus2 Bbsus2 Gsus2 Csus2
+    bass: { pattern: [0], len: 3.5, decay: 1.4, down: 1 },
+    pluck: { pattern: [0, 1.5, 2.5], level: 0.5 }, padLevel: 0.8, cutoff: 900,
+  }),
 };
 
+// node tools/make-sounds.mjs page boop   regenerates only the sounds named (the rest stay byte-identical).
+const only = process.argv.slice(2);
+const want = (name) => !only.length || only.includes(name);
 console.log('sound effects:');
-for (const [name, make] of Object.entries(SFX)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), make());
+for (const [name, make] of Object.entries(SFX)) if (want(name)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), make());
 console.log('music beds:');
-for (const [name, make] of Object.entries(MUSIC)) save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());
+for (const [name, make] of Object.entries(MUSIC)) if (want(name)) save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());
