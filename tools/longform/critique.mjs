@@ -92,6 +92,20 @@ export function critique(plan, R, { briefFile, staticMax = 20, slowWpm = 105 } =
     last = Math.max(last, b);
   }
 
+  // ---- whiteboard: a full-screen cutaway over the drawing hides the explanation
+  for (const id of used) {
+    const b = lib.clips[id].board;
+    if (!b?.white) continue;
+    for (const [a, e] of b.active) {
+      const oa = outTime(cuts, id, a), oe = outTime(cuts, id, e);
+      if (oa == null || oe == null) continue;
+      const hid = (R.inserts || []).find((i) => i.layout === 'full' && i.at < oe - 0.5 && i.at + i.dur > oa + 0.5);
+      if (hid) add('board', hid.at, `${hid.id} covers the board while it's being drawn on (${fmt(oa)}-${fmt(oe)}).`, 'Use layout split or pip there, or move the visual to after the drawing.');
+    }
+    const drawingTime = b.active.reduce((x, [a, e]) => x + e - a, 0);
+    if (drawingTime > 20 && !(plan.punch_in)) add('board', null, `${id} is a whiteboard session with ${Math.round(drawingTime)} s of drawing.`, 'Set punch_in (zoom with focus on the board) so the writing reads on a phone, and keep the board visible while it is drawn.');
+  }
+
   // ---- the same visual twice in a row
   const anim = (R.inserts || []).filter((i) => !i.autoBroll);
   anim.forEach((i, k) => { const p = anim[k - 1]; if (p && i.scene && i.scene === p.scene) add('sameness', i.at, `Two ${i.scene} visuals in a row (${p.id}, ${i.id}).`, 'Change one to another template, or merge them.'); });
@@ -119,7 +133,7 @@ export function critique(plan, R, { briefFile, staticMax = 20, slowWpm = 105 } =
     }
   }
 
-  const weight = { opener: 12, promise: 10, repeats: 6, fluff: 5, terms: 4, static: 5, order: 4, sameness: 3, pace: 3, ending: 5, brief: 10 };
+  const weight = { opener: 12, promise: 10, repeats: 6, fluff: 5, terms: 4, static: 5, order: 4, sameness: 3, pace: 3, ending: 5, brief: 10, board: 6 };
   const score = Math.max(0, 100 - notes.reduce((a, n) => a + (weight[n.kind] || 3), 0));
   return { score, notes };
 }
@@ -129,4 +143,40 @@ export function critiqueMarkdown(name, c) {
   if (!c.notes.length) L.push('Nothing flagged.');
   for (const n of c.notes) L.push(`- **${n.kind}**${n.t != null ? ` at ${fmt(n.t)}` : ''}: ${n.text}\n  - fix: ${n.fix}`);
   return L.join('\n') + '\n';
+}
+
+// ---- depth pass (docs/EDITORIAL.md "Added depth"): what a first-time viewer needs that the footage doesn't give.
+// A worklist, not an edit: every term to explain (with an insert to fill in), every figure said (to source or
+// soften), and a place for pickup lines the speaker records. Never words in the speaker's mouth.
+const FIGURE = /(\d[\d,.]*\s*(%|percent\b|million\b|billion\b|trillion\b|thousand\b|times\b|x\b)|\b\d{1,3}(,\d{3})+\b|\b\d{3,}\b|\b(hundred|thousand|million|billion|trillion)\b|\bpercent\b)/i;
+export function depthWorklist(plan, R) {
+  const lib = R.lib, cuts = R.cuts || [];
+  const used = [...new Set(cuts.map((c) => c.clip))].filter((id) => lib.clips[id]?.sentences?.length);
+  const shown = JSON.stringify((R.inserts || []).map((i) => [i.data, i.scene, i.id])).toLowerCase();
+  const terms = [], figures = [];
+  for (const id of used) {
+    const c = lib.clips[id], m = analyze(c);
+    for (const t of m.terms) {
+      if (t.defined || shown.includes(t.term.toLowerCase())) continue;
+      const s = c.sentences[t.first - 1];
+      const at = s && partlyIn(cuts, id, s) ? (outTime(cuts, id, s.s) ?? outTime(cuts, id, s.e)) : null;
+      if (at == null) continue;
+      terms.push({ term: t.term, at, anchor: `${id}#${t.first}`, said: s.text });
+    }
+    for (const s of c.sentences) if (FIGURE.test(s.text) && partlyIn(cuts, id, s)) figures.push({ anchor: `${id}#${s.n}`, at: outTime(cuts, id, s.s), text: s.text });
+  }
+  return { terms, figures };
+}
+
+export function depthMarkdown(name, d) {
+  const L = [`# Depth: ${name}`, '', 'What a first-time viewer needs that the footage doesn\'t give. Work through it, then rebuild.', '',
+    '## Terms to explain on screen', '', 'Each one: an insert on its first use (a `term` card, or better a `story`/`count` visual that shows it), or a pickup line.', ''];
+  if (!d.terms.length) L.push('None: every term is defined or already shown.');
+  d.terms.forEach((t) => L.push(`- **${t.term}** at ${fmt(t.at)} (\`${t.anchor}\`): "${t.said.slice(0, 120)}"`,
+    `  \`{ "id": "term-${t.term.replace(/\W+/g, '-')}", "kind": "animation", "scene": "term", "at": "${t.anchor}", "word": "${t.term.split(' ')[0]}", "dur": 5, "layout": "split", "data": { "term": "${t.term}", "definition": "", "plain": "" } }\``));
+  L.push('', '## Figures said (source each one, or soften the claim)', '');
+  if (!d.figures.length) L.push('None.');
+  d.figures.forEach((f) => L.push(`- ${f.at != null ? fmt(f.at) : '--'} \`${f.anchor}\`: "${f.text.slice(0, 140)}" -> source:`));
+  L.push('', '## Pickup lines to record (only where the footage can\'t carry the point)', '', '- (line) -> goes after `clip#n`, because ...', '');
+  return L.join('\n');
 }

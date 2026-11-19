@@ -7,6 +7,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
+import { scanBoard } from './board.mjs';
 import { FF, FILLERS, ROOT, VIDEO_EXT, bare, fileKey, fmt, frameAt, probe, readJSON, sentencesOf, sheet, slug, transcribe, writeJSON } from './common.mjs';
 
 export const libDir = () => (process.env.LONGFORM_LIBRARY ? resolve(process.env.LONGFORM_LIBRARY) : join(ROOT, 'footage', 'library'));
@@ -72,7 +73,7 @@ export async function index(dir = libDir(), { force = false, log = console.log }
     const t = p.hasAudio ? await transcribe(file, cache) : { via: 'none', words: [] };
     const sentences = sentencesOf(t.words);
     const clip = { id, file: resolve(file), key, duration: +p.duration.toFixed(2), width: p.width, height: p.height, fps: p.fps,
-      hasAudio: p.hasAudio, transcript: t.via, words: t.words, sentences, shots: p.hasVideo ? shots(file, p.duration) : [] };
+      hasAudio: p.hasAudio, transcript: t.via, words: t.words, sentences, shots: p.hasVideo ? shots(file, p.duration) : [], board: p.hasVideo ? scanBoard(file) : null };
     if (p.hasVideo) await contactSheet(file, p.duration, join(IDX(), id + '.sheet.jpg'));
     lib.clips[id] = clip;
     mkdirSync(IDX(), { recursive: true });
@@ -115,6 +116,7 @@ function clipMarkdown(c) {
     `Contact sheet: ${c.id}.sheet.jpg`, '', '## Sentences (anchor as `' + c.id + '#n`)', ''];
   for (const s of c.sentences) lines.push(`#${s.n} [${fmt(s.s)}–${fmt(s.e)}] ${s.text.replace(/\b(um+|uh+|erm|uhm)\b/gi, '($1)')}`);
   if (c.shots.length > 1) { lines.push('', '## Shots', ''); c.shots.forEach(([a, b], i) => lines.push(`${i + 1}. ${fmt(a)}–${fmt(b)}`)); }
+  if (c.board?.white) { lines.push('', `## Whiteboard (${Math.round(c.board.whiteShare * 100)}% of the frame is board)`, '', 'Drawing or pointing (keep the board on screen here: split, pip or a punch-in, not a full cutaway):', ''); c.board.active.forEach(([a, b]) => lines.push(`- ${fmt(a)}–${fmt(b)}`)); }
   return lines.join('\n') + '\n';
 }
 

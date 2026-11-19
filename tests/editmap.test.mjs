@@ -103,3 +103,59 @@ test('critique flags table talk at the open, repeats kept, an undefined term, a 
   const k2 = critique({ name: 'cut' }, R2, { staticMax: 15 }).notes.map((x) => x.kind);
   for (const k of ['opener', 'repeats', 'fluff']) assert.ok(!k2.includes(k), `${k} gone (${k2})`);
 });
+
+import { crossTakes } from '../tools/longform/editmap.mjs';
+test('best take across recordings: the same point in two sessions, the cleaner take first', () => {
+  const mk = (id, lines) => { const words = []; let t = 0; for (const l of lines) { for (const w of l.split(' ')) { words.push({ w, s: t, e: t + 0.3 }); t += 0.36; } t += 1.2; } return { id, words, sentences: sentencesOf(words), duration: t }; };
+  const a = mk('session1', ['Um so the simulation um renders only what the observer um looks at to save compute.', 'Something unrelated about breakfast cereal today.']);
+  const b = mk('session2', ['The simulation renders only what the observer looks at, to save compute.', 'Gravity bends light around heavy stars and galaxies.']);
+  const g = crossTakes({ clips: { session1: a, session2: b } });
+  assert.equal(g.length, 1);
+  assert.equal(g[0].best, 'session2#1');
+  assert.equal(g[0].takes.length, 2);
+});
+
+import { proposeRules } from '../tools/longform/extras.mjs';
+test('feedback notes that read like standing preferences become proposed taste rules', () => {
+  const r = proposeRules([{ t: 3, text: 'Always put the face in the corner circle' }, { t: 9, text: 'wrong card here, should be the queen' }, { t: 20, text: 'Music is too loud under the voice' }, { t: 30, text: 'I love these pop-up words' }]);
+  assert.deepEqual(r.map((x) => x.t), [3, 20, 30]);
+});
+
+import { boardFromFrames } from '../tools/longform/board.mjs';
+test('whiteboard scan: a bright board, with drawing found only where a small part of it changes', () => {
+  const frame = (ink) => { const f = new Uint8Array(64 * 36).fill(235); for (let i = 0; i < ink; i++) f[64 * 10 + 5 + i] = 20; return f; };
+  // 0-4 s still, 4-8 s a line being drawn (grows each frame), 8-10 s still, then a cut to a dark frame.
+  const frames = [];
+  for (let i = 0; i < 8; i++) frames.push(frame(0));
+  for (let i = 0; i < 8; i++) frames.push(frame(i * 4 + 4));
+  for (let i = 0; i < 4; i++) frames.push(frame(32));
+  frames.push(new Uint8Array(64 * 36).fill(30));
+  const b = boardFromFrames(frames, { fps: 2 });
+  assert.ok(b.white);
+  assert.equal(b.active.length, 1, JSON.stringify(b.active));
+  assert.ok(b.active[0][0] >= 3.5 && b.active[0][0] <= 4.5 && b.active[0][1] >= 7.5 && b.active[0][1] <= 8.5, JSON.stringify(b.active));
+});
+
+import { auto } from '../tools/longform/auto.mjs';
+import { mkdtempSync, mkdirSync as mkd, writeFileSync as wf, existsSync as ex, readFileSync as rf } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+test('drop folder: a file is only picked up once its size holds still, and briefs waiting are queued', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'auto-'));
+  const inbox = join(root, 'inbox'), plans = join(root, 'plans');
+  mkd(inbox, { recursive: true }); mkd(plans, { recursive: true });
+  wf(join(inbox, 'session.txt'), 'not a video');
+  wf(join(plans, 'old.brief.md'), '# Brief\n\n## The one idea\n<!-- todo -->\n\n## Hook\n');
+  const prevLib = process.env.LONGFORM_LIBRARY; process.env.LONGFORM_LIBRARY = join(root, 'library');
+  try {
+    wf(join(inbox, 'take.mp4'), 'partial');
+    const r1 = await auto({ inbox, plans, queueFile: join(root, 'QUEUE.md'), log: () => {}, build: false });
+    assert.deepEqual(r1.waiting, ['take.mp4'], 'first sighting waits');
+    assert.deepEqual(r1.needBrief, ['old']);
+    wf(join(inbox, 'take.mp4'), 'partial plus more');
+    const r2 = await auto({ inbox, plans, queueFile: join(root, 'QUEUE.md'), log: () => {}, build: false });
+    assert.deepEqual(r2.waiting, ['take.mp4'], 'still growing: waits again');
+    assert.ok(ex(join(inbox, 'take.mp4')));
+    assert.match(rf(r2.queue, 'utf8'), /write the brief/);
+  } finally { if (prevLib === undefined) delete process.env.LONGFORM_LIBRARY; else process.env.LONGFORM_LIBRARY = prevLib; }
+});

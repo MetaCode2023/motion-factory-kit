@@ -115,7 +115,7 @@ server.registerTool('kit_overview', {
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
-    longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_broll (automatic cutaways to validated, reusable footage; look at the check sheets), longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_analyze (edit map: repeats, fluff, hooks, Shorts, undefined terms) and write the brief (docs/EDITORIAL.md) before any plan', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
+    longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_broll (automatic cutaways to validated, reusable footage; look at the check sheets), longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_analyze (edit map: repeats, fluff, hooks, Shorts, undefined terms) and write the brief (docs/EDITORIAL.md) before any plan', 'longform_takes (best take of each point across sessions)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report + CRITIQUE.md; returns the contact sheet)', 'longform_depth (terms to explain, figures to source, pickups)', 'longform_package (every format: video, Shorts, thumbnails, PACKAGE.md)', 'longform_auto (drop folder -> queue)'],
     overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
   },
   templates: templates(),
@@ -299,6 +299,30 @@ server.registerTool('longform_analyze', {
   description: 'Read one raw recording the way an editor does: sections where the subject changes, points said more than once (which take to keep), false starts, table talk and filler, hook candidates from anywhere in the recording, stand-alone stretches for Shorts, and terms the speaker never defines. Writes <id>.EDITMAP.md and a brief to fill in (edits/longform/<name>.brief.md). Raw footage is raw material: read the map, decide the one idea, hook, structure and cuts in the brief (docs/EDITORIAL.md), then write the plan.',
   inputSchema: { clip: z.string(), name: z.string().optional() },
 }, async ({ clip, name }) => text(await cli('longform.mjs', ['analyze', clip, ...(name ? ['--name', name] : [])])));
+
+server.registerTool('longform_takes', {
+  title: 'Best take of each point across recordings',
+  description: 'Points the speaker made in more than one recording (whiteboard series re-explain constantly), best take first: complete, fewest fillers, says the most, starts cleanly. Writes TAKES.md next to the index. Use the best take in the plan unless another fits the story better, and say which in the brief.',
+  inputSchema: {},
+}, async () => text(await cli('longform.mjs', ['takes'])));
+
+server.registerTool('longform_depth', {
+  title: 'Depth worklist for a plan',
+  description: 'What a first-time viewer needs that the footage does not give: every jargon term used without a definition or a visual (with a term insert to fill in), every figure said (to source or soften), and a section for pickup lines the speaker records. Writes edits/longform/<name>.DEPTH.md. Never put words in the speaker\'s mouth.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['depth', plan])));
+
+server.registerTool('longform_package', {
+  title: 'Every format from one plan',
+  description: 'Build the long-form video, then vertical Shorts (the plan\'s "shorts", else the stand-alone stretches from the edit map), thumbnails and PACKAGE.md (files, chapters, credits, editor score, what is still missing before posting). Nothing is posted.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['package', plan])));
+
+server.registerTool('longform_auto', {
+  title: 'Run the drop folder',
+  description: 'footage/inbox -> new recordings (size stable since the last run) are moved into the library, indexed, mapped and given a brief template; plans whose brief is filled in and changed are packaged; footage/QUEUE.md lists what waits on the editor. Nothing is posted.',
+  inputSchema: {},
+}, async () => text(await cli('longform.mjs', ['auto'])));
 
 server.registerTool('longform_words', {
   title: 'Word timings of a clip or sentence',

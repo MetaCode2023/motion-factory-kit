@@ -111,6 +111,15 @@ draw();
 
 // review.json (from the page) -> FEEDBACK.md: every note with what was on screen and being said there,
 // and where in the plan to change it.
+const GENERAL = [
+  [/\b(always|never|every (time|video|one)|from now on|in general|going forward|all (the )?videos?|each time|whenever|by default)\b/i, 'says "always/never/every"'],
+  [/\b(i (really )?(like|love|hate|prefer|want)|we (like|want|prefer)|i don'?t (like|want)|don'?t ever|stop (doing|using)|more of (this|these|that)|less of)\b/i, 'a preference'],
+  [/\b(too (long|short|fast|slow|loud|quiet|much|many|busy|small|big)|not enough)\b/i, 'a level that is off'],
+];
+export function proposeRules(notes) {
+  return notes.map((n) => { const hit = GENERAL.find(([re]) => re.test(n.text)); return hit ? { t: n.t, text: n.text, why: hit[1] } : null; }).filter(Boolean);
+}
+
 export function feedback(reviewFile, planFile) {
   const rv = JSON.parse(readFileSync(reviewFile, 'utf8'));
   const pf = planFile || (rv.plan && existsSync(join(ROOT, rv.plan)) ? join(ROOT, rv.plan) : join(ROOT, 'edits', 'longform', `${rv.name}.json`));
@@ -136,9 +145,18 @@ export function feedback(reviewFile, planFile) {
     lines.push('');
   });
   if (!notes.length) lines.push('No notes.', '');
+  // Notes that read like a standing preference become proposed rules for docs/TASTE.md (docs/EDITORIAL.md,
+  // "Learning from feedback"). The editor words them as general rules, adds the date and video, or says why not.
+  const rules = proposeRules(notes);
+  if (rules.length) {
+    lines.push('## Proposed rules for docs/TASTE.md', '', 'These notes sound like they apply to every video, not just this one. Fix this video first, then add each',
+      'one that generalises to docs/TASTE.md (dated, with this video named), or say in the run report why not.', '');
+    rules.forEach((r) => lines.push(`- [${fmtChapter(r.t)}] ${r.why}: "${r.text.split('\n')[0]}"`));
+    lines.push('');
+  }
   const out = join(dirname(resolve(reviewFile)), 'FEEDBACK.md');
   writeFileSync(out, lines.join('\n'));
-  return { ok: true, file: out, approved: !!rv.approved, notes, plan: pf };
+  return { ok: true, file: out, approved: !!rv.approved, notes, rules, plan: pf };
 }
 
 // ---- thumbnails ------------------------------------------------------------------------------------------
@@ -166,13 +184,13 @@ export function thumbnails(planFile, { log = console.log } = {}) {
 // With none in the plan, one is proposed per chapter: from its first line to the sentence that ends
 // nearest 45 s later. The 16:9 picture sits in a 9:16 frame over a blurred copy of itself: title above,
 // big word-by-word captions below (for the words the long video doesn't already caption), all inside the safe area.
-export async function shorts(planFile, { log = console.log, max = 6 } = {}) {
+export async function shorts(planFile, { log = console.log, max = 6, list: given = null } = {}) {
   const plan = loadPlan(planFile), R = resolvePlan(plan);
   if (R.errors.length) return { ok: false, errors: R.errors };
   const dir = outDir(plan), src = [join(dir, `${plan.name}.mp4`)].find(existsSync);
   if (!src) return { ok: false, errors: ['build the plan first (node longform.mjs build <plan>)'] };
   const total = probe(src).duration || R.total;
-  let list = (plan.shorts || []).map((s) => ({ from: seconds(s.from), to: seconds(s.to), title: s.title || '' }));
+  let list = (given || plan.shorts || []).map((s) => ({ from: seconds(s.from), to: seconds(s.to), title: s.title || '' }));
   if (!list.length) {
     const ends = R.words.filter((w) => /[.?!]$/.test(w.w)).map((w) => w.e + 0.25);
     list = R.chapters.slice(0, max).map((c) => {

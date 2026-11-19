@@ -259,3 +259,45 @@ changed after review. Guide: docs/EDITORIAL.md. Evidence: EDITMAP.md for ${m.cli
 <!-- Each with the default you'll use if nobody answers. -->
 `;
 }
+
+// ---- the best take across sessions ----------------------------------------------------------------------
+// Whiteboard series re-explain the same idea in several recordings. Find points made in more than one clip and
+// rank the takes (complete, fewest fillers, says the most, starts cleanly), so a plan can use the best one.
+export function crossTakes(lib, { min = 0.45, minTerms = 5 } = {}) {
+  const all = [];
+  for (const c of Object.values(lib.clips)) c.sentences.forEach((s, i) => {
+    const t = [...new Set(termsOf(s.text))];
+    if (t.length < minTerms) return;
+    const prev = c.sentences[i - 1];
+    all.push({ clip: c.id, n: s.n, s: s.s, e: s.e, text: s.text.trim(), terms: t, fillers: fillerCount(s.text), cont: !!(prev && !/[.?!]$/.test(prev.text) && s.s - prev.e < 0.9) || /^[a-z]/.test(s.text.trim()) });
+  });
+  // Candidate pairs share at least two terms; the inverted index keeps this fast on hours of footage.
+  const df = new Map();
+  for (const x of all) for (const t of x.terms) df.set(t, (df.get(t) || 0) + 1);
+  const index = new Map();
+  all.forEach((x, i) => { for (const t of x.terms) if (df.get(t) <= Math.max(25, all.length * 0.02)) { if (!index.has(t)) index.set(t, []); index.get(t).push(i); } });
+  const parent = all.map((_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  all.forEach((x, i) => {
+    const seen = new Map();
+    for (const t of x.terms) for (const j of index.get(t) || []) if (j > i && all[j].clip !== x.clip) seen.set(j, (seen.get(j) || 0) + 1);
+    for (const [j, shared] of seen) if (shared >= 2 && jaccard(x.terms, all[j].terms) >= min) parent[find(j)] = find(i);
+  });
+  const groups = new Map();
+  all.forEach((x, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(x); });
+  const score = (x) => x.terms.length - x.fillers * 1.5 + (/[.?!]$/.test(x.text) ? 1 : 0) - (x.cont ? 2 : 0);
+  return [...groups.values()].filter((g) => new Set(g.map((x) => x.clip)).size >= 2).map((g) => {
+    const takes = [...g].sort((a, b) => score(b) - score(a)).map((x) => ({ anchor: `${x.clip}#${x.n}`, clip: x.clip, n: x.n, s: x.s, text: x.text, score: +score(x).toFixed(1) }));
+    const words = new Map();
+    for (const x of g) for (const t of x.terms) words.set(t, (words.get(t) || 0) + 1);
+    return { idea: [...words].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t]) => t).join(', '), best: takes[0].anchor, takes };
+  }).sort((a, b) => b.takes.length - a.takes.length);
+}
+
+export function takesMarkdown(groups) {
+  const L = ['# Best takes across recordings', '', 'Points made in more than one recording, best take first (complete, fewest fillers, says the most, starts cleanly).',
+    'Use the best take in the plan unless another one fits the story better; say which in the brief.', ''];
+  if (!groups.length) L.push('No point is made in more than one recording.');
+  for (const g of groups) { L.push(`## ${g.idea}`, ''); g.takes.forEach((t, i) => L.push(`${i ? '-' : '- **best**'} \`${t.anchor}\` [${fmt(t.s)}] (${t.score}) ${t.text}`)); L.push(''); }
+  return L.join('\n');
+}

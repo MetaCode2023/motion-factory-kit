@@ -533,6 +533,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const crit = critique(plan, R, { briefFile: briefStatus(planFile, plan).file });
   for (const [a, d] of R.frozen) if (d >= 6) crit.notes.push({ kind: 'static', t: a, text: `The picture doesn't change for ${d.toFixed(0)} s at ${fmt(a)}.`, fix: 'Cut tighter, or give that stretch a visual that moves.' });
   writeFileSync(join(dir, 'CRITIQUE.md'), critiqueMarkdown(plan.name, crit));
+  writeFileSync(join(dir, 'decisions.json'), JSON.stringify(decisionRecord(plan, R, crit, briefStatus(planFile, plan).file), null, 1) + '\n');
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });
   log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md, editor ${crit.score}/100 with ${crit.notes.length} note(s) in CRITIQUE.md)`);
   return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), critique: join(dir, 'CRITIQUE.md'), editorScore: crit.score, sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
@@ -559,6 +560,24 @@ export async function remix(planFile, { voice = true, log = console.log } = {}) 
 
 // The editorial brief (docs/EDITORIAL.md): the reasons behind an edit of raw footage, written before the plan.
 // Script-first plans have the script as their brief. Missing or unfilled -> a warning, so no edit ships unexplained.
+// Machine-readable record of what this edit decided and why (docs/SELF-LEARNING-ENGINE.md): the brief's sections,
+// the source ranges kept in story order, every visual, the chapters and the editor's notes.
+export function decisionRecord(plan, R, crit, briefFile) {
+  const brief = {};
+  if (briefFile && existsSync(briefFile)) {
+    for (const part of readFileSync(briefFile, 'utf8').split(/^## /m).slice(1)) {
+      const [head, ...body] = part.split('\n');
+      const text = body.join('\n').replace(/<!--[\s\S]*?-->/g, '').trim();
+      if (text) brief[head.trim()] = text;
+    }
+  }
+  return { name: plan.name, title: plan.title || plan.name, duration: +R.total.toFixed(2), source: +R.source.toFixed(2), brief,
+    kept: R.cuts.map((c) => ({ clip: c.clip, from: +c.s.toFixed(2), to: +c.e.toFixed(2), at: +c.out.toFixed(2) })),
+    visuals: R.inserts.map((i) => ({ id: i.id, kind: i.kind, scene: i.scene || null, at: +i.at.toFixed(2), dur: i.dur, layout: i.layout, auto: !!i.autoBroll, query: i.query || null })),
+    chapters: R.chapters.map((c) => ({ at: +c.at.toFixed(2), title: c.title })),
+    editor: { score: crit.score, notes: crit.notes } };
+}
+
 export function briefStatus(planFile, plan) {
   if (plan.from_script) return { file: null, warning: null };
   const file = plan.brief ? join(dirname(planFile), plan.brief) : planFile.replace(/\.json$/, '.brief.md');

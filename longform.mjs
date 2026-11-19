@@ -8,12 +8,14 @@
 //   From existing footage (raw recordings are raw material: map them, decide, then plan):
 //   node longform.mjs index [footage/library]     # transcribe + index every video once (new files only)
 //   node longform.mjs analyze <id|file> [--name x] # edit map (sections, repeats, fluff, hooks, Shorts, terms) + brief to fill in
+//   node longform.mjs takes                       # points made in several recordings, best take first (TAKES.md)
 //   node longform.mjs search "bluffing"           # moments across the whole archive, ranked
 //   node longform.mjs clip <id>                   # one clip's numbered sentences (path to its .md)
 //   node longform.mjs words <id> [#n]             # word timings (for exact anchors and cutting false starts)
 //   node longform.mjs check edits/longform/x.json # resolve the plan, list every problem, show the timeline
 //   node longform.mjs broll edits/longform/x.json # automatic B-roll: validated video (then photos) of the things named, reusable sources only
 //   node longform.mjs stock edits/longform/x.json # download free stock B-roll for "stock" inserts (PEXELS_API_KEY)
+//   node longform.mjs package edits/longform/x.json # build + vertical Shorts + thumbnails + PACKAGE.md (every format)
 //   node longform.mjs build edits/longform/x.json # preview MP4 + Premiere XML + captions + chapters + report
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
 //   node longform.mjs pull <plan>                 # fetch pulls that have a url + from/to (needs yt-dlp)
@@ -34,7 +36,10 @@ import { pull, stock } from './tools/longform/stock.mjs';
 import { autoBroll } from './tools/broll/index.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
 import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
-import { analyze, briefTemplate, editmapMarkdown } from './tools/longform/editmap.mjs';
+import { analyze, briefTemplate, crossTakes, editmapMarkdown, takesMarkdown } from './tools/longform/editmap.mjs';
+import { depthMarkdown, depthWorklist } from './tools/longform/critique.mjs';
+import { auto } from './tools/longform/auto.mjs';
+import { packageAll } from './tools/longform/package.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -73,6 +78,31 @@ try {
       console.log(`brief    -> ${relative(ROOT, brief)}${fresh ? ' (new: fill it in before writing the plan, docs/EDITORIAL.md)' : ' (kept: already exists)'}`);
     }
     emit({ ok: true, clip: c.id, editmap: md, brief, ...m });
+  } else if (cmd === 'takes') {
+    // node longform.mjs takes: points made in more than one recording, best take first -> .index/TAKES.md
+    const groups = crossTakes(loadLibrary());
+    const file = join(IDX(), 'TAKES.md');
+    mkdirSync(IDX(), { recursive: true });
+    writeFileSync(file, takesMarkdown(groups));
+    if (!json) { console.log(`${groups.length} point(s) made in more than one recording -> ${relative(ROOT, file)}`); groups.slice(0, 8).forEach((g) => console.log(`  ${g.idea}: best ${g.best} (of ${g.takes.length})`)); }
+    emit({ ok: true, file, groups });
+  } else if (cmd === 'depth') {
+    // node longform.mjs depth <plan>: terms to explain, figures to source, pickups -> edits/longform/<name>.DEPTH.md
+    const plan = loadPlan(args[0]), R = resolvePlan(plan);
+    if (R.errors.length) throw new Error(R.errors.join('\n'));
+    const d = depthWorklist(plan, R), file = resolve(args[0]).replace(/\.json$/, '.DEPTH.md');
+    writeFileSync(file, depthMarkdown(plan.name, d));
+    if (!json) console.log(`${d.terms.length} term(s) to explain, ${d.figures.length} figure(s) to source -> ${relative(ROOT, file)}`);
+    emit({ ok: true, file, ...d });
+  } else if (cmd === 'auto') {
+    // node longform.mjs auto [--no-build]: drop folder -> index, map, brief template; ready plans -> package; QUEUE.md
+    emit(await auto({ log, build: !rest.includes('--no-build') }));
+  } else if (cmd === 'package') {
+    // node longform.mjs package <plan> [--no-build]: the long video, vertical Shorts, thumbnails and PACKAGE.md in one run.
+    const r = await packageAll(args[0], { log, skipBuild: rest.includes('--no-build') });
+    if (!r.ok) { (r.errors || []).forEach((e) => console.log('ERROR  ' + e)); process.exitCode = 1; }
+    else if (!json) r.missing.forEach((m) => console.log('  still to do: ' + m));
+    emit(r);
   } else if (cmd === 'search') {
     const q = args.filter((a) => a !== opt('limit')).join(' ');
     const hits = search(q, { limit: Number(opt('limit', 12)) });
@@ -251,12 +281,16 @@ function readmeUsage() {
   node longform.mjs from-script <script> <recording> [--build]   recording -> plan (-> video)
   node longform.mjs index [dir]        index footage (default footage/library)
   node longform.mjs analyze <id|file>  edit map of raw footage + a brief to fill in (before any plan)
+  node longform.mjs takes              the same point in several recordings, best take first
   node longform.mjs search "<topic>"   find moments across the archive
   node longform.mjs clip <id>          one clip's numbered sentences
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence
   node longform.mjs check <plan.json>  validate a plan and show its timeline
   node longform.mjs broll <plan.json>  automatic B-roll: validated video (then photos) of the things named
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
+  node longform.mjs depth <plan>       terms to explain, figures to source, pickup lines (DEPTH.md)
+  node longform.mjs auto               drop folder (footage/inbox): map new recordings, package ready plans, QUEUE.md
+  node longform.mjs package <plan>     every format in one run: video, Shorts, thumbnails, PACKAGE.md
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
   node longform.mjs demo [podcast]     run it all on bundled stand-in footage
