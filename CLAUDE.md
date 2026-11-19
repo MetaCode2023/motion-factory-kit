@@ -5,6 +5,16 @@ This repo turns code into finished short-form videos. You write a **scene** (one
 adds narration, captions, music and sound effects, and writes a postable MP4. It's built for
 **UGC-style ads around Higgsfield clips** and for **motion-graphics explainers**.
 
+## The goal, and how to read every request
+
+The kit is being built into a **reasoning video editor**: raw footage in (whiteboard explainers, talking heads,
+podcasts, notes), clean finished videos out in every format, with minimal hand-holding. Treat every request as a step
+toward that, not a literal script. Footage and notes are raw material: find the one idea and the strongest hook, put
+it in story order, cut repeats and fluff, add depth, choose the formats, and explain your calls afterwards. Ask first
+only before spending money or credits, or posting. Read `AGENTS.md` (orientation), `docs/STATUS.md` (current state and
+the handoff queue), `docs/EDITORIAL.md` (the editing loop) and `docs/TASTE.md` (the owner's standing preferences).
+**Before you finish any work:** update `docs/STATUS.md`, add to `docs/DECISIONS.md` / `docs/runs/` as needed.
+
 ## When the user asks for a video
 
 1. **Figure out the type.**
@@ -102,7 +112,7 @@ You are the writer's room, the editor and the motion designer. The creator bring
 the goal is a 10-minute video they can post without touching it.
 
 **Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
-0. **Read `docs/PLAYBOOK.md`** (section 0 is how deep to go: the profound version of the idea, every term earned, for someone who has never heard of it), and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
+0. **Read `docs/PLAYBOOK.md`** (sections 0 and 3 are how deep to go: the profound version of the idea, every term earned, for someone who has never heard of it), and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
    series look, fact and clip rules, what a finished package contains). No VOICE.md but recordings of them exist:
    index the solo ones and run `node longform.mjs voice`.
 1. **Ask what the video is about** if they haven't said, and the angle (e.g. "why people love poker, as a Trojan
@@ -119,6 +129,11 @@ the goal is a 10-minute video they can post without touching it.
    with `source:`. Run `node longform.mjs script` and fix every error and cadence warning. It also
    prints a **retention** score with notes (weak hook, no promise in the first 45 s, a stretch with no question or
    turn, sagging chapters, too many word cards, no next step at the end): fix each or tell the creator why not.
+   **Write deep, not wide** (PLAYBOOK "Depth"): put `thesis:`, `tension:` and `bridge:` in the header first; name the
+   real ideas, who proposed them and how we know; set the competing views against each other; follow the idea one
+   step past the usual explainer; say where the knowledge stops and what it means for the viewer. The same command
+   prints a **depth** score with notes: fix each in the writing. Pick the music bed in the header
+   (`music: wonder 0.1` for big ideas; default `calm`) and the sound style (`sound: lively | calm | off`).
    Layouts when the speaker is on camera: `full`, `side` (box beside them), `pip` (visual full screen, speaker in a
    corner circle: keeps a face on screen through long explanations), `split` (speaker left, simple visual right).
 3. **Revise with the creator** until they approve. Then they record from the `.read.txt` (re-reading a flubbed
@@ -127,7 +142,10 @@ the goal is a 10-minute video they can post without touching it.
    independent, so write them in parallel with subagents if you can.
 4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
    Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
-   `broll` (automatic: cutaways to free-license photos of the places and things named, no key; review BROLL.md),
+   `broll` (automatic: cutaways to real footage of the places and things named, video before photos, only from
+   sources released for reuse: stock, Wikimedia Commons, Creative Commons YouTube via yt-dlp, channels listed in
+   `auto_broll.channels`; each pick is checked against the name said. **Look at every check sheet** in
+   `out/longform/<name>/broll-check/`, set `"seen": true` or re-pick/drop in the lockfile; review BROLL.md),
    `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
@@ -140,8 +158,11 @@ the goal is a 10-minute video they can post without touching it.
    only what the notes ask for, rebuild. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
    and `shorts <plan>` (set `"shorts": [{ from, to, title }]` to the stretches that stand alone) finish the package.
 
-**From existing footage** (podcast archives). MCP: `longform_index`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.
-`node longform.mjs index` (footage in `footage/library/`), `search` several phrasings of every beat, pick the
+**From existing footage** (whiteboard sessions, podcast archives, raw takes). MCP: `longform_index`, `longform_analyze`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.
+`node longform.mjs index` (footage in `footage/library/`), then **`node longform.mjs analyze <clip> --name <video>`**:
+read the edit map (sections, repeats, false starts, fluff, hook candidates, Short candidates, undefined terms) and fill
+in `edits/longform/<video>.brief.md` (one idea, hook, story order, cuts, depth, formats; docs/EDITORIAL.md) before
+the plan. Then `search` several phrasings of every beat, pick the
 clearest take, and write a plan (`edits/longform/<name>.json`): `a_roll` in story order across clips,
 `tighten.cut` for false starts, inserts anchored to words, chapters, music. Never stitch words into a sentence
 they didn't say; if a beat isn't covered, give them the lines to record.
@@ -222,18 +243,19 @@ creator.draw(ctx, t, 0, 0, 1080, 1920, { zoom: 1.03 });   // cover-fit; any size
 ```js
 M.setup({ ...,
   captions: true,                                       // word-by-word captions; keep content above y≈1250
-  music: { track: 'pulse', volume: 0.2 },                // sounds/music: pulse, calm, drive (or your own file)
+  music: { track: 'pulse', volume: 0.2 },                // sounds/music: pulse, calm, drive, wonder (or your own file)
   sfx: [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.45 }],
   voice: [{ at: 0.3, text: 'One sentence per beat.' }],  // ElevenLabs narration (or file: 'x.mp3')
 });
 ```
 
-- Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`, plus the
-  short-form staples `pageturn beep boop bop ding shutter scratch boom glitch sparkle swipe`
+- Effects in `sounds/sfx/`: `whoosh swipe pageturn tap click tick pop boop bop beep ding chime sparkle success error type
+  notify shutter scratch riser hit boom glitch coin`. Music beds: `pulse calm drive wonder`.
   (`pageturn` on a new chapter or idea, `bop`/`beep` on key words landing, `boop` on a question, `scratch` on "wait, what?",
   `boom` on the big reveal, `glitch` when reality breaks, `sparkle` on a mind-blown line, `shutter` on a photo, `swipe` on a card).
   One effect per beat at most: `hit` on the hook, `whoosh` on cuts, `success`/`chime` on the payoff,
   `pop` on badges, `notify` with `B.notification`, `type` with typed text, `coin` on prices.
+  `boom` once at most. Long-form builds add the editing sounds themselves (docs/LONGFORM.md).
 - Narration needs `ELEVENLABS_API_KEY` (voice: `ELEVENLABS_VOICE_ID` or `--voice <id>`). Without it the video
   still gets music + effects, and captions use estimated timing. Run `node make.mjs <scene> --voice-only`
   to get each line's real start/end, then set cut times to match.

@@ -16,6 +16,7 @@
 //   broll <library clip> | from:       their own footage;  image <file>
 //   face                               back to the speaker here (ends the previous visual)
 //   music <track> [volume]             music from here;  sfx <name>   one effect on the next word
+// Header: music: <track> [volume] (the bed under the whole video; default calm 0.1), sound: lively | calm | off
 // Options on any visual: dur (seconds or auto), layout (full|side|pip|split), offset, id, note.
 // Animations: mark.<key>: <word> lands a beat (e.g. mark.flipAt: boom) on that spoken word.
 // Lists: "items: a; b; c". Objects: "left.title: X". Pairs: "bars: Taxes=42; Rent=27".
@@ -137,7 +138,7 @@ export function lintScript(text, { wpm } = {}) {
   for (const c of S.cues) { const k = c.kind === 'anim' ? basename(c.scene || 'anim', '.html') : c.kind; kinds[k] = (kinds[k] || 0) + 1; }
   return { ok: !errors.length, errors, warnings, title: S.meta.title || '', words, runtime: +runtime.toFixed(1), pace,
     visuals: vis.length, every: vis.length ? +(runtime / vis.length).toFixed(1) : null, longestGap: gaps.length ? +Math.max(...gaps).toFixed(1) : null,
-    chapters: S.chapters.map((c) => `${fmt(tAt(c.word))} ${c.title}`), cues: kinds, retention: retention(S, pace) };
+    chapters: S.chapters.map((c) => `${fmt(tAt(c.word))} ${c.title}`), cues: kinds, retention: retention(S, pace), depth: depth(S) };
 }
 
 // ---- retention: the places a viewer is most likely to leave, found before anything is recorded --------
@@ -180,6 +181,40 @@ export function retention(S, pace = 150) {
   const end = S.words.slice(-Math.round(pace / 3)).map((x) => x.w).join(' ');
   if (!has(end, /next|watch|subscribe|link|comment|see you|part two|part 2|video/)) notes.push('ending: the last 20 s never says what to watch or do next');
   return { score: Math.max(0, 100 - 9 * notes.length), notes };
+}
+
+// ---- depth: does the script teach the idea, or only describe that it exists? ----------------------------
+// The standard is docs/PLAYBOOK.md "Depth". These are the signs of a surface-level script that can be found
+// by reading the words; each note says what is missing. Heuristics, not rules: fix it or decide it's fine.
+const STOCK_PHRASES = ["in today's world", "in today's fast-paced", 'game changer', 'game-changer', 'mind-blowing', 'mind blowing', 'blow your mind', "it's important to note", 'it is important to note',
+  'at the end of the day', 'since the dawn of time', 'throughout history', 'let that sink in', 'buckle up', 'dive in', 'deep dive', 'delve', 'the truth is', 'believe it or not', 'simply put',
+  'scientists say', 'experts say', 'experts agree', 'studies show', 'research shows', 'some people say', 'many people believe', 'revolutionize', 'revolutionary', 'unlock the secrets', 'has fascinated',
+  'fascinating world', 'incredible world', 'complex topic', 'in conclusion', 'needless to say', 'as we all know', 'changed everything', 'the world of'];
+export function depth(S) {
+  const text = S.words.map((w) => w.w).join(' '), low = text.toLowerCase().replace(/[’]/g, "'"), n = S.words.length;
+  if (n < 40) return { score: 100, notes: [] };
+  const notes = [], per1000 = (k) => (k / n) * 1000;
+  const any = (re) => re.test(low);
+  // 1. A spine, written down before the script: what it argues, what it is up against, what it connects to.
+  for (const [key, what] of [['thesis', 'the one claim the video argues, in a sentence'], ['tension', 'the competing answers and why smart people disagree'], ['bridge', 'the other field or part of life this idea turns out to explain']])
+    if (!S.meta[key]) notes.push(`no "${key}:" in the header (${what})`);
+  // 2. Names: who found it, which experiment, what year, what it is called.
+  const names = new Set();
+  S.words.forEach((w, i) => { const prev = S.words[i - 1]?.w || '.'; const raw = w.w.replace(/^["'(]+/, ''); if (/^[A-Z][a-z]{2,}/.test(raw) && !/[.?!:]["')\]]*$/.test(prev)) names.add(raw.replace(/[^A-Za-z-]/g, '').replace(/s$/, '')); });
+  const years = (text.match(/\b(1[5-9]\d\d|20\d\d)\b/g) || []).length;
+  if (per1000(names.size + years) < 8) notes.push(`${names.size} named people, ideas or places and ${years} date(s) in ${n} words: say who worked it out, which experiment, what year, what it's called`);
+  // 3. More than one view, and what each costs.
+  if (!any(/\b(interpretations?|argue[sd]?|according to|on the other hand|critics?|disagree[sd]?|versus|objections?|rivals?|debates?|others (think|say|believe)|competing|alternative|camp|school of thought|was wrong|turned out)\b/)) notes.push('one view only: name the competing explanations and what each one costs you to believe');
+  // 4. How we know.
+  if (!any(/\b(experiments?|measur(e|ed|ing|ement)s?|evidence|tested|observ(e|ed|ation)s?|data|prov(e|ed|en)|predict(s|ed|ion)?|derive[sd]?|showed|demonstrated|confirmed|detected)\b/)) notes.push('never says how we know: the experiment, the measurement, the prediction that came true');
+  // 5. Where the knowledge stops.
+  if (!any(/\b(nobody knows|no one knows|we don't know|don't yet know|still (don't|open|unsolved|argue|debated)|unsolved|unresolved|open question|remains? (a mystery|open|unclear)|not settled|unanswered|no agreement)\b/)) notes.push("no open question: say where the knowledge stops and what's still argued about");
+  // 6. What it means for the person watching.
+  if (!any(/\b(which means|what (this|that|it) means|this matters|that's why|the reason (this|that|it) matters|changes how|so the next time|for you\b|in your (own )?(life|head|day)|you are|you're (not|made|also|doing))\b/)) notes.push('never says what the idea means for the person watching (the "so what")');
+  // 7. Phrases that could be in any video on any subject.
+  const stock = STOCK_PHRASES.filter((p) => low.includes(p));
+  if (stock.length) notes.push(`${stock.length} stock phrase(s) that could be in any video: ${stock.slice(0, 6).map((p) => `"${p}"`).join(', ')}: replace each with the specific thing`);
+  return { score: Math.max(0, 100 - 12 * notes.length), notes };
 }
 
 // ---- alignment: script words <-> recording transcript (semi-global, later takes preferred) ----------
@@ -279,6 +314,7 @@ export function planFromScript(text, clip, { name } = {}) {
     a_roll: [{ clip: clip.id, from: +Math.max(0, first.s - 0.3).toFixed(3), to: +Math.min(clip.duration, last.e + 0.4).toFixed(3) }],
     tighten: { fillers: true, max_pause: S.meta.max_pause ?? 0.45, cut },
     ...(S.meta.punch_in ? { punch_in: S.meta.punch_in } : {}),
+    ...(S.meta.sound !== undefined ? { sound: S.meta.sound } : {}),
     chapters: [], inserts: [], music: [], sfx: [],
   };
   S.chapters.forEach((ch) => { const at = anchor(ch.word, `chapter "${ch.title}"`); if (at) plan.chapters.push({ at, title: ch.title }); });
@@ -309,7 +345,8 @@ export function planFromScript(text, clip, { name } = {}) {
     else if (c.kind === 'music') { const [track, vol] = (c.arg || '').split(/\s+/); plan.music.push({ at: plan.music.length ? at : 0, track: track || c.data.track || 'calm', volume: Number(vol || c.data.volume || 0.09) }); }
     else if (c.kind === 'sfx') plan.sfx.push({ at, name: c.arg || c.data.name, volume: c.data.volume ?? 0.5, offset: c.opts.offset ?? 0 });
   }
-  if (!plan.music.length) plan.music.push({ at: 0, track: 'calm', volume: 0.08 });
+  // Music under the whole video: the header's "music: <track> [volume]" (or "none"), else the calm bed.
+  if (!plan.music.length) { const [track, vol] = String(S.meta.music || 'calm').split(/\s+/); plan.music.push({ at: 0, track, volume: Number(vol || 0.1) }); }
   const report = {
     scriptWords: S.words.length, matched, coverage: +(matched / Math.max(1, S.words.length)).toFixed(3),
     retakesCut: cut.map((c) => c.text), adlibsKept: adlibs.map((r) => `${fmt(clip.words[r.from].s)} "${r.text}"`),

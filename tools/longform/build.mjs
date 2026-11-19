@@ -5,10 +5,11 @@ import { cpus } from 'node:os';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
+import { FF, H, ROOT, W, bare, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
+import { critique, critiqueMarkdown } from './critique.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -306,9 +307,10 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
             `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
           nIn += 2;
         } else if (ins.layout === 'split') {
-          const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
+          // split_crop: show only the middle of the visual (its width in px), bigger, for content that sits centred.
+          const hw = W / 2, cw = Math.max(hw, Math.min(W, +ins.src?.split_crop || W)), vh = Math.min(H, Math.round(hw * H / cw / 2) * 2);
           g.push(`[bgF]crop=${hw}:${H}:(iw-${hw})*${fx}:0[L]`,
-            `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr]`,
+            `[1:v]setpts=PTS-STARTPTS,split[p0][p1];[p0]crop=${hw}:${H}:${hw / 2}:0,boxblur=20:2,eq=brightness=-0.15[pb];[p1]crop=${cw}:${H}:${(W - cw) / 2}:0,scale=${hw}:${vh}[ps];[pb][ps]overlay=0:${(H - vh) / 2}[Rr]`,
             `[L][Rr]hstack,drawbox=x=${hw - 3}:y=0:w=6:h=${H}:color=${col}:t=fill,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
         } else {
           if (needs.face) g.push('[bgF]nullsink');
@@ -366,7 +368,9 @@ function mixAudio(R, plan, voice, out, stemsDir) {
     f.push(`[${n}:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=${ins.audio},afade=t=in:d=0.15,afade=t=out:st=${Math.max(0, ins.dur - 0.3).toFixed(3)}:d=0.3,adelay=${Math.round(ins.at * 1000)}:all=1[s${n}]`);
     fx.push(`[s${n}]`); n++;
   }
-  f.push('[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]');
+  // "voice_clean": true in the plan: rumble cut, broadband hiss down, gentle compression so quiet words carry.
+  const clean = plan.voice_clean ? 'highpass=f=80,afftdn=nr=12:nf=-30,acompressor=threshold=0.1:ratio=3:attack=8:release=120:makeup=1.6,' : '';
+  f.push(`[0:a]${clean}aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voice][key]`);
   const parts = ['[voice]'];
   const noVoice = plan.voice === false;   // a version without the voice: music up, no ducking
   if (noVoice) parts[0] = '[vmute]', f.push('[voice]volume=0[vmute]');
@@ -384,6 +388,8 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
 function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
+  R.pipUsed = R.inserts.some((i) => i.layout === 'pip');   // keep caption lines clear of the corner circle
+  const EMPH = new Set((R.captions.emphasis || []).map(bare));
   const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
   const center = R.voiceOnly;
@@ -399,18 +405,22 @@ function assCaptions(R, accent, file) {
   });
   if (cur.length) lines.push(cur);
   const ev = [];
-  for (const ln of lines) {
-    const end = ln[ln.length - 1].e + 0.15;
+  lines.forEach((ln, li) => {
+    const nextStart = lines[li + 1]?.[0].s ?? Infinity;
+    const end = Math.min(ln[ln.length - 1].e + 0.15, nextStart);   // never two caption lines on screen at once
     ln.forEach((w, k) => {
       const a = w.s, b = k + 1 < ln.length ? ln[k + 1].s : end;
       if (gapsOnly && covered(a, b)) return;
-      const text = ln.map((x, j) => (j === k ? `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}` : esc(x.w))).join(' ');
+      // The word being said lights up; a key word (captions.emphasis) also pops up big as it is said.
+      const text = ln.map((x, j) => (j !== k ? esc(x.w) : EMPH.has(bare(x.w))
+        ? `{\\c${bgr(accent)}\\fscx100\\fscy100\\t(0,120,\\fscx215\\fscy215)\\t(120,260,\\fscx185\\fscy185)}${esc(x.w)}{\\c&HFFFFFF&\\fscx100\\fscy100}`
+        : `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}`)).join(' ');
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
-  }
+  });
   const style = center
     ? 'Style: C,Plus Jakarta Sans,92,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,5,160,160,0,1'
-    : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
+    : `Style: C,Plus Jakarta Sans,62,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,4,0,2,${R.pipUsed ? 440 : 160},${R.pipUsed ? 440 : 160},70,1`;
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
     style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
@@ -519,9 +529,14 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);
+  // The editor's second look (docs/EDITORIAL.md step 7): what a first-time viewer would trip on.
+  const crit = critique(plan, R, { briefFile: briefStatus(planFile, plan).file });
+  for (const [a, d] of R.frozen) if (d >= 6) crit.notes.push({ kind: 'static', t: a, text: `The picture doesn't change for ${d.toFixed(0)} s at ${fmt(a)}.`, fix: 'Cut tighter, or give that stretch a visual that moves.' });
+  writeFileSync(join(dir, 'CRITIQUE.md'), critiqueMarkdown(plan.name, crit));
+  writeFileSync(join(dir, 'decisions.json'), JSON.stringify(decisionRecord(plan, R, crit, briefStatus(planFile, plan).file), null, 1) + '\n');
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });
-  log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md)`);
-  return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
+  log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md, editor ${crit.score}/100 with ${crit.notes.length} note(s) in CRITIQUE.md)`);
+  return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), critique: join(dir, 'CRITIQUE.md'), editorScore: crit.score, sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
 }
 
 // Same picture, new sound (e.g. no voice): re-mix and lay it under the already-built video.
@@ -543,10 +558,41 @@ export async function remix(planFile, { voice = true, log = console.log } = {}) 
   return { ok: true, video: out };
 }
 
+// The editorial brief (docs/EDITORIAL.md): the reasons behind an edit of raw footage, written before the plan.
+// Script-first plans have the script as their brief. Missing or unfilled -> a warning, so no edit ships unexplained.
+// Machine-readable record of what this edit decided and why (docs/SELF-LEARNING-ENGINE.md): the brief's sections,
+// the source ranges kept in story order, every visual, the chapters and the editor's notes.
+export function decisionRecord(plan, R, crit, briefFile) {
+  const brief = {};
+  if (briefFile && existsSync(briefFile)) {
+    for (const part of readFileSync(briefFile, 'utf8').split(/^## /m).slice(1)) {
+      const [head, ...body] = part.split('\n');
+      const text = body.join('\n').replace(/<!--[\s\S]*?-->/g, '').trim();
+      if (text) brief[head.trim()] = text;
+    }
+  }
+  return { name: plan.name, title: plan.title || plan.name, duration: +R.total.toFixed(2), source: +R.source.toFixed(2), brief,
+    kept: R.cuts.map((c) => ({ clip: c.clip, from: +c.s.toFixed(2), to: +c.e.toFixed(2), at: +c.out.toFixed(2) })),
+    visuals: R.inserts.map((i) => ({ id: i.id, kind: i.kind, scene: i.scene || null, at: +i.at.toFixed(2), dur: i.dur, layout: i.layout, auto: !!i.autoBroll, query: i.query || null })),
+    chapters: R.chapters.map((c) => ({ at: +c.at.toFixed(2), title: c.title })),
+    editor: { score: crit.score, notes: crit.notes } };
+}
+
+export function briefStatus(planFile, plan) {
+  if (plan.from_script) return { file: null, warning: null };
+  const file = plan.brief ? join(dirname(planFile), plan.brief) : planFile.replace(/\.json$/, '.brief.md');
+  if (!existsSync(file)) return { file, warning: `no editorial brief (${relative(ROOT, file)}): run "node longform.mjs analyze <clip> --name ${plan.name || 'x'}" and fill it in before planning (docs/EDITORIAL.md)` };
+  const idea = (readFileSync(file, 'utf8').split(/^## The one idea\s*$/m)[1] || '').split(/^## /m)[0].replace(/<!--[\s\S]*?-->/g, '').trim();
+  return { file, warning: idea ? null : `brief ${relative(ROOT, file)} has no "one idea" yet: decide what the video is saying before cutting it` };
+}
+
 export function check(planFile) {
   const plan = loadPlan(planFile);
   const R = resolvePlan(plan);
-  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
+  const brief = briefStatus(planFile, plan);
+  if (brief.warning) R.warnings.push(brief.warning);
+  const editor = R.errors.length ? { score: null, notes: [] } : critique(plan, R, { briefFile: brief.file });
+  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, brief: brief.file, editor, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
     pieces: R.cuts?.length, timeline: (R.inserts || []).map((i) => `${fmt(i.at)}  ${i.id}  ${i.kind}/${i.layout}  ${i.dur}s`),
     chapters: (R.chapters || []).map((c) => `${fmtChapter(c.at)} ${c.title}`) };
 }

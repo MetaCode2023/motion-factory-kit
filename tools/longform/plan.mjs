@@ -5,6 +5,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs';
 import { loadLibrary } from './library.mjs';
 import { lockedInserts } from '../broll/index.mjs';
+import { designSound } from './sound.mjs';
 
 export const KINDS = ['animation', 'broll', 'pull', 'image', 'face'];
 // full: the visual fills the frame. side: a box beside the speaker. pip: the visual fills the frame and the
@@ -249,7 +250,9 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   }
 
   const music = [];
-  for (const [i, m] of (plan.music || []).entries()) {
+  // Music runs under the whole video unless the plan says otherwise ("music": [] or track "none").
+  const beds = plan.music === undefined ? [{ at: 0, track: 'calm', volume: 0.1 }] : plan.music || [];
+  for (const [i, m] of beds.entries()) {
     let at;
     try { at = resolveAt(m, cuts, lib, `music[${i}]`); } catch (e) { errors.push(e.message); continue; }
     const file = m.file ? rel(m.file) : join(ROOT, 'sounds', 'music', `${m.track || 'calm'}.mp3`);
@@ -258,12 +261,16 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   }
   music.sort((a, b) => a.at - b.at);
   music.forEach((m, k) => { m.end = music[k + 1]?.at ?? total; });
+  if (music.length && music[0].at > 1.5) warnings.push(`no music until ${fmt(music[0].at)}: start the first track at 0 so it runs under the whole video`);
 
   const sfx = [];
   for (const [i, s] of (plan.sfx || []).entries()) {
     try { sfx.push({ at: +resolveAt(s, cuts, lib, `sfx[${i}]`).toFixed(3), name: s.name, volume: s.volume ?? 0.5 }); } catch (e) { errors.push(e.message); }
   }
-  for (const ins of inserts) if (ins.sfx && ins.kind !== 'face') sfx.push({ at: Math.max(0, ins.at - (ins.sfx === 'whoosh' ? 0.12 : 0)), name: ins.sfx, volume: 0.42, from: ins.id });
+  // Automatic sound design (sound.mjs): cutaway sounds, chapter page turns, a bop after a question. The plan's own effects win.
+  const design = designSound({ inserts, chapters, words: outWords(cuts, lib), total }, plan, sfx.map((s) => s.at));
+  for (const ins of inserts) if (ins.sfx && ins.kind !== 'face') sfx.push({ at: Math.max(0, ins.at - (ins.sfx === 'whoosh' ? 0.12 : 0)), name: ins.sfx, volume: ins.sfxVolume ?? 0.42, from: ins.id });
+  sfx.push(...design);
   for (const s of sfx) if (!existsSync(join(ROOT, 'sounds', 'sfx', `${s.name}.mp3`))) errors.push(`sfx "${s.name}" not in sounds/sfx/`);
 
   // Punch-ins: alternate framing on every Nth cut where the same clip continues (a jump cut).
@@ -277,9 +284,15 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   });
 
   // The words that stay, on the output timeline (captions and the report).
-  const words = [];
-  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
+  const words = outWords(cuts, lib);
 
   const burn = plan.captions?.burn ?? (voiceOnly ? 'gaps' : false);
-  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn } };
+  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn, emphasis: plan.captions?.emphasis || [] } };
+}
+
+// The words that stay after the cuts, on the output timeline.
+function outWords(cuts, lib) {
+  const words = [];
+  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 0.02 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
+  return words;
 }

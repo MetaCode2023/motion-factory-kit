@@ -17,7 +17,7 @@ export const bare = (w) => String(w).toLowerCase().replace(/[^a-z0-9']/g, '');
 
 export function ff(args, what) {
   const r = spawnSync(FF, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { encoding: 'utf8', maxBuffer: 1 << 28 });
-  if (r.status !== 0) throw new Error(`ffmpeg failed (${what}): ${(r.stderr || '').slice(-1200)}`);
+  if (r.status !== 0) throw new Error(`ffmpeg failed (${what}): ${r.signal || ""} ${r.error?.message || ""} ${(r.stderr || "").slice(-1200)}`);
   return r;
 }
 

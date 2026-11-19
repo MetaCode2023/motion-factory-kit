@@ -1,7 +1,11 @@
 // tools/broll/sources.mjs: free stock search behind one shape, so the picker doesn't care where media comes from.
 //
 //   Openverse  photos            no key   CC0 / PDM / CC BY / CC BY-SA (commercial use + changes allowed), mostly Flickr
-//   Commons    videos + photos   no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only (NASA, ESA, labs, museums)
+//   Commons    videos + photos   no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only
+//   YouTube    videos            no key, needs yt-dlp   only videos their uploader published under YouTube's
+//                                         Creative Commons licence (CC BY, reuse allowed), or from channels the
+//                                         plan lists in auto_broll.channels (your own, or ones you have cleared).
+//                                         Only the few seconds used are downloaded.
 //   Pixabay    videos + photos   PIXABAY_API_KEY (optional)   Pixabay Content License
 //   Pexels     videos + photos   PEXELS_API_KEY  (optional; new keys are paused)   Pexels License
 //
@@ -10,6 +14,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const UA = 'motion-factory-kit/1.0 (automatic B-roll; https://github.com/metacode2023/motion-factory-kit)';
 const DAY = 86400e3;
@@ -19,12 +24,23 @@ export const SOURCES = {
   pixabay: { key: 'PIXABAY_API_KEY', kinds: ['video', 'photo'] },
   pexels: { key: 'PEXELS_API_KEY', kinds: ['video', 'photo'] },
   commons: { key: null, kinds: ['video', 'photo'] },
+  youtube: { key: null, tool: 'yt-dlp', kinds: ['video'] },
 };
+// Videos are tried in this order whatever the order of `sources`: clean stock first, then Commons, then YouTube.
+const VIDEO_ORDER = ['pixabay', 'pexels', 'commons', 'youtube'];
+
+// yt-dlp, if it is installed (pip install yt-dlp). Looked up once.
+let YTDLP;
+export function findYtdlp() {
+  if (YTDLP === undefined) YTDLP = ['yt-dlp', 'yt-dlp.exe'].find((b) => { try { return spawnSync(b, ['--version'], { timeout: 15000 }).status === 0; } catch { return false; } }) || null;
+  return YTDLP;
+}
+const runTool = (bin, args) => spawnSync(bin, args, { encoding: 'utf8', timeout: 180000, maxBuffer: 256 * 1024 * 1024 });
 
 // The sources that can run now (a key where one is needed), in the order asked for.
-export const DEFAULT_SOURCES = ['openverse', 'commons', 'pixabay', 'pexels'];
-export function available(order = DEFAULT_SOURCES, env = process.env) {
-  return order.filter((s) => SOURCES[s] && (!SOURCES[s].key || env[SOURCES[s].key]));
+export const DEFAULT_SOURCES = ['openverse', 'commons', 'pixabay', 'pexels', 'youtube'];
+export function available(order = DEFAULT_SOURCES, env = process.env, { ytdlp = findYtdlp() } = {}) {
+  return order.filter((s) => SOURCES[s] && (!SOURCES[s].key || env[SOURCES[s].key]) && (!SOURCES[s].tool || ytdlp));
 }
 
 const pickFile = (files, want = 1920) => {
@@ -106,27 +122,27 @@ const ADAPTERS = {
     },
   },
   commons: {
-    // Real footage: Commons video (NASA, ESA, university labs, museums). Uses the transcoded copies (720p/1080p),
-    // which Wikimedia serves far more freely than the originals.
+    // Real footage: Commons video (NASA, ESA, university labs, museums). Prefers the transcoded copies, which
+    // Wikimedia serves far more freely than the originals; science footage is often only 640-1200 px, so take what's there.
     async video(q, _o, { fetchImpl }) {
-      const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:video`, gsrnamespace: '6', gsrlimit: '15', prop: 'videoinfo', viprop: 'url|size|extmetadata|mime|derivatives', origin: '*' });
+      const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:video`, gsrnamespace: '6', gsrlimit: '15', prop: 'videoinfo', viprop: 'url|size|mime|extmetadata|derivatives', origin: '*' });
       const j = await getJSON(`https://commons.wikimedia.org/w/api.php?${p}`, { fetchImpl });
       const pages = Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
       return pages.map((pg) => {
-        const vi = pg.videoinfo?.[0];
-        if (!vi) return null;
+        const vi = (pg.videoinfo || pg.imageinfo)?.[0];
+        if (!vi || !/^(video|application\/ogg)/.test(vi.mime || '') || !(vi.duration > 0)) return null;
+        if (vi.duration < 2 || vi.duration > 900) return null;   // stills and hour-long lectures aren't B-roll
         const m = vi.extmetadata || {};
         const license = strip(m.LicenseShortName?.value || '');
         if (!commonsLicenseOk(license)) return null;
-        const dur = Number(vi.duration) || 0;
-        if (dur < 2 || dur > 900) return null;   // stills and hour-long lectures aren't B-roll
-        const ders = (vi.derivatives || []).map((d) => ({ url: d.src, w: Number(d.width) || 0, h: Number(d.height) || 0, type: d.type || '' }))
-          .filter((d) => /webm|mp4|quicktime/.test(d.type) && d.h >= 300);
-        const f = pickFile(ders, 1920) || ders.sort((a, b) => b.h - a.h)[0];   // closest to 1080p, else the biggest there is
-        if (!f) return null;
-        return { source: 'commons', id: String(pg.pageid), kind: 'video', w: f.w, h: f.h, dur, url: f.url, ext: /mp4|quicktime/.test(f.type) ? (/quicktime/.test(f.type) ? 'mov' : 'mp4') : 'webm',
+        // A transcode closest to 1080p if there is one (originals can be gigabytes), else the original up to 200 MB.
+        const ders = (vi.derivatives || []).filter((d) => d.src && /^video\/(webm|mp4)/.test(d.type || '') && d.height >= 300 && d.height <= 1080).sort((a, b) => b.height - a.height);
+        const pick = ders[0] ? { url: ders[0].src, w: ders[0].width, h: ders[0].height } : vi.size <= 200e6 ? { url: vi.url, w: vi.width, h: vi.height } : null;
+        if (!pick) return null;
+        const url = pick.url.startsWith('//') ? 'https:' + pick.url : pick.url;
+        return { source: 'commons', id: String(pg.pageid), kind: 'video', w: pick.w, h: pick.h, dur: +Number(vi.duration).toFixed(1), url, ext: /\.mp4(\?|$)/i.test(url) ? 'mp4' : /\.ogv(\?|$)/i.test(url) ? 'ogv' : 'webm',
           title: String(pg.title || '').replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, ''), page: vi.descriptionurl, author: strip(m.Artist?.value || 'unknown'), license,
-          tags: `${pg.title || ''} ${strip(m.ImageDescription?.value || '').slice(0, 200)}` };
+          tags: `${pg.title || ''} ${strip(m.Categories?.value || '')}`, description: strip(m.ImageDescription?.value || '').slice(0, 400) };
       }).filter(Boolean);
     },
     async photo(q, _o, { fetchImpl }) {
@@ -146,6 +162,37 @@ const ADAPTERS = {
   },
 };
 
+// YouTube through yt-dlp. Two searches: the site's own Creative Commons filter, and (if the plan lists channels)
+// a plain search kept only where the uploader is one of them. Every result's licence is read from the video's
+// own metadata; a video with the standard YouTube licence from an unlisted channel is never returned.
+ADAPTERS.youtube = {
+  async video(q, { channels = [] }, { run = runTool, ytdlp = findYtdlp() }) {
+    if (!ytdlp) return [];
+    const base = ['--dump-json', '--no-download', '--no-warnings', '--ignore-errors', '--no-playlist', '--playlist-end', '8', '--match-filter', '!is_live & duration>6 & duration<5400 & age_limit<18'];
+    const listed = channels.map((c) => String(c).toLowerCase().replace(/^@/, ''));
+    const urls = [`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=EgIwAQ%253D%253D`, ...(listed.length ? [`ytsearch8:${q}`] : [])];
+    const seen = new Set(), out = [];
+    for (const u of urls) {
+      const r = run(ytdlp, [...base, u]);
+      for (const line of String(r.stdout || '').split('\n')) {
+        let v;
+        try { v = JSON.parse(line); } catch { continue; }
+        if (!v?.id || seen.has(v.id)) continue;
+        const cc = /creative commons/i.test(v.license || '');
+        const who = [v.channel, v.uploader, v.uploader_id, v.channel_id].filter(Boolean).map((x) => String(x).toLowerCase().replace(/^@/, ''));
+        const mine = listed.some((c) => who.includes(c));
+        if (!cc && !mine) continue;
+        seen.add(v.id);
+        out.push({ source: 'youtube', id: v.id, kind: 'video', fetch: 'ytdlp', w: v.width || 1920, h: v.height || 1080, dur: v.duration, url: v.webpage_url || `https://www.youtube.com/watch?v=${v.id}`, ext: 'mp4',
+          title: v.title || '', page: v.webpage_url || `https://www.youtube.com/watch?v=${v.id}`, author: v.channel || v.uploader || 'unknown',
+          license: cc ? 'CC BY (YouTube Creative Commons Attribution licence)' : 'channel listed in the plan (auto_broll.channels)',
+          tags: `${v.title || ''} ${(v.tags || []).join(' ')} ${(v.categories || []).join(' ')}`, description: String(v.description || '').slice(0, 600) });
+      }
+    }
+    return out;
+  },
+};
+
 const openverseLicense = (r) => (r.license === 'cc0' ? 'CC0' : r.license === 'pdm' ? 'Public domain' : `CC ${String(r.license).toUpperCase()} ${r.license_version || ''}`.trim());
 
 // Only licences that allow commercial use without asking: public domain, CC0, CC BY, CC BY-SA.
@@ -158,14 +205,14 @@ const strip = (h) => String(h).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim
 const slugWords = (u = '') => (String(u).match(/\/(?:video|photo)\/([^/]+)/)?.[1] || '').replace(/-\d+$/, '').replace(/-/g, ' ');
 
 // Search one source for one kind, through the cache.
-export async function search(source, kind, query, { portrait = false, cacheDir, env = process.env, fetchImpl = fetch, offline = false, maxAge = 30 * DAY } = {}) {
+export async function search(source, kind, query, { portrait = false, channels = [], cacheDir, env = process.env, fetchImpl = fetch, offline = false, maxAge = 30 * DAY, run, ytdlp } = {}) {
   const ad = ADAPTERS[source]?.[kind];
   if (!ad) return [];
-  const key = createHash('sha1').update(JSON.stringify([source, kind, query.toLowerCase().trim(), portrait])).digest('hex').slice(0, 20);
+  const key = createHash('sha1').update(JSON.stringify([source, kind, query.toLowerCase().trim(), portrait, ...(source === 'youtube' && channels.length ? [channels] : [])])).digest('hex').slice(0, 20);
   const file = cacheDir && join(cacheDir, `${source}-${kind}-${key}.json`);
   if (file && existsSync(file) && (offline || Date.now() - statSync(file).mtimeMs < maxAge)) return JSON.parse(readFileSync(file, 'utf8'));
   if (offline) return [];
-  const results = await ad(query, { portrait }, { env, fetchImpl });
+  const results = await ad(query, { portrait, channels }, { env, fetchImpl, ...(run ? { run } : {}), ...(ytdlp !== undefined ? { ytdlp } : {}) });
   if (file) { mkdirSync(cacheDir, { recursive: true }); writeFileSync(file, JSON.stringify(results)); }
   return results;
 }
@@ -188,12 +235,14 @@ export function rank(results, { query, need = 2, portrait = false, used = new Se
     .map((x) => x.r);
 }
 
-// The order to try for one moment: videos first, then photos; Commons first for names and landmarks.
-export function tryOrder(sources, type) {
-  const tries = [...sources.filter((s) => SOURCES[s].kinds.includes('video')).map((s) => [s, 'video']), ...sources.filter((s) => SOURCES[s].kinds.includes('photo')).map((s) => [s, 'photo'])];
+// The order to try for one moment: videos first, then photos (Commons photos ahead of the other photo sources
+// for names and landmarks; `photos: false` = moving pictures only).
+export function tryOrder(sources, type, { photos = true } = {}) {
+  const vids = sources.filter((s) => SOURCES[s].kinds.includes('video')).sort((a, b) => VIDEO_ORDER.indexOf(a) - VIDEO_ORDER.indexOf(b));
+  const tries = [...vids.map((s) => [s, 'video']), ...(photos ? sources.filter((s) => SOURCES[s].kinds.includes('photo')).map((s) => [s, 'photo']) : [])];
   if ((type === 'landmark' || type === 'proper' || type === 'person') && sources.includes('commons')) {
-    const i = tries.findIndex(([s]) => s === 'commons');
-    if (i > 0) tries.unshift(...tries.splice(i, 1));
+    const i = tries.findIndex(([s, k]) => s === 'commons' && k === 'photo');
+    if (i > vids.length) tries.splice(vids.length, 0, ...tries.splice(i, 1));
   }
   return tries;
 }
@@ -201,7 +250,20 @@ export function tryOrder(sources, type) {
 // Download once per provider id into assets/broll/stock/.
 // Openverse results whose origin (Flickr, Wikimedia) rate-limits us are fetched through Openverse's own image
 // proxy instead (full size; it refuses very large originals with a 424, so it's a fallback, not the default).
-export async function download(r, dir, { fetchImpl = fetch } = {}) {
+// yt-dlp results: only the seconds that will be used (r.from .. r.from + r.take), picture only, up to 1080p.
+export async function download(r, dir, { fetchImpl = fetch, run = runTool, ytdlp = findYtdlp(), ffmpeg } = {}) {
+  if (r.fetch === 'ytdlp') {
+    mkdirSync(dir, { recursive: true });
+    // Only the seconds used are downloaded, so the file name carries them (a longer or later piece is a new file).
+    const file = join(dir, `${r.source}-${r.id}-${Math.round((r.from || 0) * 10)}-${Math.round((r.take || 6) * 10)}.${r.ext}`);
+    if (existsSync(file) && statSync(file).size > 0) return file;
+    if (!ytdlp) throw new Error('yt-dlp is not installed (pip install yt-dlp)');
+    const from = Math.max(0, r.from || 0), to = from + (r.take || 6);
+    const res = run(ytdlp, ['-f', 'bv*[height<=1080][ext=mp4]/bv*[height<=1080]/b[height<=1080]', '--remux-video', 'mp4', '--download-sections', `*${from.toFixed(1)}-${to.toFixed(1)}`, '--force-keyframes-at-cuts',
+      '--no-playlist', '--no-warnings', ...(ffmpeg ? ['--ffmpeg-location', ffmpeg] : []), '-o', file, r.url]);
+    if (res.status !== 0 || !existsSync(file)) throw new Error(`yt-dlp: ${String(res.stderr || '').trim().split('\n').pop() || 'download failed'} (${r.id})`);
+    return file;
+  }
   try { return await fetchTo(r, r.url, dir, fetchImpl); }
   catch (err) {
     if (r.source !== 'openverse' || !/rate-limited|429/.test(err.message)) throw err;
