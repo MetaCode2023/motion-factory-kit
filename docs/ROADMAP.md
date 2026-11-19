@@ -26,7 +26,7 @@ video decided and what the reviewer said). Phase 1.
 
 ## Phases
 
-**Phase 1: think before cutting (this PR, stacked on PR #5).**
+**Phase 1: think before cutting (PR #7, stacked on PR #5).**
 `analyze` + EDITMAP.md, the brief template and the `check` warning, `longform_analyze` MCP tool, docs/EDITORIAL.md,
 docs/TASTE.md, the orientation docs and the "update STATUS before you finish" rule. Worked example brief for the demo.
 

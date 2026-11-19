@@ -30,14 +30,14 @@ laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Details: `docs/LESSONS.md`
 
 | PR | What | State / what's needed |
 |---|---|---|
-| this branch (`claude/project-thread-qzfjco`) | Roadmap phase 1: edit map, brief, orientation docs | Draft, stacked on #5. Merge after #5. |
+| #7 | Roadmap phase 1: edit map, brief, orientation docs | Draft, stacked on #5. Merge after #5. |
 | #6 | Validated video B-roll (Commons video, CC YouTube), depth score for scripts, automatic editing sounds, `wonder` music | Open. **Overlaps #5** (same effects under other names: `page`/`pageturn`, `swish`/`swipe`; both change `tools/broll/sources.mjs`). Rebase onto #5 and keep one set of names. |
 | #5 | B-roll throughout, real video, 11 short-form effects, deeper playbook, docs/LESSONS.md, voice-lines | Draft. Merge first. |
 | #3 | `key: 'alpha'` for clips with their own transparency | Draft, small, independent. |
 | #2 | Native 9:16 Short compositor, evidence scene, caption emphasis, split_crop | Draft. Needed for roadmap phase 2 (formats). |
 | #1 | table3d `show` option, `term pronounce: none` | Draft, small. |
 
-Suggested merge order: #5, this one, #6 (after reconciling), #2, #3, #1.
+Suggested merge order: #5, #7, #6 (after reconciling), #2, #3, #1.
 
 ## Videos made so far
 
@@ -53,7 +53,7 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
 
 1. Run phase 1 on a real raw recording of Alan's (a whiteboard session): `analyze`, write the brief, build, and log
    the run in `docs/runs/`. Tune `tools/longform/editmap.mjs` thresholds on what it gets wrong.
-2. Reconcile PR #6 with PR #5 (one sound-effect naming, one sources.mjs), then merge #5 → this → #6.
+2. Reconcile PR #6 with PR #5 (one sound-effect naming, one sources.mjs), then merge #5 → #7 → #6.
 3. Phase 2: structure check on plans; cross-session best take; merge PR #2 and add `longform.mjs package`
    (long-form + Shorts + thumbnail + titles in one run).
 4. Phase 3: depth pass with PICKUPS.md; whiteboard detection; CRITIQUE.md after every build.
