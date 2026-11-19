@@ -3,6 +3,24 @@
 Why things are the way they are, so a later agent doesn't undo them by accident. One entry per decision, newest
 first: the date, the decision, the reason, and what would change it.
 
+## 2026-11-19: Wipe transitions are precomputed masks, not xfade custom (plan decision 10)
+**Decision.** A wipe is a set of grayscale PNG mask frames computed in Node (`tools/longform/wipes.mjs`, cached in
+`out/.cache/wipes/<hash>/`), joined to the picture with `alphamerge` + `overlay`, the same pattern as the pip layout.
+The legacy `xfade` path is untouched.
+**Why.** `xfade=transition=custom` runs an expression per pixel per plane (slow), cannot read a third input, has no
+seeded random source and makes soft edges costly. Masks give anti-aliased feathered edges, are testable without
+ffmpeg, cost about a dozen small PNGs per wipe and keep the two-media-streams-per-chunk rule.
+**What would change it.** A need for a wipe that depends on the picture content, or an ffmpeg filter that does masked
+blends natively and cheaply.
+
+## 2026-11-19: Wipe grammar is wipe:<family>(name=number ...), no commas (plan decision 11)
+**Decision.** `"wipe:<family>"`, `"wipe:<family>(softness=0.15 dur=0.6 angle=30)"` or `{ "wipe": "linear", "softness": 0.15 }`.
+A malformed wipe is an error in `resolvePlan`; an unknown legacy name stays a warning with the old fallback.
+**Why.** Script headers split `transitions:` on commas and cues split on pipes and semicolons, so the spec can
+contain none of them and still travel through a script. A wipe typo should stop the build (it would otherwise
+render the wrong thing silently); a legacy name has always fallen back, and changing that breaks old plans.
+The future project-format work should adopt this grammar. Clean room: nothing came from OpenShot (GPL-3.0); see docs/TRANSITIONS.md.
+
 ## 2026-11-19: Sound effect names are pageturn and swipe
 **Decision.** PR #5 and PR #6 both added the same short-form effects under different names. Kept #5's names
 (`pageturn`, `swipe`) and #6's extra `click` and `wonder` music; #6's code now uses the kept names.
