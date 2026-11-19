@@ -1,0 +1,40 @@
+# Decisions
+
+Why things are the way they are, so a later agent doesn't undo them by accident. One entry per decision, newest
+first: the date, the decision, the reason, and what would change it.
+
+## 2026-11-19: Edit raw footage through a brief, not straight into a plan
+**Decision.** For raw footage, `longform.mjs analyze` writes an edit map and a brief template; the agent fills in the
+brief (one idea, hook, story order, cuts, depth, formats) before writing the plan, and `check` warns without one.
+Script-first plans are exempt: the script is their brief.
+**Why.** The owner's critique: early videos took a collaborator's words literally and turned them straight into a
+video. The missing step was deciding what the material is saying. A written brief makes that step explicit and
+reviewable.
+**Would change if.** Briefs become boilerplate nobody reads; then move the decisions into the plan itself.
+
+## 2026-11-19: The edit map flags, it doesn't cut
+**Decision.** `analyze` lists repeats, false starts, fluff and hook candidates with reasons; it never edits the plan.
+**Why.** Cheap text heuristics are wrong often enough (a callback looks like a repeat, a quiet line can be the best
+hook). Evidence for the editor beats an automatic cut nobody checks.
+**Would change if.** Measured on several real sessions, a class of flag is right almost every time; then apply it
+by default with an opt-out.
+
+## 2026-11-19: The repo explains itself
+**Decision.** `AGENTS.md` is the front door; `docs/STATUS.md` (with a handoff queue), this file and `docs/runs/`
+are kept current by every agent before it finishes.
+**Why.** The owner wants any agent that opens the repo to know exactly what is going on: goal, pieces, state, open
+work, lessons, why.
+
+## 2026-11-19: Build on PR #5
+**Decision.** Roadmap phase 1 is stacked on PR #5's branch, not main.
+**Why.** The owner asked to build on that work (docs/LESSONS.md, the Openverse fallback, voice-lines).
+
+## 2026-11-18: Free-license B-roll only, no keys by default
+**Decision.** Automatic B-roll searches Openverse and Wikimedia Commons (CC0, PD, CC BY, CC BY-SA) and credits
+every file; Pexels/Pixabay only if a key is set. Copyrighted clips (news, YouTube) are pulls the owner approves one by one.
+**Why.** Pexels paused new keys and the owner rejected Pixabay; outside clips carry Content ID and fair-use risk.
+
+## 2026-11-17: Captions burned in, something on screen every second
+**Decision.** Long-form defaults: burned captions with key words popped, no talking-head gap without a graphic
+(pip for full graphics, split otherwise). See `docs/TASTE.md`.
+**Why.** Owner's notes on Physics of Poker v1: first-time viewers need something to read and look at every second.

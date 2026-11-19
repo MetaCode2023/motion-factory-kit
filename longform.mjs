@@ -5,8 +5,9 @@
 //   node longform.mjs script x.script.md          # check the script (runtime, a visual every ~15 s) + teleprompter copy
 //   node longform.mjs from-script x.script.md rec.mp4 [--build]   # align the recording, write the plan, build
 //
-//   From existing footage:
+//   From existing footage (raw recordings are raw material: map them, decide, then plan):
 //   node longform.mjs index [footage/library]     # transcribe + index every video once (new files only)
+//   node longform.mjs analyze <id|file> [--name x] # edit map (sections, repeats, fluff, hooks, Shorts, terms) + brief to fill in
 //   node longform.mjs search "bluffing"           # moments across the whole archive, ranked
 //   node longform.mjs clip <id>                   # one clip's numbered sentences (path to its .md)
 //   node longform.mjs words <id> [#n]             # word timings (for exact anchors and cutting false starts)
@@ -33,6 +34,7 @@ import { pull, stock } from './tools/longform/stock.mjs';
 import { autoBroll } from './tools/broll/index.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
 import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
+import { analyze, briefTemplate, editmapMarkdown } from './tools/longform/editmap.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -45,6 +47,32 @@ const log = json ? () => {} : console.log;
 try {
   if (cmd === 'index') {
     emit(await index(args[0] || libDir(), { force: rest.includes('--force'), log }));
+  } else if (cmd === 'analyze') {
+    // node longform.mjs analyze <clip id | recording> [--name x]: read raw footage like an editor before planning.
+    // Writes <id>.EDITMAP.md (+ .editmap.json) next to the index and edits/longform/<name>.brief.md (never overwritten).
+    if (!args[0]) throw new Error('usage: node longform.mjs analyze <clip id | recording file> [--name <video name>]');
+    let lib = loadLibrary(), c = lib.clips[args[0]];
+    if (!c && existsSync(args[0])) { await index(resolve(args[0]), { log }); lib = loadLibrary(); c = Object.values(lib.clips).find((x) => x.file === resolve(args[0])); }
+    if (!c) throw new Error(`unknown clip "${args[0]}" (index it first, or pass the file). Clips: ${Object.keys(lib.clips).join(', ') || 'none'}`);
+    if (!c.sentences.length) throw new Error(`${c.id} has no transcript (pip install faster-whisper, or put a .srt / .words.json next to it)`);
+    const m = analyze(c), name = opt('name', c.id);
+    const md = join(IDX(), `${c.id}.EDITMAP.md`);
+    writeFileSync(md, editmapMarkdown(m));
+    writeFileSync(join(IDX(), `${c.id}.editmap.json`), JSON.stringify(m, null, 2) + '\n');
+    const bdir = join(ROOT, 'edits', 'longform'), brief = join(bdir, `${name}.brief.md`);
+    mkdirSync(bdir, { recursive: true });
+    const fresh = !existsSync(brief);
+    if (fresh) writeFileSync(brief, briefTemplate(m, name));
+    if (!json) {
+      console.log(`${c.id}: raw ${fmt(m.duration)}, ${m.sections.length} sections, ${m.repeats.length} repeated points, ${m.falseStarts.length} false starts, ${m.fluff.length} fluff lines, ${m.hooks.length} hook candidates, ${m.shorts.length} Short candidates`);
+      console.log(`  ~${fmt(m.stats.keepable)} survives a clean tighten (the ceiling, not the target)`);
+      m.hooks.slice(0, 3).forEach((h) => console.log(`  hook  ${c.id}#${h.n}  "${h.text.slice(0, 90)}"`));
+      const undefinedTerms = m.terms.filter((t) => !t.defined).map((t) => t.term);
+      if (undefinedTerms.length) console.log(`  never defined: ${undefinedTerms.join(', ')}`);
+      console.log(`edit map -> ${relative(ROOT, md)}`);
+      console.log(`brief    -> ${relative(ROOT, brief)}${fresh ? ' (new: fill it in before writing the plan, docs/EDITORIAL.md)' : ' (kept: already exists)'}`);
+    }
+    emit({ ok: true, clip: c.id, editmap: md, brief, ...m });
   } else if (cmd === 'search') {
     const q = args.filter((a) => a !== opt('limit')).join(' ');
     const hits = search(q, { limit: Number(opt('limit', 12)) });
@@ -215,6 +243,7 @@ function readmeUsage() {
   node longform.mjs script <x.script.md>            check a script, write its reading copy
   node longform.mjs from-script <script> <recording> [--build]   recording -> plan (-> video)
   node longform.mjs index [dir]        index footage (default footage/library)
+  node longform.mjs analyze <id|file>  edit map of raw footage + a brief to fill in (before any plan)
   node longform.mjs search "<topic>"   find moments across the archive
   node longform.mjs clip <id>          one clip's numbered sentences
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence

@@ -543,10 +543,22 @@ export async function remix(planFile, { voice = true, log = console.log } = {}) 
   return { ok: true, video: out };
 }
 
+// The editorial brief (docs/EDITORIAL.md): the reasons behind an edit of raw footage, written before the plan.
+// Script-first plans have the script as their brief. Missing or unfilled -> a warning, so no edit ships unexplained.
+export function briefStatus(planFile, plan) {
+  if (plan.from_script) return { file: null, warning: null };
+  const file = plan.brief ? join(dirname(planFile), plan.brief) : planFile.replace(/\.json$/, '.brief.md');
+  if (!existsSync(file)) return { file, warning: `no editorial brief (${relative(ROOT, file)}): run "node longform.mjs analyze <clip> --name ${plan.name || 'x'}" and fill it in before planning (docs/EDITORIAL.md)` };
+  const idea = (readFileSync(file, 'utf8').split(/^## The one idea\s*$/m)[1] || '').split(/^## /m)[0].replace(/<!--[\s\S]*?-->/g, '').trim();
+  return { file, warning: idea ? null : `brief ${relative(ROOT, file)} has no "one idea" yet: decide what the video is saying before cutting it` };
+}
+
 export function check(planFile) {
   const plan = loadPlan(planFile);
   const R = resolvePlan(plan);
-  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
+  const brief = briefStatus(planFile, plan);
+  if (brief.warning) R.warnings.push(brief.warning);
+  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, brief: brief.file, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
     pieces: R.cuts?.length, timeline: (R.inserts || []).map((i) => `${fmt(i.at)}  ${i.id}  ${i.kind}/${i.layout}  ${i.dur}s`),
     chapters: (R.chapters || []).map((c) => `${fmtChapter(c.at)} ${c.title}`) };
 }

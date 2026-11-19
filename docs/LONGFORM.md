@@ -20,8 +20,10 @@ case anything needs a touch.
                                     -> aligned word by word, retakes cut, every cue on its word, built
 ```
 
-**From footage you already have** (podcast archives): index the library, search everything you've said, and
-write a plan from the best takes. See "Plans from existing footage" below.
+**From footage you already have** (whiteboard sessions, podcast archives, raw takes): index the library, map each
+raw recording (`node longform.mjs analyze <clip> --name <video>`: sections, repeats, fluff, hook and Short candidates,
+terms never defined), write the brief (docs/EDITORIAL.md), then search and write a plan from the best takes in story
+order. See "Plans from existing footage" below.
 
 ```
 out/longform/<name>/
@@ -232,6 +234,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs from-script <script> <recording> [--build]` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. |
 | `node longform.mjs pull <plan>` | Downloads outside clips that have a `url` and `from`/`to` (needs yt-dlp). |
 | `node longform.mjs index [dir]` | Transcribes and indexes everything. Writes `footage/library/.index/LIBRARY.md` (one row per clip with its topics), `<clip>.md` (every sentence numbered with times), and `<clip>.sheet.jpg` (12 frames). |
+| `node longform.mjs analyze <clip> [--name video]` | Reads one raw recording like an editor: `<clip>.EDITMAP.md` (sections, points said twice and which take to keep, false starts, table talk, hook candidates, stand-alone Short stretches, terms never defined) and `edits/longform/<video>.brief.md` to fill in before the plan. `check` warns when a plan from footage has no brief. |
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
