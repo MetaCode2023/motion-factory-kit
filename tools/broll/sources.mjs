@@ -199,17 +199,27 @@ export function tryOrder(sources, type) {
 }
 
 // Download once per provider id into assets/broll/stock/.
+// Openverse results whose origin (Flickr, Wikimedia) rate-limits us are fetched through Openverse's own image
+// proxy instead (full size; it refuses very large originals with a 424, so it's a fallback, not the default).
 export async function download(r, dir, { fetchImpl = fetch } = {}) {
+  try { return await fetchTo(r, r.url, dir, fetchImpl); }
+  catch (err) {
+    if (r.source !== 'openverse' || !/rate-limited|429/.test(err.message)) throw err;
+    return fetchTo(r, `https://api.openverse.org/v1/images/${r.id}/thumb/?full_size=true`, dir, fetchImpl);
+  }
+}
+
+async function fetchTo(r, url, dir, fetchImpl) {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${r.source}-${r.id}.${r.ext}`);
   if (existsSync(file) && statSync(file).size > 0) return file;
   for (let attempt = 0; ; attempt++) {
-    const res = await fetchImpl(r.url, { headers: { 'User-Agent': UA } });
+    const res = await fetchImpl(url, { headers: { 'User-Agent': UA } });
     const after = retryAfter(res);
     // Wikimedia answers a busy shared IP (cloud sessions) with Retry-After: 600; retrying sooner only extends the block.
-    if (res.status === 429 && after > 60) throw new Error(`download rate-limited by ${new URL(r.url).host}, retry after ${Math.round(after / 60)} min (${r.source} ${r.id})`);
+    if (res.status === 429 && after > 60) throw new Error(`download rate-limited by ${new URL(url).host}, retry after ${Math.round(after / 60)} min (${r.source} ${r.id})`);
     if (res.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, (after || (attempt + 1) * 20) * 1e3)); continue; }
-    if (!res.ok) throw new Error(`download ${res.status} (${r.source} ${r.id})`);
+    if (!res.ok) throw new Error(`download ${res.status} from ${new URL(url).host} (${r.source} ${r.id})`);
     const buf = Buffer.from(await res.arrayBuffer());
     if (/^\s*</.test(buf.subarray(0, 64).toString('latin1'))) throw new Error(`download returned a web page, not media (${r.source} ${r.id})`);
     writeFileSync(file, buf);

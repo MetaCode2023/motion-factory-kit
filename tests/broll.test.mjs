@@ -9,7 +9,7 @@ import { sentencesOf } from '../tools/longform/common.mjs';
 import { resolveAt, resolvePlan } from '../tools/longform/plan.mjs';
 import { findMoments } from '../tools/broll/find.mjs';
 import { placeBroll } from '../tools/broll/place.mjs';
-import { commonsLicenseOk, rank, search, tryOrder } from '../tools/broll/sources.mjs';
+import { commonsLicenseOk, download, rank, search, tryOrder } from '../tools/broll/sources.mjs';
 import { autoBroll, lockPath } from '../tools/broll/index.mjs';
 
 // Timed words from a sentence list, 0.3 s per word, 0.6 s between sentences.
@@ -192,4 +192,20 @@ test('Commons video: keeps free licences and real-length clips, picks the 1080p 
   assert.equal(rs[0].h, 1080);
   assert.equal(rs[0].author, 'NASA');
   assert.equal(rs[0].ext, 'webm');
+});
+
+test('a rate-limited Openverse origin falls back to the Openverse image proxy', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'broll-dl-'));
+  const calls = [];
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    if (url.includes('staticflickr')) return { ok: false, status: 429, headers: { get: (h) => (h === 'retry-after' ? '600' : null) }, arrayBuffer: async () => new ArrayBuffer(0) };
+    return { ok: true, status: 200, headers: { get: () => null }, arrayBuffer: async () => Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2]).buffer };
+  };
+  const file = await download({ source: 'openverse', id: 'abc', ext: 'jpg', url: 'https://live.staticflickr.com/1/1_b.jpg' }, dir, { fetchImpl });
+  assert.ok(existsSync(file));
+  assert.equal(calls.length, 2, 'no retry loop against a 10-minute block');
+  assert.match(calls[1], /api\.openverse\.org\/v1\/images\/abc\/thumb\/\?full_size=true/);
+  // Other sources don't have a proxy: the block is reported so the next source is tried.
+  await assert.rejects(download({ source: 'commons', id: 'x', ext: 'jpg', url: 'https://live.staticflickr.com/2/2_b.jpg' }, dir, { fetchImpl }), /rate-limited/);
 });

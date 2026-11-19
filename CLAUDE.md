@@ -276,10 +276,13 @@ All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.bra
 
 ## Other commands
 
+Read `docs/LESSONS.md` before fetching media or narration from a cloud session (what's blocked, rate limits, workarounds, picking B-roll that shows the subject).
+
 ```
 node render.mjs <scene> --still 4.2            # one PNG at a time (quick look, no sound)
 node render.mjs <scene> --from 8 --to 12       # silent render of one section
 node batch.mjs scenes/mine --sheet             # silent renders of a folder
 node voice.mjs "text" --out out/voice.mp3      # a single narration file
-node tools/make-sounds.mjs                     # regenerate the bundled sound library
+node tools/make-sounds.mjs [names]             # regenerate the bundled sound library (or just those effects)
+node tools/voice-lines.mjs vo.mp3 script.txt   # start/end of each line in a one-take narration
 ```
