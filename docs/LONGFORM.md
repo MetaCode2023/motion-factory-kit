@@ -70,6 +70,9 @@ base: backdrop                                      // optional: never show the 
 | `[[stacks3d bars: Rent=42; Food=27 \| prop: chip/coin \| unit: %]]` | **3D.** Amounts as stacks of chips or coins dropping in piece by piece, camera arcing around them |
 | `[[stat value: .. \| label: .. \| sub: .. \| source: ..]]` | One big number counting up |
 | `[[quote text: .. \| highlight: words \| by: ..]]` | A line, written big, key words lit (`by` only for a real quote) |
+| `[[title kicker: .. \| title: .. \| sub: ..]]` | The opening title card: a small label, the title, one line under it (`kit/titles.js`, docs/TITLES.md) |
+| `[[anim scenes/longform/chapter.html \| n: 2 \| title: ..]]` | A numbered chapter card. Written as `anim` because `[[chapter ..]]` is reserved for the `##` headings |
+| `[[endcard title: .. \| cta: .. \| url: ..]]` | The end card, with the right half left clear for YouTube end-screen elements (give it 5 to 20 s) |
 | `[[term term: .. \| definition: .. \| plain: ..]]` | A definition with an everyday translation |
 | `[[compare left.title: .. \| left.items: a; b \| left.tone: bad \| right...]]` | Two sides, with a verdict |
 | `[[steps steps: Title - body; Title - body]]` | A process building along a line |
@@ -183,6 +186,10 @@ up to the next full-frame visual for that reason.
 - `transition: circleopen` on one cue (or `"transition"` on one insert) sets that one. Names are ffmpeg
   xfade transitions (`smoothleft/right/up/down`, `slideleft/right/up/down`, `wipeleft/…`, `circleopen`,
   `circleclose`, `hblur`, `dissolve`, `fadeblack`, `zoomin`, `radial`, `pixelize`).
+- Twenty soft-edged wipes (iris, clock, blinds, checker, noise, ...): `transition: wipe:iris(softness=0.2 dur=0.6)` on a
+  cue, or `"transitions": ["wipe:iris", "smoothleft"]` in a plan, mixed with the names above. No commas, pipes or
+  semicolons in the brackets. A bad wipe spec is an error; an unknown plain name is a warning. Every family, the
+  grammar and the limits (not exported to Premiere): [TRANSITIONS.md](TRANSITIONS.md).
 - `side` boxes still fade.
 
 Every 2D template shares one camera (`LF.drift` in `lf.js`): it lands (arrives slightly close and settles),
@@ -357,6 +364,9 @@ File → Import → `<name>.premiere.xml`. You get a sequence with:
 Music ducking is baked into the preview, but not into the XML. In Premiere, tag the voice Dialogue and the music
 Music in Essential Sound and turn on Ducking. If you move the project folder, Premiere asks you to relink, so
 point it at the same files.
+
+To trim the cut in an editor and bring it back, or to hand it over as an EDL: `node longform.mjs export <plan>` and
+`import <plan> <cut>` (`docs/INTERCHANGE.md`; untested in external editors, checklist in `docs/INTERCHANGE-CHECKLIST.md`).
 
 ## Automatic B-roll
 

@@ -40,7 +40,7 @@ See them all moving: `node render.mjs scenes/examples/blocks-gallery.html`
 | Block | Key options |
 |---|---|
 | `B.questionCard` | `text, label='We asked', y, until, light` — the host's question, pinned while people answer. Returns `{ bottom }` |
-| `B.lowerThird` | `name, detail, y, until` — accent bar + name. Only names/details people actually gave |
+| `B.lowerThird` | `name, detail, y, until, maxW`: accent bar + name. Only names/details people actually gave. `maxW` caps the panel width (default 940; text wider than the panel shrinks to fit). Without it nothing changes |
 | `B.counter` | `n, total, mode: 'chip' \| 'big', label, x, y` — "7/50" badge, or the total counting up for an opener |
 | `B.tally` | `title, options: [{ label, value }], y` — poll result bar. Real counts only |
 

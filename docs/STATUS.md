@@ -24,11 +24,13 @@ in every format, with minimal hand-holding. How it should think: `docs/EDITORIAL
 | **Every format in one run** | `longform.mjs package` (PACKAGE.md) | New; tested on the demo |
 | **Whiteboard scan** | runs in `index`; used by the critique | New; thresholds untested on real board footage |
 | **Drop folder** | `longform.mjs auto` (footage/QUEUE.md) | New |
+| **Interchange** (cut out as xmeml/EDL, trimmed cut back in) | `longform.mjs export / import` (docs/INTERCHANGE.md) | New; tested only inside the kit (plan to file to import), **untested in Premiere, Resolve and Final Cut** |
 | Self-learning engine | docs/SELF-LEARNING-ENGINE.md | Planned, not built (waiting on R2/D1) |
 | Automatic B-roll (free-license photos/video) | `longform.mjs broll` | Works; Wikimedia 429s from the cloud (docs/LESSONS.md) |
 | Overlays on a finished clip | `tools/overlay.py` (docs/OVERLAYS.md) | Stable |
 | Weekly content for a brand | `content.mjs` (docs/CONTENT.md) | Stable |
 | Native vertical Short from a long-form plan | `tools/longform/vertical.mjs` | Merged into #7 from PR #2 |
+| **Wipe transitions** (20 soft-edged shapes: `wipe:iris`, ...) | `tools/longform/wipes.mjs`, `transitions.mjs`, docs/TRANSITIONS.md | New; masks and two real renders tested at 64x36, not yet looked at on real 1080p footage. Not exported to Premiere. |
 
 Runs on the cloud box: rendering, mixing, captions, animations, transcripts (faster-whisper). Needs the owner's
 laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Automatic B-roll lists YouTube (Creative Commons only) as a
@@ -64,11 +66,14 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
    thresholds (`tools/longform/board.mjs`), repeat detection on run-on transcripts, the jargon list
    (`tools/longform/terms.json`). The raw Physics of Poker draft is on the owner's laptop (Downloads) as a second test.
 2. Merge #5, then #7; close #6 and #2.
+   Interchange: someone with Premiere, Resolve or Final Cut runs `docs/INTERCHANGE-CHECKLIST.md` and records it in `docs/runs/`; the mixed-rate in/out change (DECISIONS 5) is the first thing to check.
 3. Native vertical Shorts from `package` (today it crops the finished 16:9; `tools/longform/vertical.mjs` makes the
    better title + circle-face layout but needs its own captions-off plan per Short).
 4. Self-learning engine, step 1 (docs/SELF-LEARNING-ENGINE.md): once R2/D1 exist, upload each build's
    `decisions.json` and the run reports.
 5. Re-run `broll` on Physics of Poker v3 (built before B-roll existed).
+6. Wipes: build one real video with a few `wipe:` families, look at them at 1080p (also with `pip` and `split`), keep
+   the ones that read well and put them in the default cycle. Details and limits: docs/TRANSITIONS.md.
 
 ## Before you finish (every agent)
 
@@ -77,3 +82,14 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
 - Made a video? Add `docs/runs/<date>-<name>.md`.
 - Learned something about the environment or a source? `docs/LESSONS.md`. A preference that generalises?
   `docs/TASTE.md`.
+
+## Titles 4a (added 2026-11-18)
+
+| Piece | Entry point | State |
+|---|---|---|
+| Opening, chapter and end cards | `kit/titles.js`, `scenes/longform/title.html` / `chapter.html` / `endcard.html` (docs/TITLES.md) | New; tested for text on screen and inside the YouTube safe zone, not yet judged by eye in a real build or against a real YouTube end screen |
+| `B.lowerThird` `maxW` | `kit/blocks.js` (docs/BLOCKS.md) | New; default unchanged |
+
+Handoff: lower third OVER the speaker (4b) waits for PR #3's alpha work (needs an `over` layout). `[[chapter ..]]` is a reserved
+cue word, so the chapter card is cued as `[[anim scenes/longform/chapter.html | ..]]`; making `chapter` a real card cue is a change to
+`tools/longform/script.mjs` that was not made.

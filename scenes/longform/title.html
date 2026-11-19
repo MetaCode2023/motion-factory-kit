@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Title: the opening card</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="../../kit/titles.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. The opening title: a small label, the video's title, one line under it. Drawn by kit/titles.js (TT.opening).
+// Data: dur, kicker, title, sub, style, color, tint
+const D = M.data({ dur: 6, kicker: 'PART ONE', title: 'Why money works the way it does', sub: 'A first look at the machine' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur, sfx: [{ at: 0.15, name: 'tap', volume: 0.6 }] });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  TT.opening(c, t, { kicker: D.kicker, title: D.title, sub: D.sub }, th);
+  LF.vignette(c, th, 0.45);
+}
+</script>
+</body>
+</html>

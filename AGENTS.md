@@ -28,6 +28,7 @@ explain afterwards; ask only before spending money or posting. Full version: `do
 | Short-form scene (explainer, ad, 9:16) | `make.mjs` + `scenes/` + `kit/` | CLAUDE.md, design/ |
 | Raw client footage → many ads | `footage.mjs` | docs/EDITOR.md |
 | Overlays on a finished clip | `tools/overlay.py` | docs/OVERLAYS.md |
+| Cut to/from Premiere, Resolve, Final Cut (xmeml, EDL) | `longform.mjs export / import` | docs/INTERCHANGE.md, docs/INTERCHANGE-CHECKLIST.md |
 | Regular posting for a brand | `content.mjs` | docs/CONTENT.md |
 
 If you speak MCP, connect `mcp/server.mjs` (docs/MCP.md) and every step is a tool. `npm test` runs the suite;
@@ -35,8 +36,12 @@ If you speak MCP, connect `mcp/server.mjs` (docs/MCP.md) and every step is a too
 
 Already have your own pipeline? `docs/MODULES.md` maps the pieces you can lift out on their own.
 
+Wipe transitions between long-form visuals (`wipe:iris` and nineteen more): `docs/TRANSITIONS.md`.
+
 ## Before you finish
 
 Update `docs/STATUS.md` (and its handoff queue), add to `docs/DECISIONS.md` for choices a later agent might undo,
 write `docs/runs/<date>-<video>.md` for any video you made, and put lessons and preferences in `docs/LESSONS.md` /
 `docs/TASTE.md`. Footage, scripts, plans and brand data never go in git.
+
+Title cards (opening, chapter, end card) and their data keys: `kit/titles.js`, `docs/TITLES.md`.

@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>End card: the last card of a long-form video</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+<script src="../../kit/titles.js"></script>
+</head>
+<body>
+<script>
+// 16:9 template. The end card: what to watch next, a call to action, an address. The right half stays empty for YouTube's end-screen elements. Drawn by kit/titles.js (TT.endCard).
+// Data: dur (YouTube wants 5-20 s), title, cta, url, style, color, tint
+const D = M.data({ dur: 8, title: 'Thanks for watching', cta: 'Subscribe for the next one', url: '' });
+const th = LF.theme(D);
+M.setup({ preset: 'youtube', duration: D.dur, background: '#05060A', draw, look: 'cinematic', motionBlur: LF.blur, sfx: [{ at: 0.15, name: 'chime', volume: 0.6 }] });
+function draw(c, t) {
+  LF.backdrop(c, t, th);
+  TT.endCard(c, t, { title: D.title, cta: D.cta, url: D.url }, th);
+  LF.vignette(c, th, 0.45);
+}
+</script>
+</body>
+</html>

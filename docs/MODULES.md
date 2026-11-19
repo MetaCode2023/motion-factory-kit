@@ -54,6 +54,11 @@ Input: clips + word timings (ElevenLabs speech-to-text, or local `openai-whisper
 plan with fillers and pauses over 0.4 s removed, alternating punch-ins to hide jump cuts, and a
 `*.words.json` of the kept words for captions. Needs: `ffmpeg-static`. The plan format is in `docs/EDITOR.md`.
 
+### Cut in and out of other editors (xmeml, EDL)
+`tools/longform/{timecode,xml,edl,interchange}.mjs` + `premiere.mjs`. Writes the A-roll cut as an xmeml timeline or a CMX3600
+EDL (non-drop and drop-frame timecode) and reads a trimmed cut back, matching clips by path then name and length.
+No dependencies (a minimal XML reader is included). Untested in external editors. Docs: `docs/INTERCHANGE.md`.
+
 ### Street-audio clean-up and speaker levelling
 `tools/audio.mjs` (no other kit dependencies). `cleanChain(options)` returns an ffmpeg `-af` chain
 (high-pass, FFT denoise, de-ess, compressor); `loudness(file, { from, dur, chain })` measures LUFS;
@@ -86,6 +91,11 @@ the word), `title-explainer.html` (creator in the corner over the thing itself, 
 `meme-caption.html`. Caption style `word` in `kit/motion.js` (one word as spoken, mid-frame). These need
 the kit's renderer (`make.mjs`); the layouts and timings are the part worth copying.
 
+### Wipe transitions (long-form)
+`tools/longform/wipes.mjs` (twenty procedural mask shapes, pure JavaScript, PNG frames via skia-canvas) and
+`tools/longform/transitions.mjs` (the `wipe:<family>(softness=0.2)` grammar and the ffmpeg `alphamerge` + `overlay`
+graph). The shapes lift out on their own; the graph assumes the chunked compositor in `build.mjs`. Details: [TRANSITIONS.md](TRANSITIONS.md).
+
 ## Rules the kit keeps (worth keeping wherever these pieces go)
 
 - Never invent quotes, names, or poll numbers. Question cards use the words the host actually said;
@@ -98,3 +108,9 @@ the kit's renderer (`make.mjs`); the layouts and timings are the part worth copy
 `npm install && npm run demo`: bundled synthetic street-poll footage (`examples/demo`) → finished ads,
 `DELIVERY.csv` and `review.html` in `out/demo/`, no keys. `npm test` runs the checks (the face test
 needs `pip install opencv-python-headless`). Any template builds with labelled placeholders until clips are added.
+
+### Title cards
+`kit/titles.js` (needs `kit/motion.js` and `kit/fx.js`; uses `scenes/longform/lf.js` curves when loaded):
+`TT.opening`, `TT.chapter`, `TT.endCard`, `TT.themeFromBrand()`. Plain canvas-2D functions of time that draw type and a
+rule inside the safe box at any frame size. Scenes: `scenes/longform/title.html`, `chapter.html`, `endcard.html`.
+See `docs/TITLES.md`.

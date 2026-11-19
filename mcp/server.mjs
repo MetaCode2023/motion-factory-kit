@@ -422,4 +422,16 @@ server.registerTool('longform_build', {
   return res.sheet && existsSync(res.sheet) ? picture(res.sheet, res) : text(res);
 });
 
+server.registerTool('longform_export_cut', {
+  title: 'Export the cut for another editor',
+  description: 'Write the plan\'s A-roll cut as an xmeml timeline (<name>.cut.xml, Premiere/Resolve/Final Cut import) and/or a CMX3600 EDL (<name>.cut.edl) into out/longform/<name>/, cutting from the ORIGINAL footage so every cut can be trimmed there. Needs no build, never touches the build\'s own files. Written: V1/A1 A-roll (XML also V2 library B-roll and already-built inserts, music, effects, chapter and pull markers). Dropped: transitions, pip/split layouts, captions, ducking, animations not yet built (listed in warnings). EDL: record time starts at 01:00:00:00, source time follows the file\'s embedded timecode, non-drop-frame unless df: true (29.97 and 59.94 only). UNTESTED in external editors: the only checked round trip is export then longform_import_cut inside this kit. Leave edl and xml unset for both files; set one to get only that file. Details: docs/INTERCHANGE.md; the manual test steps are docs/INTERCHANGE-CHECKLIST.md.',
+  inputSchema: { plan: z.string(), edl: z.boolean().optional(), xml: z.boolean().optional(), df: z.boolean().optional().describe('drop-frame EDL timecode (29.97 or 59.94 plans only)') },
+}, async ({ plan, edl, xml, df }) => text(await cli('longform.mjs', ['export', inRepo(plan), ...(edl ? ['--edl'] : []), ...(xml ? ['--xml'] : []), ...(df ? ['--df'] : [])])));
+
+server.registerTool('longform_import_cut', {
+  title: 'Bring a cut trimmed elsewhere back into a plan',
+  description: 'Read an xmeml (.xml) or CMX3600 EDL (.edl) cut that was trimmed in another editor and write <plan>.imported.json next to the plan (the original plan is never overwritten): a_roll is replaced by one range per V1 clip, {clip, from, to, tighten: false}, so reordering and trimming survive, everything else in the plan is kept, and the result is checked like longform_write_plan. Then look at the plan and longform_build it. SUPPORTED: V1 cuts (A1 when V1 is empty) of original library files, in any order, trimmed. REJECTED with a message (a_roll comes back empty): speed or time remap, nested sequences, generators and titles, transitions, effects other than Basic Motion and Audio Levels, gaps or overlaps on V1, media that matches no library clip (match: same path, else same file name and length within 0.5 s; two candidates is an error naming both). WARNED: split audio edits (audio follows picture), Basic Motion scale differing across clips (punch-ins are recomputed), inserts placed by a number of seconds (they will not follow the speech). UNTESTED with files from real Premiere, Resolve or Final Cut. Details and exact messages: docs/INTERCHANGE.md.',
+  inputSchema: { plan: z.string().describe('The plan the cut was exported from, e.g. edits/longform/x.json'), cut: z.string().describe('The edited .xml or .edl file') },
+}, async ({ plan, cut }) => text(await cli('longform.mjs', ['import', inRepo(plan), inRepo(cut)])));
+
 await server.connect(new StdioServerTransport());

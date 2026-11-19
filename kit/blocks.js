@@ -527,12 +527,14 @@
   // Name lower-third: an accent bar that wipes in, the name, and an optional detail line.
   // Only put names and details people gave you (on camera or on their release); never make them up.
   //   B.lowerThird(ctx, t, { at: 2.1, until: 4.6, name: 'Marcus', detail: 'Runs 40 miles a week' })
-  B.lowerThird = (ctx, t, { at = 0, until = at + 2.6, name = '', detail = '', x = 70, y = 1030, size = 58, accent = C.accent } = {}) => {
+  // maxW caps the panel width (default 940); text wider than that shrinks to fit. Without maxW nothing changes.
+  B.lowerThird = (ctx, t, { at = 0, until = at + 2.6, name = '', detail = '', x = 70, y = 1030, size = 58, accent = C.accent, maxW } = {}) => {
     const a = Math.min(appear(t, at, 0.12), clamp((until - t) / 0.2));
     if (a <= 0 || !name) return { bottom: y };
     const nf = font(800, size, F.display), df = font(600, Math.round(size * 0.58));
     ctx.save(); ctx.font = nf; const nw = ctx.measureText(name).width; ctx.font = df; const dw = detail ? ctx.measureText(detail).width : 0; ctx.restore();
-    const w = Math.min(940, Math.max(nw, dw) + 84), h = detail ? size * 2.25 : size * 1.5;
+    const w = Math.min(maxW ?? 940, Math.max(nw, dw) + 84), h = detail ? size * 2.25 : size * 1.5;
+    const fit = maxW && Math.max(nw, dw) + 84 > w ? (w - 84) / Math.max(nw, dw) : 1;
     const k = ease.outCubic(appear(t, at, 0.4)), reveal = ease.outCubic(appear(t, at + 0.08, 0.45));
     ctx.save();
     ctx.globalAlpha *= a;
@@ -541,8 +543,8 @@
     shadow(ctx, 24, 8, 0.3);
     ctx.fillStyle = 'rgba(12,12,14,0.86)'; ctx.fillRect(x + 14, y, w, h);
     noShadow(ctx);
-    M.text(ctx, name, x + 50, y + size * 1.08, { font: nf, color: '#FFFFFF' });
-    if (detail) M.text(ctx, detail, x + 52, y + size * 1.86, { font: df, color: 'rgba(255,255,255,0.78)' });
+    M.text(ctx, name, x + 50, y + size * 1.08, { font: fit < 1 ? font(800, size * fit, F.display) : nf, color: '#FFFFFF' });
+    if (detail) M.text(ctx, detail, x + 52, y + size * 1.86, { font: fit < 1 ? font(600, Math.round(size * 0.58) * fit) : df, color: 'rgba(255,255,255,0.78)' });
     ctx.restore();
     return { bottom: y + h };
   };

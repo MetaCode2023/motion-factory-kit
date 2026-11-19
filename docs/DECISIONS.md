@@ -3,6 +3,24 @@
 Why things are the way they are, so a later agent doesn't undo them by accident. One entry per decision, newest
 first: the date, the decision, the reason, and what would change it.
 
+## 2026-11-19: Wipe transitions are precomputed masks, not xfade custom (plan decision 10)
+**Decision.** A wipe is a set of grayscale PNG mask frames computed in Node (`tools/longform/wipes.mjs`, cached in
+`out/.cache/wipes/<hash>/`), joined to the picture with `alphamerge` + `overlay`, the same pattern as the pip layout.
+The legacy `xfade` path is untouched.
+**Why.** `xfade=transition=custom` runs an expression per pixel per plane (slow), cannot read a third input, has no
+seeded random source and makes soft edges costly. Masks give anti-aliased feathered edges, are testable without
+ffmpeg, cost about a dozen small PNGs per wipe and keep the two-media-streams-per-chunk rule.
+**What would change it.** A need for a wipe that depends on the picture content, or an ffmpeg filter that does masked
+blends natively and cheaply.
+
+## 2026-11-19: Wipe grammar is wipe:<family>(name=number ...), no commas (plan decision 11)
+**Decision.** `"wipe:<family>"`, `"wipe:<family>(softness=0.15 dur=0.6 angle=30)"` or `{ "wipe": "linear", "softness": 0.15 }`.
+A malformed wipe is an error in `resolvePlan`; an unknown legacy name stays a warning with the old fallback.
+**Why.** Script headers split `transitions:` on commas and cues split on pipes and semicolons, so the spec can
+contain none of them and still travel through a script. A wipe typo should stop the build (it would otherwise
+render the wrong thing silently); a legacy name has always fallen back, and changing that breaks old plans.
+The future project-format work should adopt this grammar. Clean room: nothing came from OpenShot (GPL-3.0); see docs/TRANSITIONS.md.
+
 ## 2026-11-19: Sound effect names are pageturn and swipe
 **Decision.** PR #5 and PR #6 both added the same short-form effects under different names. Kept #5's names
 (`pageturn`, `swipe`) and #6's extra `click` and `wonder` music; #6's code now uses the kept names.
@@ -52,3 +70,39 @@ every file; Pexels/Pixabay only if a key is set. Copyrighted clips (news, YouTub
 **Decision.** Long-form defaults: burned captions with key words popped, no talking-head gap without a graphic
 (pip for full graphics, split otherwise). See `docs/TASTE.md`.
 **Why.** Owner's notes on Physics of Poker v1: first-time viewers need something to read and look at every second.
+
+## 2026-11-18: Title cards live in kit/titles.js; the lower third is extended, not duplicated
+**Decision.** The opening, chapter and end cards are drawing functions in `kit/titles.js` (global `TT`) taking an
+`LF.theme`-shaped theme, with thin scenes in `scenes/longform/`. `B.lowerThird` got a `maxW` option (default 940,
+unchanged) instead of a new block. The quote card and stat callout already existed and are not duplicated.
+**Why.** Drawing code in the kit works at any frame size and in short-form too (`TT.themeFromBrand()`); the scenes stay
+about 25 lines. Safe-zone checking already existed (skia `textOnly` plus `M.PRESETS.youtube.safe`), so the tests reuse it.
+The ideas are the owner's; the code is original (OpenShot is GPL-3.0, this repo is MIT, nothing was read or copied).
+**Would change if.** A second long-form look needs different layouts per card; then split `TT` per look.
+
+<!-- Interchange (xmeml and EDL in and out): decisions 1 to 5 of the four-additions plan, 2026-11-19. Details: docs/INTERCHANGE.md -->
+## 2026-11-19: Interchange 1 to 5 (xmeml and EDL out, a trimmed cut back in)
+**1. Import writes `<plan>.imported.json` next to the plan and never overwrites the plan.** Each range is
+`{clip, from, to, tighten: false}`. Why: the exported cuts are already tightened, so tightening again would break the
+round trip; and a failed or wrong import must not cost the owner the plan. Would change if: a project file format
+exists that can hold both versions.
+
+**2. Clip matching: resolved path, then file name plus duration within 0.5 s; two candidates is an error that lists
+both.** Why: a moved or relinked file keeps its name and length; guessing between two lookalikes would silently cut the
+wrong recording. An EDL has no duration, so its name alone decides.
+
+**3. Import supports V1 (or A1 when V1 is empty) cuts of original library files, reordered and trimmed.** It rejects
+speed or time remap, nested sequences, generators and titles, transitions, other effects, gaps and unmatched media; it
+warns on split audio, varying Basic Motion scale and numeric-`at` inserts. Why: a transition makes the neighbouring
+start/end -1 and a speed change makes the source length differ from the timeline, so the cut cannot be reconstructed
+faithfully; failing loudly with the exact reason beats a wrong cut that looks right.
+
+**4. EDL record start is 01:00:00:00; source TC is offset by the file's embedded timecode** (`probe().tc`, an additive
+field). Reels are the clip id (8 upper alphanumerics, unique). NDF by default; drop-frame only with `--df` at 29.97 or
+59.94. Why: the convention, and without the source offset Resolve conforms camera files to the wrong place.
+
+**5. xmeml `<in>`/`<out>` are counted in the clipitem's declared rate (the sequence rate), not the source file's.**
+Why: the clipitem says one rate and the numbers used another whenever the source fps differs from the sequence's.
+Equal-rate output is byte-identical (pinned by a hash). Unproven in a real editor, so it is the first item on
+`docs/INTERCHANGE-CHECKLIST.md`. Would change if: the checklist shows an editor reading them in the file's rate.
+Also fixed in the same change: the A1 `clipindex` counts audio clips only, and inserts without media are skipped with a warning.

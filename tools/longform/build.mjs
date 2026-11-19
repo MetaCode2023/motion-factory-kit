@@ -10,6 +10,8 @@ import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
 import { critique, critiqueMarkdown } from './critique.mjs';
+import { cycleOf, parseTransition, wipeGraph } from './transitions.mjs';
+import { wipeFrames } from './wipes.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -234,18 +236,16 @@ async function prerender(R, plan, log) {
   await run(todo.filter((j) => is3d(j.scene)), Math.min(P, 2));
 }
 
-// How visuals arrive and leave. plan.transitions: 'fade' for plain fades everywhere, or your own list to cycle
-// through; "transition" on one insert overrides it. Names are ffmpeg xfade transitions.
+// How visuals arrive and leave: transitions.mjs (the names, the wipe grammar). A wipe's mask frames are made at half size and scaled up.
 const TRANSITION = 0.4;
-const TRANSITIONS = ['smoothleft', 'slideup', 'circleopen', 'hblur', 'smoothup', 'slideleft'];
-const XFADE = new Set(['fade', 'dissolve', 'fadeblack', 'smoothleft', 'smoothright', 'smoothup', 'smoothdown', 'slideleft', 'slideright', 'slideup', 'slidedown', 'wipeleft', 'wiperight', 'wipeup', 'wipedown', 'circleopen', 'circleclose', 'zoomin', 'radial', 'hblur', 'pixelize', 'circlecrop', 'rectcrop', 'diagtl', 'diagbr', 'squeezeh', 'squeezev']);
+const MASK = { w: 960, h: 540 };
 
 // ---- picture: inserts over the A-roll ------------------------------------------------------------
 // The picture is built in chunks: plain stretches of the A-roll, and one chunk per insert (the insert over
 // its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
 // uses no more memory than a 1-minute one. Captions are drawn per chunk at the right times; the chunks are
 // joined without re-encoding and the mix is laid under them.
-function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null) {
+export function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null) {
   const SIDE = sideBox(plan), fps = plan.fps;
   const N = Math.round(R.total * fps);
   const parts = [];
@@ -262,12 +262,14 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
   }
   if (f < N) parts.push({ from: f, to: N });
   // Which transition each full-frame visual uses, and whether it follows another one directly.
-  const cycle = Array.isArray(plan.transitions) && plan.transitions.length ? plan.transitions : plan.transitions === 'fade' ? ['fade'] : TRANSITIONS;
+  const cycle = cycleOf(plan.transitions);
   let nth = 0;
   parts.forEach((p, i) => {
     if (!p.ins || p.ins.layout === 'side') return;
-    const t = p.ins.src?.transition;
-    p.transition = t === 'cut' ? 'cut' : XFADE.has(t) ? t : p.ins.carried ? 'dissolve' : cycle[nth++ % cycle.length];   // a carried figure stays put while the rest changes
+    const t = parseTransition(p.ins.src?.transition);
+    const pick = t && t.type !== 'unknown' ? t : p.ins.carried ? { type: 'xfade', name: 'dissolve' } : parseTransition(cycle[nth++ % cycle.length]);   // a carried figure stays put while the rest changes
+    p.transition = pick.type === 'xfade' ? pick.name : pick.type;
+    if (pick.type === 'wipe') p.wipe = pick;
     const before = parts[i - 1], after = parts[i + 1];
     if (before?.ins && before.ins.layout !== 'side' && before.to === p.from && before.ins.media) p.prev = before.ins;
     if (after?.ins && after.ins.layout !== 'side' && after.from === p.to) p.next = true;
@@ -294,9 +296,10 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
         // another visual it transitions from that one's last frame, not from the speaker in between.
         const NORM = `fps=${fps},format=yuv420p,settb=AVTB,setsar=1`;
         const fx = Math.min(1, Math.max(0, plan.face?.x ?? 0.5));
-        const d = Math.min(TRANSITION, D / 4), name = p.transition, cut = name === 'cut';   // cut: straight in and out (short cutaways)
+        const wipe = p.wipe, d = Math.min(wipe?.dur ?? TRANSITION, D / 4), name = p.transition, cut = name === 'cut';   // cut: straight in and out (short cutaways)
         const inputs = ['-ss', ss, '-i', aroll.video, '-i', ins.media], g = [];
         let nIn = 2;
+        const maskIn = () => { inputs.push('-framerate', String(fps), '-i', join(wipeFrames(wipe, { ...MASK, fps, dur: d }), '%04d.png')); return nIn++; };
         const needs = { in: !p.prev && !cut, out: !p.next && !cut, face: ins.layout === 'pip' || ins.layout === 'split' };
         const outs = [needs.in && 'bgA', needs.out && 'bgB', needs.face && 'bgF'].filter(Boolean);
         g.push(outs.length ? `[0:v]setpts=PTS-STARTPTS,${NORM}${outs.length > 1 ? `,split=${outs.length}` : ''}${outs.map((o) => `[${o}]`).join('')}` : '[0:v]nullsink');
@@ -323,8 +326,8 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
           inputs.push('-loop', '1', '-t', (d + 1).toFixed(2), '-i', still);
           g.push(`[${nIn}:v]${NORM}[from]`); nIn++;
         }
-        if (!cut) g.push(`[${p.prev ? 'from' : 'bgA'}][vis]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=0[x1]`);
-        if (needs.out) g.push(`[bgB]trim=start=${(D - d).toFixed(3)},setpts=PTS-STARTPTS,${NORM}[tail]`, `[x1][tail]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=${(D - d).toFixed(3)}[x2]`);
+        if (!cut) g.push(wipe ? wipeGraph(p.prev ? 'from' : 'bgA', 'vis', maskIn(), d, 0, 'x1') : `[${p.prev ? 'from' : 'bgA'}][vis]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=0[x1]`);
+        if (needs.out) g.push(`[bgB]trim=start=${(D - d).toFixed(3)},setpts=PTS-STARTPTS,${NORM}[tail]`, wipe ? wipeGraph('x1', 'tail', maskIn(), d, D - d, 'x2') : `[x1][tail]xfade=transition=${name}:duration=${d.toFixed(3)}:offset=${(D - d).toFixed(3)}[x2]`);
         ff([...inputs, '-filter_complex', `${g.join(';')};[${cut ? 'vis' : needs.out ? 'x2' : 'x1'}]setpts=PTS-STARTPTS${caps(p.from)},format=yuv420p[v]`, '-map', '[v]', '-frames:v', String(n), '-an', ...VENC(fps, 19), file], `chunk ${k} (${ins.id})`);
       }
     }
