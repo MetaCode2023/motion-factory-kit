@@ -34,7 +34,7 @@ export function doctor() {
   add('3D scenes', pw && three, pw && three ? (chrome ? `Chrome at ${chrome}` : 'playwright-core + three (Chrome: Playwright\'s own or set CHROME_PATH)') : 'missing ' + [!pw && 'playwright-core', !three && 'three'].filter(Boolean).join(', '), 'run: npm install  (then: npx playwright install chromium if Chrome is not installed)', false);
   add('Stock footage', !!process.env.PEXELS_API_KEY, process.env.PEXELS_API_KEY ? 'PEXELS_API_KEY set' : 'no key', 'free key at pexels.com/api, then set PEXELS_API_KEY', false);
   const yt = run('yt-dlp', ['--version']);
-  add('Outside clips', !!yt, yt ? `yt-dlp ${yt}` : 'yt-dlp not found', 'install yt-dlp (pip install yt-dlp)', false);
+  add('Outside clips', !!yt, yt ? `yt-dlp ${yt}` : 'yt-dlp not found (also needed for video B-roll from YouTube)', 'install yt-dlp (pip install yt-dlp)', false);
   add('Fonts and sounds', existsSync(join(ROOT, 'fonts')) && existsSync(join(ROOT, 'sounds', 'sfx')), 'bundled', 'the repo is incomplete: clone it again');
   const ready = rows.filter((r) => r.need).every((r) => r.ok);
   return { ok: ready, ready, rows };

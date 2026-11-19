@@ -232,3 +232,61 @@ test('a visual right after a stat inherits its figure; one after a gap does not'
   assert.equal(next.carried, true);
   assert.equal(animData(later, R).carry, undefined);
 });
+
+test('automatic sound: cutaway sounds, page turns on chapters, a bop after a question; the plan wins; off is off', async () => {
+  const { designSound } = await import('../tools/longform/sound.mjs');
+  const mk = () => ({
+    inserts: [
+      { kind: 'image', at: 10, dur: 2, layout: 'full', sfx: null, autoBroll: true, src: {} },
+      { kind: 'broll', at: 20, dur: 3, layout: 'full', sfx: 'whoosh', src: {} },
+      { kind: 'broll', at: 30, dur: 3, layout: 'full', sfx: 'hit', src: { sfx: 'hit' } },
+      { kind: 'animation', at: 40, dur: 5, layout: 'full', sfx: 'whoosh', src: {} },
+    ],
+    chapters: [{ at: 0, title: 'A' }, { at: 50, title: 'B' }, { at: 90, title: 'C' }],
+    words: [{ w: 'Why', s: 0.4, e: 0.6 }, { w: 'now?', s: 0.7, e: 1.0 }, { w: 'Again?', s: 5, e: 5.4 }, { w: 'Really?', s: 60, e: 60.5 }],
+    total: 120,
+  });
+  const a = mk(), extra = designSound(a, {}, [90]);
+  assert.equal(a.inserts[0].sfx, 'shutter', 'a photo arrives with a shutter');
+  assert.ok(a.inserts[0].sfxVolume < 0.3, 'automatic cutaways are quieter');
+  assert.equal(a.inserts[1].sfx, 'swish', 'a clip gets a swish instead of the default whoosh');
+  assert.equal(a.inserts[2].sfx, 'hit', 'an effect the plan chose is kept');
+  assert.equal(a.inserts[3].sfx, 'whoosh', 'animations keep theirs');
+  assert.deepEqual(extra.filter((x) => x.auto === 'chapter').map((x) => x.at), [50], 'a page turn on chapter B; chapter C already has an effect; none at 0');
+  assert.ok(extra.some((x) => x.name === 'riser' && x.at < 50 && x.at > 48));
+  assert.deepEqual(extra.filter((x) => x.auto === 'question').map((x) => Math.round(x.at)), [5, 61], 'a bop after a question: not on top of the opening hit, not within 20 s of the last');
+  const calm = mk(), c = designSound(calm, { sound: 'calm' });
+  assert.equal(calm.inserts[0].sfx, null, 'calm: automatic cutaways stay silent');
+  assert.ok(c.every((x) => x.auto === 'chapter'));
+  const off = mk();
+  assert.deepEqual(designSound(off, { sound: 'off' }), []);
+  assert.equal(off.inserts[1].sfx, 'whoosh');
+});
+
+test('music runs under the whole video by default; a script header can choose the track and the sound style', async () => {
+  const lib = fakeLib();
+  const R = resolvePlan({ name: 'x', tighten: false, a_roll: [{ clip: 'a' }] }, lib);
+  assert.equal(R.music.length, 1);
+  assert.equal(R.music[0].at, 0);
+  assert.equal(R.music[0].end, R.total);
+  assert.equal(resolvePlan({ name: 'x', tighten: false, a_roll: [{ clip: 'a' }], music: [] }, lib).music.length, 0, 'an empty list means no music');
+  const { planFromScript } = await import('../tools/longform/script.mjs');
+  const { plan } = planFromScript('---\ntitle: T\nmusic: wonder 0.12\nsound: calm\n---\nHello there. So this is the point. Okay.\n', lib.clips.a);
+  assert.deepEqual(plan.music, [{ at: 0, track: 'wonder', volume: 0.12 }]);
+  assert.equal(plan.sound, 'calm');
+});
+
+test('depth flags a surface-level script and passes one that names, argues, shows how we know and says what it means', async () => {
+  const { lintScript } = await import('../tools/longform/script.mjs');
+  const thin = lintScript('---\ntitle: Quantum\n---\n## One\n' + 'Quantum mechanics is a fascinating world that has changed everything. Scientists say particles can be in two places at once. It is a complex topic but simply put it is very strange. Let that sink in. Particles are small and they behave in odd ways that are hard to picture. '.repeat(2));
+  assert.ok(thin.depth.notes.some((n) => /thesis/.test(n)));
+  assert.ok(thin.depth.notes.some((n) => /one view only/.test(n)));
+  assert.ok(thin.depth.notes.some((n) => /how we know/.test(n)));
+  assert.ok(thin.depth.notes.some((n) => /stock phrase/.test(n)));
+  const deep = lintScript('---\ntitle: Quantum\nthesis: Measurement is the unsolved part of physics\ntension: Copenhagen says the wave collapses, Everett says it never does\nbridge: what an observer is, in physics and in your own head\n---\n## One\n' +
+    'In 1927 Niels Bohr and Werner Heisenberg argued in Copenhagen that an electron has no position until it is measured. The double slit experiment showed the pattern vanish the moment a detector observed which slit it took. ' +
+    'In 1957 Hugh Everett disagreed. On his interpretation the wave never collapses, and every outcome happens in a branch you cannot see. Critics ask what probability even means if everything happens. ' +
+    'Nobody knows which is right, and no experiment has yet told them apart. Which means the question of what counts as an observer is still open, and you are one of the things it is asking about.\n');
+  assert.deepEqual(deep.depth.notes, []);
+  assert.ok(deep.depth.score > thin.depth.score);
+});
