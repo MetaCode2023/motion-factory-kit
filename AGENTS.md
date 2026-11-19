@@ -17,6 +17,7 @@ explain afterwards; ask only before spending money or posting. Full version: `do
 4. `docs/LESSONS.md`: what runs where (cloud vs the owner's laptop), rate limits, picking B-roll.
 5. `CLAUDE.md`: the full workflow and every tool, by kind of video.
 6. `docs/ROADMAP.md` and `docs/DECISIONS.md`: where it's going and why things are the way they are.
+7. `docs/SELF-LEARNING-ENGINE.md`: the planned engine that learns from every run (decisions, feedback, view stats).
 
 ## The pieces
 

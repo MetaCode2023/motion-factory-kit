@@ -17,11 +17,18 @@ in every format, with minimal hand-holding. How it should think: `docs/EDITORIAL
 | Raw client footage → many ads | `footage.mjs` (docs/EDITOR.md) | Stable |
 | Long-form 16:9 from a script + recording | `longform.mjs script / from-script / build` | Stable; used for Physics of Poker v1-v3 and Build Don't Buy |
 | Long-form from existing footage | `longform.mjs index / search / plan / build` | Stable |
-| **Edit map + brief before planning** | `longform.mjs analyze` (docs/EDITORIAL.md) | New (roadmap phase 1); not yet run on Alan's footage |
+| **Edit map + brief before planning** | `longform.mjs analyze` (docs/EDITORIAL.md) | New; tuned on one real recording (Physics of Poker), not yet on a raw whiteboard session |
+| **Editor critique** (before and after the build) | `longform.mjs check`, `CRITIQUE.md` | New |
+| **Best take across sessions** | `longform.mjs takes` | New; untested on a real multi-session series |
+| **Depth worklist** | `longform.mjs depth` (DEPTH.md) | New |
+| **Every format in one run** | `longform.mjs package` (PACKAGE.md) | New; tested on the demo |
+| **Whiteboard scan** | runs in `index`; used by the critique | New; thresholds untested on real board footage |
+| **Drop folder** | `longform.mjs auto` (footage/QUEUE.md) | New |
+| Self-learning engine | docs/SELF-LEARNING-ENGINE.md | Planned, not built (waiting on R2/D1) |
 | Automatic B-roll (free-license photos/video) | `longform.mjs broll` | Works; Wikimedia 429s from the cloud (docs/LESSONS.md) |
 | Overlays on a finished clip | `tools/overlay.py` (docs/OVERLAYS.md) | Stable |
 | Weekly content for a brand | `content.mjs` (docs/CONTENT.md) | Stable |
-| Native vertical Short from a long-form plan | `tools/longform/vertical.mjs` | On PR #2 only |
+| Native vertical Short from a long-form plan | `tools/longform/vertical.mjs` | Merged into #7 from PR #2 |
 
 Runs on the cloud box: rendering, mixing, captions, animations, transcripts (faster-whisper). Needs the owner's
 laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Details: `docs/LESSONS.md`.
@@ -30,14 +37,14 @@ laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Details: `docs/LESSONS.md`
 
 | PR | What | State / what's needed |
 |---|---|---|
-| #7 | Roadmap phase 1: edit map, brief, orientation docs | Draft, stacked on #5. Merge after #5. |
-| #6 | Validated video B-roll (Commons video, CC YouTube), depth score for scripts, automatic editing sounds, `wonder` music | Open. **Overlaps #5** (same effects under other names: `page`/`pageturn`, `swish`/`swipe`; both change `tools/broll/sources.mjs`). Rebase onto #5 and keep one set of names. |
+| #7 | Roadmap phases 1-4 (edit map, brief, critique, takes, depth, package, whiteboard scan, drop folder), orientation docs. **Also contains #6 and #2**, reconciled: one set of sound names (`pageturn`, `swipe`; #6's `click` and `wonder` kept), one B-roll sources file. | Draft, stacked on #5. Merge #5, then #7; then close #6 and #2 as merged through #7. |
+| #6 | Validated video B-roll, depth score, automatic editing sounds | Contained in #7 (renamed `page`→`pageturn`, `swish`→`swipe`). Close after #7 merges. |
 | #5 | B-roll throughout, real video, 11 short-form effects, deeper playbook, docs/LESSONS.md, voice-lines | Draft. Merge first. |
 | #3 | `key: 'alpha'` for clips with their own transparency | Draft, small, independent. |
-| #2 | Native 9:16 Short compositor, evidence scene, caption emphasis, split_crop | Draft. Needed for roadmap phase 2 (formats). |
+| #2 | Native 9:16 Short compositor, evidence scene, caption emphasis, split_crop | Contained in #7. Close after #7 merges. |
 | #1 | table3d `show` option, `term pronounce: none` | Draft, small. |
 
-Suggested merge order: #5, #7, #6 (after reconciling), #2, #3, #1.
+Suggested merge order: #5, #7 (closes #6 and #2), then #3 and #1.
 
 ## Videos made so far
 
@@ -51,13 +58,16 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
 
 ## Handoff queue (next tasks, in priority order)
 
-1. Run phase 1 on a real raw recording of Alan's (a whiteboard session): `analyze`, write the brief, build, and log
-   the run in `docs/runs/`. Tune `tools/longform/editmap.mjs` thresholds on what it gets wrong.
-2. Reconcile PR #6 with PR #5 (one sound-effect naming, one sources.mjs), then merge #5 → #7 → #6.
-3. Phase 2: structure check on plans; cross-session best take; merge PR #2 and add `longform.mjs package`
-   (long-form + Shorts + thumbnail + titles in one run).
-4. Phase 3: depth pass with PICKUPS.md; whiteboard detection; CRITIQUE.md after every build.
-5. Phase 4: TASTE.md rules proposed from feedback; `longform.mjs auto <folder>`.
+1. **Run the loop on a raw whiteboard session of Alan's** (drop it in `footage/inbox/`, `node longform.mjs auto`,
+   write the brief, plan, `package`) and log it in `docs/runs/`. Tune on what it gets wrong: the whiteboard scan
+   thresholds (`tools/longform/board.mjs`), repeat detection on run-on transcripts, the jargon list
+   (`tools/longform/terms.json`). The raw Physics of Poker draft is on the owner's laptop (Downloads) as a second test.
+2. Merge #5, then #7; close #6 and #2.
+3. Native vertical Shorts from `package` (today it crops the finished 16:9; `tools/longform/vertical.mjs` makes the
+   better title + circle-face layout but needs its own captions-off plan per Short).
+4. Self-learning engine, step 1 (docs/SELF-LEARNING-ENGINE.md): once R2/D1 exist, upload each build's
+   `decisions.json` and the run reports.
+5. Re-run `broll` on Physics of Poker v3 (built before B-roll existed).
 
 ## Before you finish (every agent)
 

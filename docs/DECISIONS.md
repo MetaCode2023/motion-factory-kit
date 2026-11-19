@@ -3,6 +3,20 @@
 Why things are the way they are, so a later agent doesn't undo them by accident. One entry per decision, newest
 first: the date, the decision, the reason, and what would change it.
 
+## 2026-11-19: Sound effect names are pageturn and swipe
+**Decision.** PR #5 and PR #6 both added the same short-form effects under different names. Kept #5's names
+(`pageturn`, `swipe`) and #6's extra `click` and `wonder` music; #6's code now uses the kept names.
+**Why.** #5 merges first and its names are in its scenes and docs; the owner asked for "page turns".
+
+## 2026-11-19: Judgement stays with the editor in the drop folder
+**Decision.** `auto` runs index, map and package by itself but queues the brief and the plan for the editor.
+**Why.** Those two steps are the reasoning; automating them with fixed rules is the literal-executor failure again.
+**Would change if.** The self-learning engine has enough evidence that a class of brief decision is reliable.
+
+## 2026-11-19: Self-learning engine is planned, not built
+**Decision.** Written up in docs/SELF-LEARNING-ENGINE.md; builds write `decisions.json` now so the history exists.
+**Why.** The owner approved it as a future phase; the R2 bucket isn't set up yet.
+
 ## 2026-11-19: Edit raw footage through a brief, not straight into a plan
 **Decision.** For raw footage, `longform.mjs analyze` writes an edit map and a brief template; the agent fills in the
 brief (one idea, hook, story order, cuts, depth, formats) before writing the plan, and `check` warns without one.
