@@ -28,6 +28,7 @@ explain afterwards; ask only before spending money or posting. Full version: `do
 | Short-form scene (explainer, ad, 9:16) | `make.mjs` + `scenes/` + `kit/` | CLAUDE.md, design/ |
 | Raw client footage → many ads | `footage.mjs` | docs/EDITOR.md |
 | Overlays on a finished clip | `tools/overlay.py` | docs/OVERLAYS.md |
+| Cut to/from Premiere, Resolve, Final Cut (xmeml, EDL) | `longform.mjs export / import` | docs/INTERCHANGE.md, docs/INTERCHANGE-CHECKLIST.md |
 | Regular posting for a brand | `content.mjs` | docs/CONTENT.md |
 
 If you speak MCP, connect `mcp/server.mjs` (docs/MCP.md) and every step is a tool. `npm test` runs the suite;

@@ -24,6 +24,7 @@ in every format, with minimal hand-holding. How it should think: `docs/EDITORIAL
 | **Every format in one run** | `longform.mjs package` (PACKAGE.md) | New; tested on the demo |
 | **Whiteboard scan** | runs in `index`; used by the critique | New; thresholds untested on real board footage |
 | **Drop folder** | `longform.mjs auto` (footage/QUEUE.md) | New |
+| **Interchange** (cut out as xmeml/EDL, trimmed cut back in) | `longform.mjs export / import` (docs/INTERCHANGE.md) | New; tested only inside the kit (plan to file to import), **untested in Premiere, Resolve and Final Cut** |
 | Self-learning engine | docs/SELF-LEARNING-ENGINE.md | Planned, not built (waiting on R2/D1) |
 | Automatic B-roll (free-license photos/video) | `longform.mjs broll` | Works; Wikimedia 429s from the cloud (docs/LESSONS.md) |
 | Overlays on a finished clip | `tools/overlay.py` (docs/OVERLAYS.md) | Stable |
@@ -65,6 +66,7 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
    thresholds (`tools/longform/board.mjs`), repeat detection on run-on transcripts, the jargon list
    (`tools/longform/terms.json`). The raw Physics of Poker draft is on the owner's laptop (Downloads) as a second test.
 2. Merge #5, then #7; close #6 and #2.
+   Interchange: someone with Premiere, Resolve or Final Cut runs `docs/INTERCHANGE-CHECKLIST.md` and records it in `docs/runs/`; the mixed-rate in/out change (DECISIONS 5) is the first thing to check.
 3. Native vertical Shorts from `package` (today it crops the finished 16:9; `tools/longform/vertical.mjs` makes the
    better title + circle-face layout but needs its own captions-off plan per Short).
 4. Self-learning engine, step 1 (docs/SELF-LEARNING-ENGINE.md): once R2/D1 exist, upload each build's

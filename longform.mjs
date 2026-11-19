@@ -19,6 +19,8 @@
 //   node longform.mjs build edits/longform/x.json # preview MP4 + Premiere XML + captions + chapters + report
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
 //   node longform.mjs pull <plan>                 # fetch pulls that have a url + from/to (needs yt-dlp)
+//   node longform.mjs export <plan> [--edl] [--xml] [--df]   # the cut as <name>.cut.xml (xmeml) and <name>.cut.edl for another editor
+//   node longform.mjs import <plan> <cut.xml|cut.edl>        # a cut trimmed elsewhere -> <plan>.imported.json (docs/INTERCHANGE.md)
 //
 //   Around the video:
 //   node longform.mjs doctor                      # is this machine set up? what's missing and how to fix it
@@ -40,6 +42,9 @@ import { analyze, briefTemplate, crossTakes, editmapMarkdown, takesMarkdown } fr
 import { depthMarkdown, depthWorklist } from './tools/longform/critique.mjs';
 import { auto } from './tools/longform/auto.mjs';
 import { packageAll } from './tools/longform/package.mjs';
+import { edlExport } from './tools/longform/edl.mjs';
+import { importPlan } from './tools/longform/interchange.mjs';
+import { premiereXML } from './tools/longform/premiere.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -235,6 +240,29 @@ try {
     if (!json) { if (r.error) console.log('error: ' + r.error); (r.failed || []).forEach((f) => console.log('failed ' + f)); }
     emit(r);
     if (!r.ok) process.exitCode = 1;
+  } else if (cmd === 'export') {
+    // node longform.mjs export <plan> [--edl] [--xml] [--df]: the A-roll cut for another editor. Never touches the build's own files.
+    if (!args[0]) throw new Error('usage: node longform.mjs export <plan.json> [--edl] [--xml] [--df]');
+    const plan = loadPlan(args[0]), R = resolvePlan(plan);
+    if (R.errors.length) throw new Error(`fix the plan first:\n  ${R.errors.join('\n  ')}`);
+    const dir = join(ROOT, 'out', 'longform', plan.name), files = [];
+    mkdirSync(dir, { recursive: true });
+    const wantEdl = rest.includes('--edl') || !rest.includes('--xml'), wantXml = rest.includes('--xml') || !rest.includes('--edl');
+    if (wantXml) { files.push(join(dir, `${plan.name}.cut.xml`)); writeFileSync(files[files.length - 1], premiereXML(R, plan)); }
+    if (wantEdl) { files.push(join(dir, `${plan.name}.cut.edl`)); writeFileSync(files[files.length - 1], edlExport(R, plan, { df: rest.includes('--df') })); }
+    if (!json) { files.forEach((f) => console.log('wrote ' + relative(ROOT, f))); R.warnings.forEach((w) => console.log('warn   ' + w)); }
+    emit({ ok: true, files, warnings: R.warnings });
+  } else if (cmd === 'import') {
+    // node longform.mjs import <plan> <cut.xml|cut.edl>: read a cut trimmed in another editor into <plan>.imported.json.
+    if (!args[0] || !args[1]) throw new Error('usage: node longform.mjs import <plan.json> <cut.xml|cut.edl>');
+    const r = importPlan(args[0], args[1]);
+    if (!json) {
+      [...r.errors, ...(r.check?.errors || [])].forEach((e) => console.log('ERROR  ' + e));
+      [...r.warnings, ...(r.check?.warnings || [])].forEach((w) => console.log('warn   ' + w));
+      if (r.file) console.log(`${r.a_roll.length} pieces -> ${relative(ROOT, r.file)} (the plan itself is unchanged; check it, then build it)`);
+    }
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
   } else if (cmd === 'build') {
     const r = await build(args[0], { log, previewOnly: rest.includes('--preview') });
     if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
@@ -293,6 +321,8 @@ function readmeUsage() {
   node longform.mjs package <plan>     every format in one run: video, Shorts, thumbnails, PACKAGE.md
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
+  node longform.mjs export <plan> [--edl] [--xml] [--df]   the cut for another editor (<name>.cut.xml, <name>.cut.edl)
+  node longform.mjs import <plan> <cut.xml|cut.edl>        a cut trimmed elsewhere -> <plan>.imported.json
   node longform.mjs demo [podcast]     run it all on bundled stand-in footage
   node longform.mjs voice [clip ids]   measure how the creator talks -> scripts/VOICE.md
   node longform.mjs doctor             check this machine is set up
