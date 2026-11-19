@@ -1,0 +1,3577 @@
+{
+ "version": 1,
+ "note": "Words and phrases the B-roll finder treats as picturable. place/landmark entries need a capital letter in a cased transcript. q = preset searches (Claude can rewrite them per moment).",
+ "entries": {
+  "afghanistan": {
+   "type": "place",
+   "q": [
+    "Afghanistan landscape",
+    "Afghanistan city"
+   ]
+  },
+  "albania": {
+   "type": "place",
+   "q": [
+    "Albania landscape",
+    "Albania city"
+   ]
+  },
+  "algeria": {
+   "type": "place",
+   "q": [
+    "Algeria landscape",
+    "Algeria city"
+   ]
+  },
+  "andorra": {
+   "type": "place",
+   "q": [
+    "Andorra landscape",
+    "Andorra city"
+   ]
+  },
+  "angola": {
+   "type": "place",
+   "q": [
+    "Angola landscape",
+    "Angola city"
+   ]
+  },
+  "argentina": {
+   "type": "place",
+   "q": [
+    "Argentina landscape",
+    "Argentina city"
+   ]
+  },
+  "armenia": {
+   "type": "place",
+   "q": [
+    "Armenia landscape",
+    "Armenia city"
+   ]
+  },
+  "australia": {
+   "type": "place",
+   "q": [
+    "Sydney Opera House",
+    "Australian outback"
+   ]
+  },
+  "austria": {
+   "type": "place",
+   "q": [
+    "Austria landscape",
+    "Austria city"
+   ]
+  },
+  "azerbaijan": {
+   "type": "place",
+   "q": [
+    "Azerbaijan landscape",
+    "Azerbaijan city"
+   ]
+  },
+  "bahamas": {
+   "type": "place",
+   "q": [
+    "Bahamas landscape",
+    "Bahamas city"
+   ]
+  },
+  "bahrain": {
+   "type": "place",
+   "q": [
+    "Bahrain landscape",
+    "Bahrain city"
+   ]
+  },
+  "bangladesh": {
+   "type": "place",
+   "q": [
+    "Bangladesh landscape",
+    "Bangladesh city"
+   ]
+  },
+  "barbados": {
+   "type": "place",
+   "q": [
+    "Barbados landscape",
+    "Barbados city"
+   ]
+  },
+  "belarus": {
+   "type": "place",
+   "q": [
+    "Belarus landscape",
+    "Belarus city"
+   ]
+  },
+  "belgium": {
+   "type": "place",
+   "q": [
+    "Belgium landscape",
+    "Belgium city"
+   ]
+  },
+  "belize": {
+   "type": "place",
+   "q": [
+    "Belize landscape",
+    "Belize city"
+   ]
+  },
+  "benin": {
+   "type": "place",
+   "q": [
+    "Benin landscape",
+    "Benin city"
+   ]
+  },
+  "bhutan": {
+   "type": "place",
+   "q": [
+    "Bhutan landscape",
+    "Bhutan city"
+   ]
+  },
+  "bolivia": {
+   "type": "place",
+   "q": [
+    "Bolivia landscape",
+    "Bolivia city"
+   ]
+  },
+  "bosnia": {
+   "type": "place",
+   "q": [
+    "Bosnia landscape",
+    "Bosnia city"
+   ]
+  },
+  "botswana": {
+   "type": "place",
+   "q": [
+    "Botswana landscape",
+    "Botswana city"
+   ]
+  },
+  "brazil": {
+   "type": "place",
+   "q": [
+    "Rio de Janeiro aerial",
+    "Amazon rainforest"
+   ]
+  },
+  "brunei": {
+   "type": "place",
+   "q": [
+    "Brunei landscape",
+    "Brunei city"
+   ]
+  },
+  "bulgaria": {
+   "type": "place",
+   "q": [
+    "Bulgaria landscape",
+    "Bulgaria city"
+   ]
+  },
+  "burkina faso": {
+   "type": "place",
+   "q": [
+    "Burkina Faso landscape",
+    "Burkina Faso city"
+   ]
+  },
+  "burundi": {
+   "type": "place",
+   "q": [
+    "Burundi landscape",
+    "Burundi city"
+   ]
+  },
+  "cambodia": {
+   "type": "place",
+   "q": [
+    "Cambodia landscape",
+    "Cambodia city"
+   ]
+  },
+  "cameroon": {
+   "type": "place",
+   "q": [
+    "Cameroon landscape",
+    "Cameroon city"
+   ]
+  },
+  "canada": {
+   "type": "place",
+   "q": [
+    "Toronto skyline",
+    "Canada mountains lake"
+   ]
+  },
+  "chad": {
+   "type": "place",
+   "q": [
+    "Chad landscape",
+    "Chad city"
+   ],
+   "ambiguous": true
+  },
+  "chile": {
+   "type": "place",
+   "q": [
+    "Chile landscape",
+    "Chile city"
+   ],
+   "ambiguous": true
+  },
+  "china": {
+   "type": "place",
+   "q": [
+    "Shanghai skyline",
+    "Great Wall of China",
+    "Beijing street"
+   ]
+  },
+  "colombia": {
+   "type": "place",
+   "q": [
+    "Colombia landscape",
+    "Colombia city"
+   ]
+  },
+  "congo": {
+   "type": "place",
+   "q": [
+    "Congo landscape",
+    "Congo city"
+   ]
+  },
+  "costa rica": {
+   "type": "place",
+   "q": [
+    "Costa Rica landscape",
+    "Costa Rica city"
+   ]
+  },
+  "croatia": {
+   "type": "place",
+   "q": [
+    "Croatia landscape",
+    "Croatia city"
+   ]
+  },
+  "cuba": {
+   "type": "place",
+   "q": [
+    "Cuba landscape",
+    "Cuba city"
+   ]
+  },
+  "cyprus": {
+   "type": "place",
+   "q": [
+    "Cyprus landscape",
+    "Cyprus city"
+   ]
+  },
+  "czech republic": {
+   "type": "place",
+   "q": [
+    "Czech Republic landscape",
+    "Czech Republic city"
+   ]
+  },
+  "czechia": {
+   "type": "place",
+   "q": [
+    "Czechia landscape",
+    "Czechia city"
+   ]
+  },
+  "denmark": {
+   "type": "place",
+   "q": [
+    "Denmark landscape",
+    "Denmark city"
+   ]
+  },
+  "dominican republic": {
+   "type": "place",
+   "q": [
+    "Dominican Republic landscape",
+    "Dominican Republic city"
+   ]
+  },
+  "ecuador": {
+   "type": "place",
+   "q": [
+    "Ecuador landscape",
+    "Ecuador city"
+   ]
+  },
+  "egypt": {
+   "type": "place",
+   "q": [
+    "pyramids Giza",
+    "Cairo city"
+   ]
+  },
+  "el salvador": {
+   "type": "place",
+   "q": [
+    "El Salvador landscape",
+    "El Salvador city"
+   ]
+  },
+  "england": {
+   "type": "place",
+   "q": [
+    "London skyline",
+    "English countryside"
+   ]
+  },
+  "estonia": {
+   "type": "place",
+   "q": [
+    "Estonia landscape",
+    "Estonia city"
+   ]
+  },
+  "ethiopia": {
+   "type": "place",
+   "q": [
+    "Ethiopia landscape",
+    "Ethiopia city"
+   ]
+  },
+  "fiji": {
+   "type": "place",
+   "q": [
+    "Fiji landscape",
+    "Fiji city"
+   ]
+  },
+  "finland": {
+   "type": "place",
+   "q": [
+    "Finland landscape",
+    "Finland city"
+   ]
+  },
+  "france": {
+   "type": "place",
+   "q": [
+    "Paris Eiffel Tower",
+    "France countryside"
+   ]
+  },
+  "gabon": {
+   "type": "place",
+   "q": [
+    "Gabon landscape",
+    "Gabon city"
+   ]
+  },
+  "gambia": {
+   "type": "place",
+   "q": [
+    "Gambia landscape",
+    "Gambia city"
+   ]
+  },
+  "georgia": {
+   "type": "place",
+   "q": [
+    "Georgia landscape",
+    "Georgia city"
+   ],
+   "ambiguous": true
+  },
+  "germany": {
+   "type": "place",
+   "q": [
+    "Berlin city",
+    "Germany countryside"
+   ]
+  },
+  "ghana": {
+   "type": "place",
+   "q": [
+    "Ghana landscape",
+    "Ghana city"
+   ]
+  },
+  "greece": {
+   "type": "place",
+   "q": [
+    "Greece landscape",
+    "Greece city"
+   ]
+  },
+  "greenland": {
+   "type": "place",
+   "q": [
+    "Greenland landscape",
+    "Greenland city"
+   ]
+  },
+  "guatemala": {
+   "type": "place",
+   "q": [
+    "Guatemala landscape",
+    "Guatemala city"
+   ]
+  },
+  "guinea": {
+   "type": "place",
+   "q": [
+    "Guinea landscape",
+    "Guinea city"
+   ],
+   "ambiguous": true
+  },
+  "haiti": {
+   "type": "place",
+   "q": [
+    "Haiti landscape",
+    "Haiti city"
+   ]
+  },
+  "honduras": {
+   "type": "place",
+   "q": [
+    "Honduras landscape",
+    "Honduras city"
+   ]
+  },
+  "hungary": {
+   "type": "place",
+   "q": [
+    "Hungary landscape",
+    "Hungary city"
+   ]
+  },
+  "iceland": {
+   "type": "place",
+   "q": [
+    "Iceland landscape",
+    "Iceland city"
+   ]
+  },
+  "india": {
+   "type": "place",
+   "q": [
+    "Mumbai street",
+    "Taj Mahal"
+   ]
+  },
+  "indonesia": {
+   "type": "place",
+   "q": [
+    "Indonesia landscape",
+    "Indonesia city"
+   ]
+  },
+  "iran": {
+   "type": "place",
+   "q": [
+    "Iran landscape",
+    "Iran city"
+   ]
+  },
+  "iraq": {
+   "type": "place",
+   "q": [
+    "Iraq landscape",
+    "Iraq city"
+   ]
+  },
+  "ireland": {
+   "type": "place",
+   "q": [
+    "Ireland landscape",
+    "Ireland city"
+   ]
+  },
+  "israel": {
+   "type": "place",
+   "q": [
+    "Israel landscape",
+    "Israel city"
+   ]
+  },
+  "italy": {
+   "type": "place",
+   "q": [
+    "Rome Colosseum",
+    "Venice canal"
+   ]
+  },
+  "ivory coast": {
+   "type": "place",
+   "q": [
+    "Ivory Coast landscape",
+    "Ivory Coast city"
+   ]
+  },
+  "jamaica": {
+   "type": "place",
+   "q": [
+    "Jamaica landscape",
+    "Jamaica city"
+   ]
+  },
+  "japan": {
+   "type": "place",
+   "q": [
+    "Tokyo street night",
+    "Mount Fuji"
+   ]
+  },
+  "jordan": {
+   "type": "place",
+   "q": [
+    "Jordan landscape",
+    "Jordan city"
+   ],
+   "ambiguous": true
+  },
+  "kazakhstan": {
+   "type": "place",
+   "q": [
+    "Kazakhstan landscape",
+    "Kazakhstan city"
+   ]
+  },
+  "kenya": {
+   "type": "place",
+   "q": [
+    "Kenya landscape",
+    "Kenya city"
+   ]
+  },
+  "korea": {
+   "type": "place",
+   "q": [
+    "Korea landscape",
+    "Korea city"
+   ]
+  },
+  "south korea": {
+   "type": "place",
+   "q": [
+    "South Korea landscape",
+    "South Korea city"
+   ]
+  },
+  "north korea": {
+   "type": "place",
+   "q": [
+    "North Korea landscape",
+    "North Korea city"
+   ]
+  },
+  "kosovo": {
+   "type": "place",
+   "q": [
+    "Kosovo landscape",
+    "Kosovo city"
+   ]
+  },
+  "kuwait": {
+   "type": "place",
+   "q": [
+    "Kuwait landscape",
+    "Kuwait city"
+   ]
+  },
+  "kyrgyzstan": {
+   "type": "place",
+   "q": [
+    "Kyrgyzstan landscape",
+    "Kyrgyzstan city"
+   ]
+  },
+  "laos": {
+   "type": "place",
+   "q": [
+    "Laos landscape",
+    "Laos city"
+   ]
+  },
+  "latvia": {
+   "type": "place",
+   "q": [
+    "Latvia landscape",
+    "Latvia city"
+   ]
+  },
+  "lebanon": {
+   "type": "place",
+   "q": [
+    "Lebanon landscape",
+    "Lebanon city"
+   ]
+  },
+  "liberia": {
+   "type": "place",
+   "q": [
+    "Liberia landscape",
+    "Liberia city"
+   ]
+  },
+  "libya": {
+   "type": "place",
+   "q": [
+    "Libya landscape",
+    "Libya city"
+   ]
+  },
+  "liechtenstein": {
+   "type": "place",
+   "q": [
+    "Liechtenstein landscape",
+    "Liechtenstein city"
+   ]
+  },
+  "lithuania": {
+   "type": "place",
+   "q": [
+    "Lithuania landscape",
+    "Lithuania city"
+   ]
+  },
+  "luxembourg": {
+   "type": "place",
+   "q": [
+    "Luxembourg landscape",
+    "Luxembourg city"
+   ]
+  },
+  "madagascar": {
+   "type": "place",
+   "q": [
+    "Madagascar landscape",
+    "Madagascar city"
+   ]
+  },
+  "malawi": {
+   "type": "place",
+   "q": [
+    "Malawi landscape",
+    "Malawi city"
+   ]
+  },
+  "malaysia": {
+   "type": "place",
+   "q": [
+    "Malaysia landscape",
+    "Malaysia city"
+   ]
+  },
+  "maldives": {
+   "type": "place",
+   "q": [
+    "Maldives landscape",
+    "Maldives city"
+   ]
+  },
+  "mali": {
+   "type": "place",
+   "q": [
+    "Mali landscape",
+    "Mali city"
+   ],
+   "ambiguous": true
+  },
+  "malta": {
+   "type": "place",
+   "q": [
+    "Malta landscape",
+    "Malta city"
+   ]
+  },
+  "mauritania": {
+   "type": "place",
+   "q": [
+    "Mauritania landscape",
+    "Mauritania city"
+   ]
+  },
+  "mauritius": {
+   "type": "place",
+   "q": [
+    "Mauritius landscape",
+    "Mauritius city"
+   ]
+  },
+  "mexico": {
+   "type": "place",
+   "q": [
+    "Mexico City",
+    "Mexico beach"
+   ]
+  },
+  "moldova": {
+   "type": "place",
+   "q": [
+    "Moldova landscape",
+    "Moldova city"
+   ]
+  },
+  "monaco": {
+   "type": "place",
+   "q": [
+    "Monaco landscape",
+    "Monaco city"
+   ]
+  },
+  "mongolia": {
+   "type": "place",
+   "q": [
+    "Mongolia landscape",
+    "Mongolia city"
+   ]
+  },
+  "montenegro": {
+   "type": "place",
+   "q": [
+    "Montenegro landscape",
+    "Montenegro city"
+   ]
+  },
+  "morocco": {
+   "type": "place",
+   "q": [
+    "Morocco landscape",
+    "Morocco city"
+   ]
+  },
+  "mozambique": {
+   "type": "place",
+   "q": [
+    "Mozambique landscape",
+    "Mozambique city"
+   ]
+  },
+  "myanmar": {
+   "type": "place",
+   "q": [
+    "Myanmar landscape",
+    "Myanmar city"
+   ]
+  },
+  "namibia": {
+   "type": "place",
+   "q": [
+    "Namibia landscape",
+    "Namibia city"
+   ]
+  },
+  "nepal": {
+   "type": "place",
+   "q": [
+    "Nepal landscape",
+    "Nepal city"
+   ]
+  },
+  "netherlands": {
+   "type": "place",
+   "q": [
+    "Netherlands landscape",
+    "Netherlands city"
+   ]
+  },
+  "holland": {
+   "type": "place",
+   "q": [
+    "Holland landscape",
+    "Holland city"
+   ]
+  },
+  "new zealand": {
+   "type": "place",
+   "q": [
+    "New Zealand landscape",
+    "New Zealand city"
+   ]
+  },
+  "nicaragua": {
+   "type": "place",
+   "q": [
+    "Nicaragua landscape",
+    "Nicaragua city"
+   ]
+  },
+  "niger": {
+   "type": "place",
+   "q": [
+    "Niger landscape",
+    "Niger city"
+   ],
+   "ambiguous": true
+  },
+  "nigeria": {
+   "type": "place",
+   "q": [
+    "Nigeria landscape",
+    "Nigeria city"
+   ]
+  },
+  "norway": {
+   "type": "place",
+   "q": [
+    "Norway landscape",
+    "Norway city"
+   ]
+  },
+  "oman": {
+   "type": "place",
+   "q": [
+    "Oman landscape",
+    "Oman city"
+   ]
+  },
+  "pakistan": {
+   "type": "place",
+   "q": [
+    "Pakistan landscape",
+    "Pakistan city"
+   ]
+  },
+  "palestine": {
+   "type": "place",
+   "q": [
+    "Palestine landscape",
+    "Palestine city"
+   ]
+  },
+  "panama": {
+   "type": "place",
+   "q": [
+    "Panama landscape",
+    "Panama city"
+   ]
+  },
+  "papua new guinea": {
+   "type": "place",
+   "q": [
+    "Papua New Guinea landscape",
+    "Papua New Guinea city"
+   ]
+  },
+  "paraguay": {
+   "type": "place",
+   "q": [
+    "Paraguay landscape",
+    "Paraguay city"
+   ]
+  },
+  "peru": {
+   "type": "place",
+   "q": [
+    "Peru landscape",
+    "Peru city"
+   ]
+  },
+  "philippines": {
+   "type": "place",
+   "q": [
+    "Philippines landscape",
+    "Philippines city"
+   ]
+  },
+  "poland": {
+   "type": "place",
+   "q": [
+    "Poland landscape",
+    "Poland city"
+   ]
+  },
+  "portugal": {
+   "type": "place",
+   "q": [
+    "Portugal landscape",
+    "Portugal city"
+   ]
+  },
+  "qatar": {
+   "type": "place",
+   "q": [
+    "Qatar landscape",
+    "Qatar city"
+   ]
+  },
+  "romania": {
+   "type": "place",
+   "q": [
+    "Romania landscape",
+    "Romania city"
+   ]
+  },
+  "russia": {
+   "type": "place",
+   "q": [
+    "Moscow Red Square",
+    "Russia winter"
+   ]
+  },
+  "rwanda": {
+   "type": "place",
+   "q": [
+    "Rwanda landscape",
+    "Rwanda city"
+   ]
+  },
+  "saudi arabia": {
+   "type": "place",
+   "q": [
+    "Saudi Arabia landscape",
+    "Saudi Arabia city"
+   ]
+  },
+  "scotland": {
+   "type": "place",
+   "q": [
+    "Scotland landscape",
+    "Scotland city"
+   ]
+  },
+  "senegal": {
+   "type": "place",
+   "q": [
+    "Senegal landscape",
+    "Senegal city"
+   ]
+  },
+  "serbia": {
+   "type": "place",
+   "q": [
+    "Serbia landscape",
+    "Serbia city"
+   ]
+  },
+  "singapore": {
+   "type": "place",
+   "q": [
+    "Singapore landscape",
+    "Singapore city"
+   ]
+  },
+  "slovakia": {
+   "type": "place",
+   "q": [
+    "Slovakia landscape",
+    "Slovakia city"
+   ]
+  },
+  "slovenia": {
+   "type": "place",
+   "q": [
+    "Slovenia landscape",
+    "Slovenia city"
+   ]
+  },
+  "somalia": {
+   "type": "place",
+   "q": [
+    "Somalia landscape",
+    "Somalia city"
+   ]
+  },
+  "south africa": {
+   "type": "place",
+   "q": [
+    "South Africa landscape",
+    "South Africa city"
+   ]
+  },
+  "spain": {
+   "type": "place",
+   "q": [
+    "Spain landscape",
+    "Spain city"
+   ]
+  },
+  "sri lanka": {
+   "type": "place",
+   "q": [
+    "Sri Lanka landscape",
+    "Sri Lanka city"
+   ]
+  },
+  "sudan": {
+   "type": "place",
+   "q": [
+    "Sudan landscape",
+    "Sudan city"
+   ]
+  },
+  "sweden": {
+   "type": "place",
+   "q": [
+    "Sweden landscape",
+    "Sweden city"
+   ]
+  },
+  "switzerland": {
+   "type": "place",
+   "q": [
+    "Switzerland landscape",
+    "Switzerland city"
+   ]
+  },
+  "syria": {
+   "type": "place",
+   "q": [
+    "Syria landscape",
+    "Syria city"
+   ]
+  },
+  "taiwan": {
+   "type": "place",
+   "q": [
+    "Taiwan landscape",
+    "Taiwan city"
+   ]
+  },
+  "tajikistan": {
+   "type": "place",
+   "q": [
+    "Tajikistan landscape",
+    "Tajikistan city"
+   ]
+  },
+  "tanzania": {
+   "type": "place",
+   "q": [
+    "Tanzania landscape",
+    "Tanzania city"
+   ]
+  },
+  "thailand": {
+   "type": "place",
+   "q": [
+    "Thailand landscape",
+    "Thailand city"
+   ]
+  },
+  "togo": {
+   "type": "place",
+   "q": [
+    "Togo landscape",
+    "Togo city"
+   ]
+  },
+  "tunisia": {
+   "type": "place",
+   "q": [
+    "Tunisia landscape",
+    "Tunisia city"
+   ]
+  },
+  "turkey": {
+   "type": "place",
+   "q": [
+    "Turkey landscape",
+    "Turkey city"
+   ],
+   "ambiguous": true
+  },
+  "turkmenistan": {
+   "type": "place",
+   "q": [
+    "Turkmenistan landscape",
+    "Turkmenistan city"
+   ]
+  },
+  "uganda": {
+   "type": "place",
+   "q": [
+    "Uganda landscape",
+    "Uganda city"
+   ]
+  },
+  "ukraine": {
+   "type": "place",
+   "q": [
+    "Ukraine landscape",
+    "Ukraine city"
+   ]
+  },
+  "united arab emirates": {
+   "type": "place",
+   "q": [
+    "United Arab Emirates landscape",
+    "United Arab Emirates city"
+   ]
+  },
+  "uae": {
+   "type": "place",
+   "q": [
+    "UAE landscape",
+    "UAE city"
+   ]
+  },
+  "united kingdom": {
+   "type": "place",
+   "q": [
+    "London skyline",
+    "London Big Ben"
+   ]
+  },
+  "uk": {
+   "type": "place",
+   "q": [
+    "London skyline",
+    "London Big Ben"
+   ]
+  },
+  "britain": {
+   "type": "place",
+   "q": [
+    "London skyline"
+   ]
+  },
+  "great britain": {
+   "type": "place",
+   "q": [
+    "London skyline"
+   ]
+  },
+  "united states": {
+   "type": "place",
+   "q": [
+    "American flag",
+    "New York skyline",
+    "American highway"
+   ]
+  },
+  "usa": {
+   "type": "place",
+   "q": [
+    "American flag",
+    "New York skyline"
+   ]
+  },
+  "america": {
+   "type": "place",
+   "q": [
+    "American flag",
+    "New York skyline"
+   ]
+  },
+  "uruguay": {
+   "type": "place",
+   "q": [
+    "Uruguay landscape",
+    "Uruguay city"
+   ]
+  },
+  "uzbekistan": {
+   "type": "place",
+   "q": [
+    "Uzbekistan landscape",
+    "Uzbekistan city"
+   ]
+  },
+  "venezuela": {
+   "type": "place",
+   "q": [
+    "Venezuela landscape",
+    "Venezuela city"
+   ]
+  },
+  "vietnam": {
+   "type": "place",
+   "q": [
+    "Vietnam landscape",
+    "Vietnam city"
+   ]
+  },
+  "wales": {
+   "type": "place",
+   "q": [
+    "Wales landscape",
+    "Wales city"
+   ]
+  },
+  "yemen": {
+   "type": "place",
+   "q": [
+    "Yemen landscape",
+    "Yemen city"
+   ]
+  },
+  "zambia": {
+   "type": "place",
+   "q": [
+    "Zambia landscape",
+    "Zambia city"
+   ]
+  },
+  "zimbabwe": {
+   "type": "place",
+   "q": [
+    "Zimbabwe landscape",
+    "Zimbabwe city"
+   ]
+  },
+  "africa": {
+   "type": "place",
+   "q": [
+    "Africa landscape",
+    "Africa city"
+   ]
+  },
+  "europe": {
+   "type": "place",
+   "q": [
+    "Europe landscape",
+    "Europe city"
+   ]
+  },
+  "asia": {
+   "type": "place",
+   "q": [
+    "Asia landscape",
+    "Asia city"
+   ]
+  },
+  "antarctica": {
+   "type": "place",
+   "q": [
+    "Antarctica ice",
+    "penguins Antarctica"
+   ]
+  },
+  "south america": {
+   "type": "place",
+   "q": [
+    "South America landscape",
+    "South America city"
+   ]
+  },
+  "north america": {
+   "type": "place",
+   "q": [
+    "North America landscape",
+    "North America city"
+   ]
+  },
+  "the middle east": {
+   "type": "place",
+   "q": [
+    "Middle East landscape",
+    "Middle East city"
+   ]
+  },
+  "scandinavia": {
+   "type": "place",
+   "q": [
+    "Scandinavia landscape",
+    "Scandinavia city"
+   ]
+  },
+  "the caribbean": {
+   "type": "place",
+   "q": [
+    "Caribbean landscape",
+    "Caribbean city"
+   ]
+  },
+  "siberia": {
+   "type": "place",
+   "q": [
+    "Siberia landscape",
+    "Siberia city"
+   ]
+  },
+  "the sahara": {
+   "type": "place",
+   "q": [
+    "Sahara desert dunes"
+   ]
+  },
+  "the amazon": {
+   "type": "place",
+   "q": [
+    "Amazon rainforest aerial"
+   ]
+  },
+  "the arctic": {
+   "type": "place",
+   "q": [
+    "arctic ice",
+    "polar bear"
+   ]
+  },
+  "hawaii": {
+   "type": "place",
+   "q": [
+    "Hawaii landscape",
+    "Hawaii city"
+   ]
+  },
+  "alaska": {
+   "type": "place",
+   "q": [
+    "Alaska landscape",
+    "Alaska city"
+   ]
+  },
+  "new york": {
+   "type": "place",
+   "q": [
+    "New York skyline",
+    "New York street"
+   ]
+  },
+  "new york city": {
+   "type": "place",
+   "q": [
+    "New York City skyline",
+    "New York City street"
+   ]
+  },
+  "los angeles": {
+   "type": "place",
+   "q": [
+    "Los Angeles skyline",
+    "Los Angeles street"
+   ]
+  },
+  "chicago": {
+   "type": "place",
+   "q": [
+    "Chicago skyline",
+    "Chicago street"
+   ]
+  },
+  "houston": {
+   "type": "place",
+   "q": [
+    "Houston skyline",
+    "Houston street"
+   ]
+  },
+  "phoenix": {
+   "type": "place",
+   "q": [
+    "Phoenix skyline",
+    "Phoenix street"
+   ],
+   "ambiguous": true
+  },
+  "philadelphia": {
+   "type": "place",
+   "q": [
+    "Philadelphia skyline",
+    "Philadelphia street"
+   ]
+  },
+  "san antonio": {
+   "type": "place",
+   "q": [
+    "San Antonio skyline",
+    "San Antonio street"
+   ]
+  },
+  "san diego": {
+   "type": "place",
+   "q": [
+    "San Diego skyline",
+    "San Diego street"
+   ]
+  },
+  "dallas": {
+   "type": "place",
+   "q": [
+    "Dallas skyline",
+    "Dallas street"
+   ]
+  },
+  "austin": {
+   "type": "place",
+   "q": [
+    "Austin skyline",
+    "Austin street"
+   ],
+   "ambiguous": true
+  },
+  "san francisco": {
+   "type": "place",
+   "q": [
+    "San Francisco skyline",
+    "San Francisco street"
+   ]
+  },
+  "seattle": {
+   "type": "place",
+   "q": [
+    "Seattle skyline",
+    "Seattle street"
+   ]
+  },
+  "denver": {
+   "type": "place",
+   "q": [
+    "Denver skyline",
+    "Denver street"
+   ]
+  },
+  "boston": {
+   "type": "place",
+   "q": [
+    "Boston skyline",
+    "Boston street"
+   ]
+  },
+  "nashville": {
+   "type": "place",
+   "q": [
+    "Nashville skyline",
+    "Nashville street"
+   ]
+  },
+  "detroit": {
+   "type": "place",
+   "q": [
+    "Detroit skyline",
+    "Detroit street"
+   ]
+  },
+  "portland": {
+   "type": "place",
+   "q": [
+    "Portland skyline",
+    "Portland street"
+   ]
+  },
+  "las vegas": {
+   "type": "place",
+   "q": [
+    "Las Vegas strip night",
+    "Las Vegas casino lights"
+   ]
+  },
+  "vegas": {
+   "type": "place",
+   "q": [
+    "Las Vegas strip night",
+    "Las Vegas casino lights"
+   ]
+  },
+  "atlantic city": {
+   "type": "place",
+   "q": [
+    "Atlantic City boardwalk",
+    "Atlantic City casino"
+   ]
+  },
+  "miami": {
+   "type": "place",
+   "q": [
+    "Miami skyline",
+    "Miami street"
+   ]
+  },
+  "atlanta": {
+   "type": "place",
+   "q": [
+    "Atlanta skyline",
+    "Atlanta street"
+   ]
+  },
+  "new orleans": {
+   "type": "place",
+   "q": [
+    "New Orleans skyline",
+    "New Orleans street"
+   ]
+  },
+  "minneapolis": {
+   "type": "place",
+   "q": [
+    "Minneapolis skyline",
+    "Minneapolis street"
+   ]
+  },
+  "washington dc": {
+   "type": "place",
+   "q": [
+    "Washington DC Capitol",
+    "White House"
+   ]
+  },
+  "sioux falls": {
+   "type": "place",
+   "q": [
+    "Sioux Falls South Dakota",
+    "Falls Park Sioux Falls"
+   ]
+  },
+  "omaha": {
+   "type": "place",
+   "q": [
+    "Omaha skyline",
+    "Omaha street"
+   ]
+  },
+  "salt lake city": {
+   "type": "place",
+   "q": [
+    "Salt Lake City skyline",
+    "Salt Lake City street"
+   ]
+  },
+  "pittsburgh": {
+   "type": "place",
+   "q": [
+    "Pittsburgh skyline",
+    "Pittsburgh street"
+   ]
+  },
+  "baltimore": {
+   "type": "place",
+   "q": [
+    "Baltimore skyline",
+    "Baltimore street"
+   ]
+  },
+  "honolulu": {
+   "type": "place",
+   "q": [
+    "Honolulu skyline",
+    "Honolulu street"
+   ]
+  },
+  "toronto": {
+   "type": "place",
+   "q": [
+    "Toronto skyline",
+    "Toronto street"
+   ]
+  },
+  "vancouver": {
+   "type": "place",
+   "q": [
+    "Vancouver skyline",
+    "Vancouver street"
+   ]
+  },
+  "montreal": {
+   "type": "place",
+   "q": [
+    "Montreal skyline",
+    "Montreal street"
+   ]
+  },
+  "mexico city": {
+   "type": "place",
+   "q": [
+    "Mexico City skyline",
+    "Mexico City street"
+   ]
+  },
+  "havana": {
+   "type": "place",
+   "q": [
+    "Havana skyline",
+    "Havana street"
+   ]
+  },
+  "rio de janeiro": {
+   "type": "place",
+   "q": [
+    "Rio de Janeiro skyline",
+    "Rio de Janeiro street"
+   ]
+  },
+  "sao paulo": {
+   "type": "place",
+   "q": [
+    "Sao Paulo skyline",
+    "Sao Paulo street"
+   ]
+  },
+  "buenos aires": {
+   "type": "place",
+   "q": [
+    "Buenos Aires skyline",
+    "Buenos Aires street"
+   ]
+  },
+  "lima": {
+   "type": "place",
+   "q": [
+    "Lima skyline",
+    "Lima street"
+   ]
+  },
+  "bogota": {
+   "type": "place",
+   "q": [
+    "Bogota skyline",
+    "Bogota street"
+   ]
+  },
+  "santiago": {
+   "type": "place",
+   "q": [
+    "Santiago skyline",
+    "Santiago street"
+   ]
+  },
+  "london": {
+   "type": "place",
+   "q": [
+    "London skyline",
+    "London street"
+   ]
+  },
+  "paris": {
+   "type": "place",
+   "q": [
+    "Paris skyline",
+    "Paris street"
+   ]
+  },
+  "berlin": {
+   "type": "place",
+   "q": [
+    "Berlin skyline",
+    "Berlin street"
+   ]
+  },
+  "madrid": {
+   "type": "place",
+   "q": [
+    "Madrid skyline",
+    "Madrid street"
+   ]
+  },
+  "barcelona": {
+   "type": "place",
+   "q": [
+    "Barcelona skyline",
+    "Barcelona street"
+   ]
+  },
+  "rome": {
+   "type": "place",
+   "q": [
+    "Rome skyline",
+    "Rome street"
+   ]
+  },
+  "milan": {
+   "type": "place",
+   "q": [
+    "Milan skyline",
+    "Milan street"
+   ]
+  },
+  "venice": {
+   "type": "place",
+   "q": [
+    "Venice skyline",
+    "Venice street"
+   ]
+  },
+  "florence": {
+   "type": "place",
+   "q": [
+    "Florence skyline",
+    "Florence street"
+   ]
+  },
+  "amsterdam": {
+   "type": "place",
+   "q": [
+    "Amsterdam skyline",
+    "Amsterdam street"
+   ]
+  },
+  "brussels": {
+   "type": "place",
+   "q": [
+    "Brussels skyline",
+    "Brussels street"
+   ]
+  },
+  "vienna": {
+   "type": "place",
+   "q": [
+    "Vienna skyline",
+    "Vienna street"
+   ]
+  },
+  "prague": {
+   "type": "place",
+   "q": [
+    "Prague skyline",
+    "Prague street"
+   ]
+  },
+  "budapest": {
+   "type": "place",
+   "q": [
+    "Budapest skyline",
+    "Budapest street"
+   ]
+  },
+  "warsaw": {
+   "type": "place",
+   "q": [
+    "Warsaw skyline",
+    "Warsaw street"
+   ]
+  },
+  "stockholm": {
+   "type": "place",
+   "q": [
+    "Stockholm skyline",
+    "Stockholm street"
+   ]
+  },
+  "oslo": {
+   "type": "place",
+   "q": [
+    "Oslo skyline",
+    "Oslo street"
+   ]
+  },
+  "copenhagen": {
+   "type": "place",
+   "q": [
+    "Copenhagen skyline",
+    "Copenhagen street"
+   ]
+  },
+  "helsinki": {
+   "type": "place",
+   "q": [
+    "Helsinki skyline",
+    "Helsinki street"
+   ]
+  },
+  "dublin": {
+   "type": "place",
+   "q": [
+    "Dublin skyline",
+    "Dublin street"
+   ]
+  },
+  "edinburgh": {
+   "type": "place",
+   "q": [
+    "Edinburgh skyline",
+    "Edinburgh street"
+   ]
+  },
+  "lisbon": {
+   "type": "place",
+   "q": [
+    "Lisbon skyline",
+    "Lisbon street"
+   ]
+  },
+  "athens": {
+   "type": "place",
+   "q": [
+    "Athens skyline",
+    "Athens street"
+   ]
+  },
+  "istanbul": {
+   "type": "place",
+   "q": [
+    "Istanbul skyline",
+    "Istanbul street"
+   ]
+  },
+  "moscow": {
+   "type": "place",
+   "q": [
+    "Moscow skyline",
+    "Moscow street"
+   ]
+  },
+  "kyiv": {
+   "type": "place",
+   "q": [
+    "Kyiv skyline",
+    "Kyiv street"
+   ]
+  },
+  "monte carlo": {
+   "type": "place",
+   "q": [
+    "Monaco harbor",
+    "Monte Carlo casino"
+   ]
+  },
+  "zurich": {
+   "type": "place",
+   "q": [
+    "Zurich skyline",
+    "Zurich street"
+   ]
+  },
+  "geneva": {
+   "type": "place",
+   "q": [
+    "Geneva skyline",
+    "Geneva street"
+   ]
+  },
+  "munich": {
+   "type": "place",
+   "q": [
+    "Munich skyline",
+    "Munich street"
+   ]
+  },
+  "frankfurt": {
+   "type": "place",
+   "q": [
+    "Frankfurt skyline",
+    "Frankfurt street"
+   ]
+  },
+  "dubai": {
+   "type": "place",
+   "q": [
+    "Dubai skyline",
+    "Dubai street"
+   ]
+  },
+  "abu dhabi": {
+   "type": "place",
+   "q": [
+    "Abu Dhabi skyline",
+    "Abu Dhabi street"
+   ]
+  },
+  "doha": {
+   "type": "place",
+   "q": [
+    "Doha skyline",
+    "Doha street"
+   ]
+  },
+  "riyadh": {
+   "type": "place",
+   "q": [
+    "Riyadh skyline",
+    "Riyadh street"
+   ]
+  },
+  "tel aviv": {
+   "type": "place",
+   "q": [
+    "Tel Aviv skyline",
+    "Tel Aviv street"
+   ]
+  },
+  "jerusalem": {
+   "type": "place",
+   "q": [
+    "Jerusalem skyline",
+    "Jerusalem street"
+   ]
+  },
+  "cairo": {
+   "type": "place",
+   "q": [
+    "Cairo skyline",
+    "Cairo street"
+   ]
+  },
+  "lagos": {
+   "type": "place",
+   "q": [
+    "Lagos skyline",
+    "Lagos street"
+   ]
+  },
+  "nairobi": {
+   "type": "place",
+   "q": [
+    "Nairobi skyline",
+    "Nairobi street"
+   ]
+  },
+  "cape town": {
+   "type": "place",
+   "q": [
+    "Cape Town skyline",
+    "Cape Town street"
+   ]
+  },
+  "johannesburg": {
+   "type": "place",
+   "q": [
+    "Johannesburg skyline",
+    "Johannesburg street"
+   ]
+  },
+  "marrakech": {
+   "type": "place",
+   "q": [
+    "Marrakech skyline",
+    "Marrakech street"
+   ]
+  },
+  "mumbai": {
+   "type": "place",
+   "q": [
+    "Mumbai skyline",
+    "Mumbai street"
+   ]
+  },
+  "delhi": {
+   "type": "place",
+   "q": [
+    "Delhi skyline",
+    "Delhi street"
+   ]
+  },
+  "new delhi": {
+   "type": "place",
+   "q": [
+    "New Delhi skyline",
+    "New Delhi street"
+   ]
+  },
+  "bangalore": {
+   "type": "place",
+   "q": [
+    "Bangalore skyline",
+    "Bangalore street"
+   ]
+  },
+  "karachi": {
+   "type": "place",
+   "q": [
+    "Karachi skyline",
+    "Karachi street"
+   ]
+  },
+  "beijing": {
+   "type": "place",
+   "q": [
+    "Beijing skyline",
+    "Beijing street"
+   ]
+  },
+  "shanghai": {
+   "type": "place",
+   "q": [
+    "Shanghai skyline",
+    "Shanghai street"
+   ]
+  },
+  "shenzhen": {
+   "type": "place",
+   "q": [
+    "Shenzhen skyline",
+    "Shenzhen street"
+   ]
+  },
+  "hong kong": {
+   "type": "place",
+   "q": [
+    "Hong Kong skyline",
+    "Hong Kong street"
+   ]
+  },
+  "macau": {
+   "type": "place",
+   "q": [
+    "Macau casino night",
+    "Macau skyline"
+   ]
+  },
+  "guangzhou": {
+   "type": "place",
+   "q": [
+    "Guangzhou skyline",
+    "Guangzhou street"
+   ]
+  },
+  "wuhan": {
+   "type": "place",
+   "q": [
+    "Wuhan skyline",
+    "Wuhan street"
+   ]
+  },
+  "tokyo": {
+   "type": "place",
+   "q": [
+    "Tokyo skyline",
+    "Tokyo street"
+   ]
+  },
+  "osaka": {
+   "type": "place",
+   "q": [
+    "Osaka skyline",
+    "Osaka street"
+   ]
+  },
+  "kyoto": {
+   "type": "place",
+   "q": [
+    "Kyoto skyline",
+    "Kyoto street"
+   ]
+  },
+  "seoul": {
+   "type": "place",
+   "q": [
+    "Seoul skyline",
+    "Seoul street"
+   ]
+  },
+  "taipei": {
+   "type": "place",
+   "q": [
+    "Taipei skyline",
+    "Taipei street"
+   ]
+  },
+  "bangkok": {
+   "type": "place",
+   "q": [
+    "Bangkok skyline",
+    "Bangkok street"
+   ]
+  },
+  "kuala lumpur": {
+   "type": "place",
+   "q": [
+    "Kuala Lumpur skyline",
+    "Kuala Lumpur street"
+   ]
+  },
+  "jakarta": {
+   "type": "place",
+   "q": [
+    "Jakarta skyline",
+    "Jakarta street"
+   ]
+  },
+  "manila": {
+   "type": "place",
+   "q": [
+    "Manila skyline",
+    "Manila street"
+   ]
+  },
+  "hanoi": {
+   "type": "place",
+   "q": [
+    "Hanoi skyline",
+    "Hanoi street"
+   ]
+  },
+  "ho chi minh city": {
+   "type": "place",
+   "q": [
+    "Ho Chi Minh City skyline",
+    "Ho Chi Minh City street"
+   ]
+  },
+  "sydney": {
+   "type": "place",
+   "q": [
+    "Sydney skyline",
+    "Sydney street"
+   ]
+  },
+  "melbourne": {
+   "type": "place",
+   "q": [
+    "Melbourne skyline",
+    "Melbourne street"
+   ]
+  },
+  "auckland": {
+   "type": "place",
+   "q": [
+    "Auckland skyline",
+    "Auckland street"
+   ]
+  },
+  "silicon valley": {
+   "type": "place",
+   "q": [
+    "tech office",
+    "San Francisco Bay aerial"
+   ]
+  },
+  "hollywood": {
+   "type": "place",
+   "q": [
+    "Hollywood sign",
+    "Hollywood Boulevard"
+   ]
+  },
+  "manhattan": {
+   "type": "place",
+   "q": [
+    "Manhattan skyline",
+    "Manhattan street"
+   ]
+  },
+  "brooklyn": {
+   "type": "place",
+   "q": [
+    "Brooklyn skyline",
+    "Brooklyn street"
+   ]
+  },
+  "wall street": {
+   "type": "place",
+   "q": [
+    "Wall Street New York",
+    "stock exchange trading"
+   ]
+  },
+  "times square": {
+   "type": "place",
+   "q": [
+    "Times Square skyline",
+    "Times Square street"
+   ]
+  },
+  "the strip": {
+   "type": "place",
+   "q": [
+    "Las Vegas strip night"
+   ]
+  },
+  "las vegas strip": {
+   "type": "place",
+   "q": [
+    "Las Vegas strip night"
+   ]
+  },
+  "alabama": {
+   "type": "place",
+   "q": [
+    "Alabama landscape",
+    "Alabama aerial"
+   ]
+  },
+  "arizona": {
+   "type": "place",
+   "q": [
+    "Arizona landscape",
+    "Arizona aerial"
+   ]
+  },
+  "arkansas": {
+   "type": "place",
+   "q": [
+    "Arkansas landscape",
+    "Arkansas aerial"
+   ]
+  },
+  "california": {
+   "type": "place",
+   "q": [
+    "California landscape",
+    "California aerial"
+   ]
+  },
+  "colorado": {
+   "type": "place",
+   "q": [
+    "Colorado landscape",
+    "Colorado aerial"
+   ]
+  },
+  "connecticut": {
+   "type": "place",
+   "q": [
+    "Connecticut landscape",
+    "Connecticut aerial"
+   ]
+  },
+  "delaware": {
+   "type": "place",
+   "q": [
+    "Delaware landscape",
+    "Delaware aerial"
+   ]
+  },
+  "florida": {
+   "type": "place",
+   "q": [
+    "Florida landscape",
+    "Florida aerial"
+   ]
+  },
+  "idaho": {
+   "type": "place",
+   "q": [
+    "Idaho landscape",
+    "Idaho aerial"
+   ]
+  },
+  "illinois": {
+   "type": "place",
+   "q": [
+    "Illinois landscape",
+    "Illinois aerial"
+   ]
+  },
+  "indiana": {
+   "type": "place",
+   "q": [
+    "Indiana landscape",
+    "Indiana aerial"
+   ]
+  },
+  "iowa": {
+   "type": "place",
+   "q": [
+    "Iowa landscape",
+    "Iowa aerial"
+   ]
+  },
+  "kansas": {
+   "type": "place",
+   "q": [
+    "Kansas landscape",
+    "Kansas aerial"
+   ]
+  },
+  "kentucky": {
+   "type": "place",
+   "q": [
+    "Kentucky landscape",
+    "Kentucky aerial"
+   ]
+  },
+  "louisiana": {
+   "type": "place",
+   "q": [
+    "Louisiana landscape",
+    "Louisiana aerial"
+   ]
+  },
+  "maine": {
+   "type": "place",
+   "q": [
+    "Maine landscape",
+    "Maine aerial"
+   ]
+  },
+  "maryland": {
+   "type": "place",
+   "q": [
+    "Maryland landscape",
+    "Maryland aerial"
+   ]
+  },
+  "massachusetts": {
+   "type": "place",
+   "q": [
+    "Massachusetts landscape",
+    "Massachusetts aerial"
+   ]
+  },
+  "michigan": {
+   "type": "place",
+   "q": [
+    "Michigan landscape",
+    "Michigan aerial"
+   ]
+  },
+  "minnesota": {
+   "type": "place",
+   "q": [
+    "Minnesota landscape",
+    "Minnesota aerial"
+   ]
+  },
+  "mississippi": {
+   "type": "place",
+   "q": [
+    "Mississippi landscape",
+    "Mississippi aerial"
+   ]
+  },
+  "missouri": {
+   "type": "place",
+   "q": [
+    "Missouri landscape",
+    "Missouri aerial"
+   ]
+  },
+  "montana": {
+   "type": "place",
+   "q": [
+    "Montana landscape",
+    "Montana aerial"
+   ]
+  },
+  "nebraska": {
+   "type": "place",
+   "q": [
+    "Nebraska landscape",
+    "Nebraska aerial"
+   ]
+  },
+  "nevada": {
+   "type": "place",
+   "q": [
+    "Nevada landscape",
+    "Nevada aerial"
+   ]
+  },
+  "new hampshire": {
+   "type": "place",
+   "q": [
+    "New Hampshire landscape",
+    "New Hampshire aerial"
+   ]
+  },
+  "new jersey": {
+   "type": "place",
+   "q": [
+    "New Jersey landscape",
+    "New Jersey aerial"
+   ]
+  },
+  "new mexico": {
+   "type": "place",
+   "q": [
+    "New Mexico landscape",
+    "New Mexico aerial"
+   ]
+  },
+  "north carolina": {
+   "type": "place",
+   "q": [
+    "North Carolina landscape",
+    "North Carolina aerial"
+   ]
+  },
+  "north dakota": {
+   "type": "place",
+   "q": [
+    "North Dakota landscape",
+    "North Dakota aerial"
+   ]
+  },
+  "ohio": {
+   "type": "place",
+   "q": [
+    "Ohio landscape",
+    "Ohio aerial"
+   ]
+  },
+  "oklahoma": {
+   "type": "place",
+   "q": [
+    "Oklahoma landscape",
+    "Oklahoma aerial"
+   ]
+  },
+  "oregon": {
+   "type": "place",
+   "q": [
+    "Oregon landscape",
+    "Oregon aerial"
+   ]
+  },
+  "pennsylvania": {
+   "type": "place",
+   "q": [
+    "Pennsylvania landscape",
+    "Pennsylvania aerial"
+   ]
+  },
+  "rhode island": {
+   "type": "place",
+   "q": [
+    "Rhode Island landscape",
+    "Rhode Island aerial"
+   ]
+  },
+  "south carolina": {
+   "type": "place",
+   "q": [
+    "South Carolina landscape",
+    "South Carolina aerial"
+   ]
+  },
+  "south dakota": {
+   "type": "place",
+   "q": [
+    "South Dakota prairie",
+    "Badlands South Dakota"
+   ]
+  },
+  "tennessee": {
+   "type": "place",
+   "q": [
+    "Tennessee landscape",
+    "Tennessee aerial"
+   ]
+  },
+  "texas": {
+   "type": "place",
+   "q": [
+    "Texas landscape",
+    "Texas aerial"
+   ]
+  },
+  "utah": {
+   "type": "place",
+   "q": [
+    "Utah landscape",
+    "Utah aerial"
+   ]
+  },
+  "vermont": {
+   "type": "place",
+   "q": [
+    "Vermont landscape",
+    "Vermont aerial"
+   ]
+  },
+  "virginia": {
+   "type": "place",
+   "q": [
+    "Virginia landscape",
+    "Virginia aerial"
+   ],
+   "ambiguous": true
+  },
+  "west virginia": {
+   "type": "place",
+   "q": [
+    "West Virginia landscape",
+    "West Virginia aerial"
+   ]
+  },
+  "wisconsin": {
+   "type": "place",
+   "q": [
+    "Wisconsin landscape",
+    "Wisconsin aerial"
+   ]
+  },
+  "wyoming": {
+   "type": "place",
+   "q": [
+    "Wyoming landscape",
+    "Wyoming aerial"
+   ]
+  },
+  "great wall": {
+   "type": "landmark",
+   "q": [
+    "Great Wall"
+   ]
+  },
+  "great wall of china": {
+   "type": "landmark",
+   "q": [
+    "Great Wall of China"
+   ]
+  },
+  "eiffel tower": {
+   "type": "landmark",
+   "q": [
+    "Eiffel Tower"
+   ]
+  },
+  "statue of liberty": {
+   "type": "landmark",
+   "q": [
+    "Statue of Liberty"
+   ]
+  },
+  "golden gate bridge": {
+   "type": "landmark",
+   "q": [
+    "Golden Gate Bridge"
+   ]
+  },
+  "grand canyon": {
+   "type": "landmark",
+   "q": [
+    "Grand Canyon"
+   ]
+  },
+  "mount everest": {
+   "type": "landmark",
+   "q": [
+    "Mount Everest"
+   ]
+  },
+  "niagara falls": {
+   "type": "landmark",
+   "q": [
+    "Niagara Falls"
+   ]
+  },
+  "pyramids": {
+   "type": "landmark",
+   "q": [
+    "Pyramids"
+   ]
+  },
+  "colosseum": {
+   "type": "landmark",
+   "q": [
+    "Colosseum"
+   ]
+  },
+  "big ben": {
+   "type": "landmark",
+   "q": [
+    "Big Ben"
+   ]
+  },
+  "taj mahal": {
+   "type": "landmark",
+   "q": [
+    "Taj Mahal"
+   ]
+  },
+  "machu picchu": {
+   "type": "landmark",
+   "q": [
+    "Machu Picchu"
+   ]
+  },
+  "stonehenge": {
+   "type": "landmark",
+   "q": [
+    "Stonehenge"
+   ]
+  },
+  "sydney opera house": {
+   "type": "landmark",
+   "q": [
+    "Sydney Opera House"
+   ]
+  },
+  "mount rushmore": {
+   "type": "landmark",
+   "q": [
+    "Mount Rushmore"
+   ]
+  },
+  "hoover dam": {
+   "type": "landmark",
+   "q": [
+    "Hoover Dam"
+   ]
+  },
+  "panama canal": {
+   "type": "landmark",
+   "q": [
+    "Panama Canal"
+   ]
+  },
+  "suez canal": {
+   "type": "landmark",
+   "q": [
+    "Suez Canal"
+   ]
+  },
+  "kremlin": {
+   "type": "landmark",
+   "q": [
+    "Kremlin"
+   ]
+  },
+  "white house": {
+   "type": "landmark",
+   "q": [
+    "White House Washington"
+   ]
+  },
+  "capitol": {
+   "type": "landmark",
+   "q": [
+    "US Capitol building"
+   ]
+  },
+  "pentagon": {
+   "type": "landmark",
+   "q": [
+    "Pentagon building aerial"
+   ]
+  },
+  "empire state building": {
+   "type": "landmark",
+   "q": [
+    "Empire State Building"
+   ]
+  },
+  "burj khalifa": {
+   "type": "landmark",
+   "q": [
+    "Burj Khalifa"
+   ]
+  },
+  "forbidden city": {
+   "type": "landmark",
+   "q": [
+    "Forbidden City"
+   ]
+  },
+  "tiananmen square": {
+   "type": "landmark",
+   "q": [
+    "Tiananmen Square"
+   ]
+  },
+  "red square": {
+   "type": "landmark",
+   "q": [
+    "Red Square"
+   ]
+  },
+  "central park": {
+   "type": "landmark",
+   "q": [
+    "Central Park"
+   ]
+  },
+  "yellowstone": {
+   "type": "landmark",
+   "q": [
+    "Yellowstone"
+   ]
+  },
+  "mount fuji": {
+   "type": "landmark",
+   "q": [
+    "Mount Fuji"
+   ]
+  },
+  "louvre": {
+   "type": "landmark",
+   "q": [
+    "Louvre"
+   ]
+  },
+  "vatican": {
+   "type": "landmark",
+   "q": [
+    "Vatican"
+   ]
+  },
+  "acropolis": {
+   "type": "landmark",
+   "q": [
+    "Acropolis"
+   ]
+  },
+  "area 51": {
+   "type": "landmark",
+   "q": [
+    "Area 51"
+   ]
+  },
+  "cape canaveral": {
+   "type": "landmark",
+   "q": [
+    "Cape Canaveral"
+   ]
+  },
+  "the moon": {
+   "type": "landmark",
+   "q": [
+    "moon surface",
+    "full moon night sky"
+   ]
+  },
+  "the sun": {
+   "type": "landmark",
+   "q": [
+    "sun surface flare",
+    "sunrise"
+   ]
+  },
+  "jupiter": {
+   "type": "landmark",
+   "q": [
+    "Jupiter"
+   ]
+  },
+  "saturn": {
+   "type": "landmark",
+   "q": [
+    "Saturn"
+   ]
+  },
+  "the milky way": {
+   "type": "landmark",
+   "q": [
+    "milky way night sky"
+   ]
+  },
+  "casino": {
+   "type": "setting",
+   "q": [
+    "casino floor",
+    "casino slot machines lights"
+   ]
+  },
+  "casinos": {
+   "type": "setting",
+   "q": [
+    "casino floor"
+   ]
+  },
+  "poker table": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips"
+   ]
+  },
+  "stock market": {
+   "type": "setting",
+   "q": [
+    "stock exchange trading floor",
+    "stock market chart screen"
+   ]
+  },
+  "stock exchange": {
+   "type": "setting",
+   "q": [
+    "stock exchange trading floor"
+   ]
+  },
+  "factory": {
+   "type": "setting",
+   "q": [
+    "factory production line"
+   ]
+  },
+  "factories": {
+   "type": "setting",
+   "q": [
+    "factory production line"
+   ]
+  },
+  "hospital": {
+   "type": "setting",
+   "q": [
+    "hospital corridor"
+   ]
+  },
+  "laboratory": {
+   "type": "setting",
+   "q": [
+    "science laboratory"
+   ]
+  },
+  "lab": {
+   "type": "setting",
+   "q": [
+    "science laboratory"
+   ]
+  },
+  "data center": {
+   "type": "setting",
+   "q": [
+    "data center servers"
+   ]
+  },
+  "server farm": {
+   "type": "setting",
+   "q": [
+    "data center servers"
+   ]
+  },
+  "farm": {
+   "type": "setting",
+   "q": [
+    "farm field tractor"
+   ]
+  },
+  "farms": {
+   "type": "setting",
+   "q": [
+    "farm field aerial"
+   ]
+  },
+  "warehouse": {
+   "type": "setting",
+   "q": [
+    "warehouse shelves"
+   ]
+  },
+  "classroom": {
+   "type": "setting",
+   "q": [
+    "classroom students"
+   ]
+  },
+  "university": {
+   "type": "setting",
+   "q": [
+    "university campus"
+   ]
+  },
+  "library": {
+   "type": "setting",
+   "q": [
+    "library bookshelves"
+   ]
+  },
+  "courtroom": {
+   "type": "setting",
+   "q": [
+    "courtroom"
+   ]
+  },
+  "prison": {
+   "type": "setting",
+   "q": [
+    "prison bars"
+   ]
+  },
+  "church": {
+   "type": "setting",
+   "q": [
+    "church interior"
+   ]
+  },
+  "stadium": {
+   "type": "setting",
+   "q": [
+    "stadium crowd"
+   ]
+  },
+  "airport": {
+   "type": "setting",
+   "q": [
+    "airport terminal"
+   ]
+  },
+  "highway": {
+   "type": "setting",
+   "q": [
+    "highway traffic aerial"
+   ]
+  },
+  "cities": {
+   "type": "setting",
+   "q": [
+    "city skyline aerial"
+   ]
+  },
+  "suburbs": {
+   "type": "setting",
+   "q": [
+    "suburban houses aerial"
+   ]
+  },
+  "desert": {
+   "type": "setting",
+   "q": [
+    "desert dunes"
+   ]
+  },
+  "ocean": {
+   "type": "setting",
+   "q": [
+    "ocean waves"
+   ]
+  },
+  "beach": {
+   "type": "setting",
+   "q": [
+    "beach waves"
+   ]
+  },
+  "forest": {
+   "type": "setting",
+   "q": [
+    "forest aerial"
+   ]
+  },
+  "rainforest": {
+   "type": "setting",
+   "q": [
+    "rainforest"
+   ]
+  },
+  "mountains": {
+   "type": "setting",
+   "q": [
+    "mountains aerial"
+   ]
+  },
+  "jungle": {
+   "type": "setting",
+   "q": [
+    "jungle"
+   ]
+  },
+  "outer space": {
+   "type": "setting",
+   "q": [
+    "outer space stars"
+   ]
+  },
+  "trading floor": {
+   "type": "setting",
+   "q": [
+    "stock exchange trading floor"
+   ]
+  },
+  "kitchen": {
+   "type": "setting",
+   "q": [
+    "kitchen cooking"
+   ]
+  },
+  "restaurant": {
+   "type": "setting",
+   "q": [
+    "restaurant interior"
+   ]
+  },
+  "construction site": {
+   "type": "setting",
+   "q": [
+    "construction site crane"
+   ]
+  },
+  "oil rig": {
+   "type": "setting",
+   "q": [
+    "oil rig ocean"
+   ]
+  },
+  "harbor": {
+   "type": "setting",
+   "q": [
+    "harbor boats"
+   ]
+  },
+  "cards": {
+   "type": "object",
+   "q": [
+    "playing cards shuffle"
+   ]
+  },
+  "playing cards": {
+   "type": "object",
+   "q": [
+    "playing cards shuffle"
+   ]
+  },
+  "chips": {
+   "type": "object",
+   "q": [
+    "poker chips stack"
+   ]
+  },
+  "poker chips": {
+   "type": "object",
+   "q": [
+    "poker chips stack"
+   ]
+  },
+  "dice": {
+   "type": "object",
+   "q": [
+    "dice rolling"
+   ]
+  },
+  "slot machine": {
+   "type": "object",
+   "q": [
+    "slot machine"
+   ]
+  },
+  "roulette": {
+   "type": "object",
+   "q": [
+    "roulette wheel spinning"
+   ]
+  },
+  "money": {
+   "type": "object",
+   "q": [
+    "money cash counting"
+   ]
+  },
+  "cash": {
+   "type": "object",
+   "q": [
+    "cash bills counting"
+   ]
+  },
+  "dollars": {
+   "type": "object",
+   "q": [
+    "dollar bills"
+   ]
+  },
+  "coins": {
+   "type": "object",
+   "q": [
+    "coins falling"
+   ]
+  },
+  "gold": {
+   "type": "object",
+   "q": [
+    "gold bars"
+   ]
+  },
+  "bitcoin": {
+   "type": "object",
+   "q": [
+    "bitcoin coin"
+   ]
+  },
+  "credit card": {
+   "type": "object",
+   "q": [
+    "credit card payment"
+   ]
+  },
+  "computer": {
+   "type": "object",
+   "q": [
+    "computer screen typing"
+   ]
+  },
+  "computers": {
+   "type": "object",
+   "q": [
+    "computer screens"
+   ]
+  },
+  "laptop": {
+   "type": "object",
+   "q": [
+    "laptop typing"
+   ]
+  },
+  "phone": {
+   "type": "object",
+   "q": [
+    "smartphone scrolling"
+   ]
+  },
+  "smartphone": {
+   "type": "object",
+   "q": [
+    "smartphone scrolling"
+   ]
+  },
+  "smartphones": {
+   "type": "object",
+   "q": [
+    "smartphone scrolling"
+   ]
+  },
+  "microchip": {
+   "type": "object",
+   "q": [
+    "computer chip macro"
+   ]
+  },
+  "semiconductors": {
+   "type": "object",
+   "q": [
+    "semiconductor wafer"
+   ]
+  },
+  "robot": {
+   "type": "object",
+   "q": [
+    "robot arm"
+   ]
+  },
+  "robots": {
+   "type": "object",
+   "q": [
+    "robot arm factory"
+   ]
+  },
+  "rocket": {
+   "type": "object",
+   "q": [
+    "rocket launch"
+   ]
+  },
+  "rockets": {
+   "type": "object",
+   "q": [
+    "rocket launch"
+   ]
+  },
+  "satellite": {
+   "type": "object",
+   "q": [
+    "satellite orbit earth"
+   ]
+  },
+  "telescope": {
+   "type": "object",
+   "q": [
+    "telescope night sky"
+   ]
+  },
+  "microscope": {
+   "type": "object",
+   "q": [
+    "microscope lab"
+   ]
+  },
+  "atom": {
+   "type": "object",
+   "q": [
+    "atom animation"
+   ]
+  },
+  "atoms": {
+   "type": "object",
+   "q": [
+    "atom animation"
+   ]
+  },
+  "black hole": {
+   "type": "object",
+   "q": [
+    "black hole space"
+   ]
+  },
+  "galaxy": {
+   "type": "object",
+   "q": [
+    "galaxy stars"
+   ]
+  },
+  "planet": {
+   "type": "object",
+   "q": [
+    "planet earth from space"
+   ]
+  },
+  "earth": {
+   "type": "object",
+   "q": [
+    "planet earth from space"
+   ]
+  },
+  "the earth": {
+   "type": "object",
+   "q": [
+    "planet earth from space"
+   ]
+  },
+  "car": {
+   "type": "object",
+   "q": [
+    "car driving road"
+   ]
+  },
+  "cars": {
+   "type": "object",
+   "q": [
+    "traffic cars"
+   ]
+  },
+  "truck": {
+   "type": "object",
+   "q": [
+    "truck highway"
+   ]
+  },
+  "trucks": {
+   "type": "object",
+   "q": [
+    "trucks highway"
+   ]
+  },
+  "train": {
+   "type": "object",
+   "q": [
+    "train railway"
+   ]
+  },
+  "plane": {
+   "type": "object",
+   "q": [
+    "airplane takeoff"
+   ]
+  },
+  "airplane": {
+   "type": "object",
+   "q": [
+    "airplane takeoff"
+   ]
+  },
+  "ship": {
+   "type": "object",
+   "q": [
+    "cargo ship ocean"
+   ]
+  },
+  "ships": {
+   "type": "object",
+   "q": [
+    "cargo ship ocean"
+   ]
+  },
+  "electric car": {
+   "type": "object",
+   "q": [
+    "electric car charging"
+   ]
+  },
+  "battery": {
+   "type": "object",
+   "q": [
+    "battery charging"
+   ]
+  },
+  "solar panels": {
+   "type": "object",
+   "q": [
+    "solar panels field"
+   ]
+  },
+  "wind turbines": {
+   "type": "object",
+   "q": [
+    "wind turbines"
+   ]
+  },
+  "coffee": {
+   "type": "object",
+   "q": [
+    "coffee pouring"
+   ]
+  },
+  "pizza": {
+   "type": "object",
+   "q": [
+    "pizza"
+   ]
+  },
+  "burger": {
+   "type": "object",
+   "q": [
+    "burger"
+   ]
+  },
+  "wine": {
+   "type": "object",
+   "q": [
+    "wine pouring glass"
+   ]
+  },
+  "beer": {
+   "type": "object",
+   "q": [
+    "beer pouring"
+   ]
+  },
+  "cigarette": {
+   "type": "object",
+   "q": [
+    "cigarette smoke"
+   ]
+  },
+  "pills": {
+   "type": "object",
+   "q": [
+    "pills medicine"
+   ]
+  },
+  "medicine": {
+   "type": "object",
+   "q": [
+    "pills medicine"
+   ]
+  },
+  "vaccine": {
+   "type": "object",
+   "q": [
+    "vaccine syringe"
+   ]
+  },
+  "dna": {
+   "type": "object",
+   "q": [
+    "dna helix"
+   ]
+  },
+  "brain": {
+   "type": "object",
+   "q": [
+    "brain scan"
+   ]
+  },
+  "calendar": {
+   "type": "object",
+   "q": [
+    "calendar pages"
+   ]
+  },
+  "newspaper": {
+   "type": "object",
+   "q": [
+    "newspaper printing"
+   ]
+  },
+  "books": {
+   "type": "object",
+   "q": [
+    "books shelf"
+   ]
+  },
+  "gun": {
+   "type": "object",
+   "q": [
+    "police lights"
+   ]
+  },
+  "houses": {
+   "type": "object",
+   "q": [
+    "houses neighborhood aerial"
+   ]
+  },
+  "real estate": {
+   "type": "object",
+   "q": [
+    "houses neighborhood aerial"
+   ]
+  },
+  "apartment": {
+   "type": "object",
+   "q": [
+    "apartment building"
+   ]
+  },
+  "skyscraper": {
+   "type": "object",
+   "q": [
+    "skyscraper looking up"
+   ]
+  },
+  "skyscrapers": {
+   "type": "object",
+   "q": [
+    "skyscrapers city"
+   ]
+  },
+  "bridge": {
+   "type": "object",
+   "q": [
+    "bridge aerial"
+   ]
+  },
+  "dam": {
+   "type": "object",
+   "q": [
+    "dam water"
+   ]
+  },
+  "volcano": {
+   "type": "object",
+   "q": [
+    "volcano eruption"
+   ]
+  },
+  "earthquake": {
+   "type": "object",
+   "q": [
+    "earthquake damage"
+   ]
+  },
+  "hurricane": {
+   "type": "object",
+   "q": [
+    "hurricane storm"
+   ]
+  },
+  "tornado": {
+   "type": "object",
+   "q": [
+    "tornado"
+   ]
+  },
+  "lightning": {
+   "type": "object",
+   "q": [
+    "lightning storm"
+   ]
+  },
+  "snow": {
+   "type": "object",
+   "q": [
+    "snow falling"
+   ]
+  },
+  "rain": {
+   "type": "object",
+   "q": [
+    "rain window"
+   ]
+  },
+  "horse": {
+   "type": "object",
+   "q": [
+    "horse running"
+   ]
+  },
+  "horses": {
+   "type": "object",
+   "q": [
+    "horses running"
+   ]
+  },
+  "shark": {
+   "type": "object",
+   "q": [
+    "shark ocean"
+   ]
+  },
+  "whale": {
+   "type": "object",
+   "q": [
+    "whale ocean"
+   ]
+  },
+  "bees": {
+   "type": "object",
+   "q": [
+    "bees honeycomb"
+   ]
+  },
+  "ants": {
+   "type": "object",
+   "q": [
+    "ants"
+   ]
+  },
+  "mars": {
+   "type": "landmark",
+   "q": [
+    "Mars planet",
+    "red planet surface"
+   ],
+   "ambiguous": true
+  },
+  "texas hold'em": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  },
+  "texas holdem": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  },
+  "texas hold em": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  },
+  "hold'em": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  },
+  "poker": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  },
+  "heisenberg": {
+   "type": "person",
+   "q": [
+    "Werner Heisenberg"
+   ],
+   "note": "historic photo, public domain on Commons"
+  },
+  "einstein": {
+   "type": "person",
+   "q": [
+    "Albert Einstein"
+   ],
+   "note": "historic photo"
+  },
+  "bohr": {
+   "type": "person",
+   "q": [
+    "Niels Bohr"
+   ],
+   "note": "historic photo"
+  },
+  "schrodinger": {
+   "type": "person",
+   "q": [
+    "Erwin Schrodinger"
+   ],
+   "note": "historic photo"
+  },
+  "feynman": {
+   "type": "person",
+   "q": [
+    "Richard Feynman"
+   ],
+   "note": "historic photo"
+  },
+  "newton": {
+   "type": "person",
+   "q": [
+    "Isaac Newton portrait"
+   ],
+   "note": "historic portrait"
+  },
+  "darwin": {
+   "type": "person",
+   "q": [
+    "Charles Darwin"
+   ],
+   "note": "historic photo"
+  },
+  "texas hold 'em": {
+   "type": "setting",
+   "q": [
+    "poker table cards chips",
+    "poker game"
+   ]
+  }
+ }
+}

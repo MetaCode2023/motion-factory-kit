@@ -327,6 +327,34 @@ Music ducking is baked into the preview, but not into the XML. In Premiere, tag 
 Music in Essential Sound and turn on Ducking. If you move the project folder, Premiere asks you to relink, so
 point it at the same files.
 
+## Automatic B-roll
+
+When the speaker names something you can picture ("China", "Las Vegas", "a casino", "Heisenberg"), the video cuts
+to a 1.5-3 s photo of it while the voice carries on. Free-license sources only, no keys: Openverse (mostly Flickr)
+and Wikimedia Commons, keeping CC0, public domain, CC BY and CC BY-SA. Pixabay and Pexels are used too if
+`PIXABAY_API_KEY` / `PEXELS_API_KEY` is set.
+
+```
+node longform.mjs broll edits/longform/x.json --dry   # list the moments, download nothing
+node longform.mjs broll edits/longform/x.json         # find, place, fetch, lock
+node longform.mjs build edits/longform/x.json         # the cutaways are in the video; CREDITS.md lists every pick
+```
+
+- **Finding the moments** (`tools/broll/find.mjs`): the lexicon (`tools/broll/lexicon.json`: countries, cities, states,
+  landmarks, settings, objects, a short list of historic scientists) matched longest phrase first. Lowercase
+  place names ("fine china"), repeats within 60 s and words that could be a name ("Austin", "Jordan") are left out.
+  Capitalised names the lexicon doesn't know are listed for review only.
+- **Placing them** (`tools/broll/place.mjs`): gaps only. Never over a visual, the first 3 s or the last 8 s; at least
+  6 s apart; one per 15 s on average; hard cuts in and out; captions stay on.
+- **Reviewing**: `out/longform/<name>/BROLL.md` lists every moment, the search, the pick and why others were
+  skipped. Change one in `edits/longform/<name>.broll.lock.json`: `"status": "drop"` or `"keep"`, a new `"query"`,
+  or `"pick": 2`, then run `broll` again. Rebuilds use the locked picks.
+- **Settings** in the plan: `"auto_broll": { "every": 15, "min": 1.5, "max": 3, "skip": ["Vegas"], "layout": "full",
+  "force": [{ "at": "rec#41", "word": "Macau", "query": "Macau casino night" }] }`; `"auto_broll": false` turns it off.
+- Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in `assets/broll/stock/`.
+- Wikimedia rate-limits busy servers (cloud sessions especially): the tool waits and retries, and falls back to the next
+  source. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
+
 ## Outside clips
 
 Clips from other channels, news and TV make a point land ("here's the moment he folded the winning hand").
@@ -342,7 +370,7 @@ marker, so you can review them before you post.
 
 ## What it doesn't do (yet)
 
-- Stock comes from Pexels only (free key). Other sources go through `clip`/`pull` + `assets/broll/`.
+- Automatic B-roll is photos only so far (with a slow push-in). Video from NASA, CERN, the Internet Archive and Commons is next.
 - Animations render on your computer: a 10-minute video with ~40 visuals takes a few minutes the first time,
   and rebuilds reuse everything that didn't change.
 - No burned-in captions. Upload the `.srt` to YouTube instead.
