@@ -36,8 +36,10 @@ const pickFile = (files, want = 1920) => {
 async function getJSON(url, { headers = {}, fetchImpl = fetch } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetchImpl(url, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA, ...headers } });
+    const after = retryAfter(res);
+    if (res.status === 429 && after > 60) throw new Error(`${new URL(url).host} rate limit (retry after ${Math.round(after / 60)} min)`);   // don't hammer a long block; the next source is tried
     if ((res.status === 429 || res.status >= 500) && attempt < 2) {   // rate limit, or Openverse's frequent 504s
-      const wait = Math.min(60, Number(res.headers?.get?.('x-ratelimit-reset')) || (res.status === 429 ? 10 : 2) * (attempt + 1));
+      const wait = Math.min(60, after || Number(res.headers?.get?.('x-ratelimit-reset')) || (res.status === 429 ? 10 : 2) * (attempt + 1));
       await new Promise((r) => setTimeout(r, wait * 1000));
       continue;
     }
@@ -46,6 +48,14 @@ async function getJSON(url, { headers = {}, fetchImpl = fetch } = {}) {
   }
   throw new Error(`${new URL(url).host} rate limit`);
 }
+
+// Seconds from a Retry-After header (seconds or an HTTP date), or 0.
+const retryAfter = (res) => {
+  const v = res.headers?.get?.('retry-after');
+  if (!v) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : Math.max(0, (Date.parse(v) - Date.now()) / 1000) || 0;
+};
 
 const ADAPTERS = {
   openverse: {
@@ -172,7 +182,10 @@ export async function download(r, dir, { fetchImpl = fetch } = {}) {
   if (existsSync(file) && statSync(file).size > 0) return file;
   for (let attempt = 0; ; attempt++) {
     const res = await fetchImpl(r.url, { headers: { 'User-Agent': UA } });
-    if (res.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, (attempt + 1) * 20e3)); continue; }
+    const after = retryAfter(res);
+    // Wikimedia answers a busy shared IP (cloud sessions) with Retry-After: 600; retrying sooner only extends the block.
+    if (res.status === 429 && after > 60) throw new Error(`download rate-limited by ${new URL(r.url).host}, retry after ${Math.round(after / 60)} min (${r.source} ${r.id})`);
+    if (res.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, (after || (attempt + 1) * 20) * 1e3)); continue; }
     if (!res.ok) throw new Error(`download ${res.status} (${r.source} ${r.id})`);
     const buf = Buffer.from(await res.arrayBuffer());
     if (/^\s*</.test(buf.subarray(0, 64).toString('latin1'))) throw new Error(`download returned a web page, not media (${r.source} ${r.id})`);
