@@ -24,7 +24,7 @@ function draw(c, t) {
   const end = LF.drift(c, t, D, { zoom: 0.025, x: 8, y: 5 });
   FX.text(c, t, String(D.kicker).toUpperCase(), 160, 220, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, maxWidth: 1400 });
   FX.text(c, t, D.term, 160, 270, { at: 0.2, mode: 'mask', font: `800 ${D.term.length > 16 ? 110 : 140}px ${LF.F.display}`, color: th.ink, maxWidth: 1600 });
-  if (D.pronounce) M.text(c, `/ ${D.pronounce} /`, 164, 490, { font: `500 32px ${LF.F.mono}`, color: th.muted, alpha: M.prog(t, 0.7, 0.4) });
+  if (D.pronounce && D.pronounce !== 'none') M.text(c, `/ ${D.pronounce} /`, 164, 490, { font: `500 32px ${LF.F.mono}`, color: th.muted, alpha: M.prog(t, 0.7, 0.4) });
   const k = M.ease.outCubic(M.clamp((t - 0.6) / 0.6));
   c.save(); c.globalAlpha = k;
   FX.glow(c, () => { c.fillStyle = th.color; c.fillRect(160, 540, 8 + 400 * k, 6); }, { color: th.color, blur: 20, strength: 0.7 });

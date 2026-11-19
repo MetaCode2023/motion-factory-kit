@@ -287,12 +287,12 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   const words = outWords(cuts, lib);
 
   const burn = plan.captions?.burn ?? (voiceOnly ? 'gaps' : false);
-  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn } };
+  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn, emphasis: plan.captions?.emphasis || [] } };
 }
 
 // The words that stay after the cuts, on the output timeline.
 function outWords(cuts, lib) {
   const words = [];
-  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
+  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 0.02 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
   return words;
 }
