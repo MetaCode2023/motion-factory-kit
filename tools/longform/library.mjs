@@ -75,6 +75,7 @@ export async function index(dir = libDir(), { force = false, log = console.log }
       hasAudio: p.hasAudio, transcript: t.via, words: t.words, sentences, shots: p.hasVideo ? shots(file, p.duration) : [] };
     if (p.hasVideo) await contactSheet(file, p.duration, join(IDX(), id + '.sheet.jpg'));
     lib.clips[id] = clip;
+    mkdirSync(IDX(), { recursive: true });
     writeFileSync(join(IDX(), id + '.md'), clipMarkdown(clip));
   }
   if (!single) for (const id of Object.keys(lib.clips)) if (!ids.has(id) && !existsSync(lib.clips[id].file)) delete lib.clips[id];   // removed from disk

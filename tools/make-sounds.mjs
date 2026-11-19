@@ -347,6 +347,16 @@ const SFX = {
     }
     return fadeEdges(peakNorm(x, 0.55));
   },
+  // Mouse click: two tiny ticks, down and up.
+  click() {
+    const x = buf(0.09), f = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      const one = (d, lvl) => (t >= d ? (f(rand(), 3200, 1.2).bp * 0.7 + Math.sin(TAU * 2400 * (t - d))) * env(t - d, 0.0004, 0.003) * lvl : 0);
+      x[n] = one(0, 1) + one(0.045, 0.6);
+    }
+    return fadeEdges(peakNorm(x, 0.5));
+  },
 };
 
 // ---- music beds ---------------------------------------------------------------------------------
@@ -472,6 +482,13 @@ const MUSIC = {
     drums: { kick: [0, 1, 2, 3], hat: [0.5, 1.5, 2.5, 3.5], clap: [1, 3], level: 0.85 },
     bass: { pattern: [0.5, 1.5, 2.5, 3.5], len: 0.45, decay: 0.12, down: 1 },
     pluck: { pattern: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5], level: 0.55 }, padLevel: 0.4, cutoff: 1800,
+  }),
+  // Slow and open, 66 bpm, suspended chords that never quite resolve: for big ideas (science, philosophy, history).
+  wonder: () => bed({
+    bpm: 66, bars: 16,
+    chords: [[50, 57, 62, 64], [46, 53, 58, 60], [43, 50, 55, 57], [48, 55, 60, 62]],   // Dsus2 Bbsus2 Gsus2 Csus2
+    bass: { pattern: [0], len: 3.5, decay: 1.4, down: 1 },
+    pluck: { pattern: [0, 1.5, 2.5], level: 0.5 }, padLevel: 0.8, cutoff: 900,
   }),
 };
 

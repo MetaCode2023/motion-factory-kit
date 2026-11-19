@@ -24,7 +24,8 @@ the viewer has never heard of any of it.
 - **End on the turn back to the viewer**: what this means for them, in one line.
 
 Check a draft by reading it as someone who has never studied the subject: every sentence should be
-understandable on its own and lead to the next.
+understandable on its own and lead to the next. The full standard, with the `thesis` / `tension` / `bridge`
+header that `node longform.mjs script` scores, is section 3.
 
 ## 1. Voice (`scripts/VOICE.md`)
 
@@ -61,7 +62,50 @@ Never: topics, words, kinds of clip this channel doesn't use
 
 Put the look in each script's header (`theme: paper`) so the build follows it.
 
-## 3. Facts
+## 3. Depth: the standard and the check
+
+A script that says "quantum mechanics is strange and fascinating" has taught nothing. The standard: someone who
+already read the encyclopedia article should still learn something, and someone who has never heard of the
+subject should be able to follow every step. Write as a teacher at the edge of the field who also reads
+outside it, not as a summary of the first page of search results.
+
+Before drafting, write three lines in the script header and make every chapter serve them:
+
+```
+thesis: the one claim this video argues (not the topic: the claim)
+tension: the competing answers, and why serious people still disagree
+bridge: the other field, or part of ordinary life, this idea turns out to explain
+```
+
+Then, in the script itself:
+
+- **Go to the real idea, by name.** Not "particles can be in two places at once" but superposition, the
+  measurement problem, and the answers on offer: Copenhagen (the wave function collapses when measured, and
+  asking what happens in between is not a physics question), many-worlds (it never collapses; every outcome
+  happens and you find yourself in one branch), and what each asks you to give up. Name who proposed it, when,
+  and what they were trying to fix.
+- **Show how we know.** The experiment, what was measured, what it ruled out. If a claim is an interpretation
+  and not a result, say so.
+- **Follow it one step further than the usual explainer.** If measurement changes the outcome, what counts as a
+  measurement? Is the observer part of the system? What does that say about where the observer's own
+  experience fits? Ask the question the viewer would ask next, and answer it or say plainly that nobody can yet.
+- **Connect it across fields.** The same structure showing up in physics, biology, economics, music or a card
+  game is what makes an idea stick. One real bridge per video, developed, beats five name-drops.
+- **Say where the knowledge stops.** The open question is the most interesting part; end a chapter on it.
+- **Make it mean something to the person watching.** Not a moral: a consequence. What should they now see
+  differently when they look at the ordinary thing?
+- **Plain words for hard ideas.** Depth is not vocabulary. Define a term the moment it appears, use it, and
+  never use a term to sound informed. No phrase that could sit in a video on any subject ("in today's world",
+  "scientists say", "a fascinating journey").
+- **Keep the claims honest.** Deeper means more precise, not more mystical. Don't present a contested
+  interpretation as settled, and don't stretch a physics result into a claim about consciousness that its
+  authors would not make; say who makes that leap and who objects.
+
+Research to that standard: the primary papers or the scientists' own accounts, one serious critic of each
+position, and the best existing explainer (so the script goes past it). `node longform.mjs script` prints a
+**depth** score with notes; treat each note as a question about the script, not a keyword to add.
+
+## 4. Facts
 
 - Every figure, date and quote in a script comes from research done for that script, with a `source:` on the
   visual that shows it and a link in the sources list at the bottom of the script. `node longform.mjs script`
@@ -77,7 +121,7 @@ Put the look in each script's header (`theme: paper`) so the build follows it.
 - Before recording, list for the creator: every claim you could not source, and every claim that is their
   opinion rather than a fact.
 
-## 4. B-roll and outside clips
+## 5. B-roll and outside clips
 
 **B-roll runs through the whole video** (`auto_broll` defaults to `mode: "throughout"`): every thing the
 speaker names gets a shot, held until the next one, and real footage is preferred over photos.
@@ -103,8 +147,12 @@ Outside clips (someone else's video):
   video used as the backbone of this one, anything showing private people in distress, or footage whose
   source can't be identified.
 - If a point can be shown with a drawn animation, stock footage or the creator's own footage instead, prefer that.
+- Automatic B-roll (`node longform.mjs broll`) is separate: it only takes footage released for reuse (stock,
+  Wikimedia Commons, Creative Commons videos on YouTube, channels listed in the plan) and checks each pick shows
+  the thing named. Look at every check sheet before the build goes out; a wrong place on screen costs more
+  trust than no picture.
 
-## 5. The publish package
+## 6. The publish package
 
 A video is finished when all of this is handed over together:
 

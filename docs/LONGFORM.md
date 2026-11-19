@@ -84,7 +84,7 @@ base: backdrop                                      // optional: never show the 
 | `[[clip <title> \| url \| from \| to \| search \| audio]]` | An outside clip that backs up the point (see "Outside clips") |
 | `[[broll <library clip> \| from: ..]]` / `[[image file]]` | Your own footage or a picture |
 | `[[face]]` | Back to you on camera here (ends the previous visual) |
-| `[[music drive 0.08]]` / `[[sfx hit]]` | Music from here / one effect on the next word |
+| `[[music drive 0.1]]` / `[[sfx hit]]` | Music from here / one effect on the next word |
 
 Options on any visual: `dur` (seconds; default auto, which runs until the next visual, capped at 7 s on camera
 and 12 s voice-only), `layout: side` (a framed box with you still on screen), `id`, `note`, `offset`.
@@ -102,6 +102,22 @@ timed to its own beats: a pop as a number lands, ticks while it counts, a pop pe
 reveal, a hit on the collapse. The build mixes them under the voice (and onto A3 in Premiere), plus a whoosh
 on every full-screen cut. `[[sfx name]]` adds one more; `"scene_sfx": false` in the plan turns them off and
 `"scene_sfx_volume": 0.4` makes them quieter. New scenes should declare theirs the same way.
+
+**The edit has its own sounds** (`tools/longform/sound.mjs`), so nothing lands in silence: a shutter or click as a
+photo arrives, a swipe or click on a clip, a page turn on every chapter with a riser into it, a bop as a
+question ends, a hit under the first line. They keep 0.9 s away from any other effect, sit quieter than the
+ones the script asked for, and never replace an effect you chose. `sound: calm` in the script header (plan:
+`"sound": "calm"`) keeps only the page turns and soft cutaway sounds; `sound: off` removes them all.
+
+Effects in `sounds/sfx/` (all original, made by `tools/make-sounds.mjs`): `whoosh swipe pageturn tap click tick pop
+boop bop beep ding chime sparkle success error type notify shutter scratch riser hit boom glitch coin`. Rough guide:
+`pageturn` for a new section, `scratch` for "wait, what?", `boop`/`bop` for labels and answers, `ding`/`sparkle` for the idea landing, `boom` once for the
+line that should stop the room, `glitch` for "but that's wrong", `shutter` for a photo.
+
+**Music runs under the whole video.** `music: <track> [volume]` in the script header picks the bed (default
+`calm 0.1`): `calm`, `pulse`, `drive`, or `wonder` (slow, open, unresolved: for big ideas). It ducks under the
+voice and fades out with the video; `[[music drive 0.1]]` changes track from a line onward, `music: none` is
+silence. Your own track: put the file in `sounds/music/` and use its name.
 
 **On camera or voice only.** If the recording has a picture, the gaps between visuals show you (with punch-ins on
 the jump cuts), so the cadence of cues decides how often you're on screen. With an audio-only recording, or
@@ -132,6 +148,14 @@ build renders them through headless Chrome instead of the 2D engine.
 a greeting or flat first 10 s, no promise by 45 s, 95 s+ with no question or turn, sentences over 34 words,
 chapters over ~2:45 or under 25 s, the same visual twice in a row, more than ~30% word cards, no next step at
 the end. They are heuristics: fix each one or decide it's fine. Figure visuals with no `source:` are warned about.
+
+## Depth check
+
+The same command prints a second score: **depth**, the signs that a script only describes that an idea exists
+instead of teaching it (the standard is in `docs/PLAYBOOK.md`, "Depth"). It flags: no `thesis:`, `tension:` or
+`bridge:` in the header; few named people, experiments or dates; one view only; no "how we know"; no open
+question; no "what this means for you"; phrases that could be in any video ("a fascinating world", "scientists
+say"). Fix each one in the writing, not by adding the keyword.
 
 ## Layouts
 
@@ -332,36 +356,61 @@ point it at the same files.
 
 ## Automatic B-roll
 
-B-roll runs under the whole talk by default: every time the speaker names something you can picture ("China",
-"a casino", "Heisenberg", "two slits"), the video cuts to footage of it and holds that shot until the next one
-(at most 8 s), with a soft swipe on each cut. Real video comes first (Wikimedia Commons video: NASA, ESA, labs,
-museums), then photos with a slow push-in. Free-license sources only, no keys: Wikimedia Commons and Openverse
-(mostly Flickr), keeping CC0, public domain, CC BY and CC BY-SA. Pixabay and Pexels are used too if
-`PIXABAY_API_KEY` / `PEXELS_API_KEY` is set. `"auto_broll": { "mode": "accent" }` goes back to short 1.5-3 s
-cutaways now and then.
+B-roll runs under the whole talk by default: every time the speaker names something you can picture ("Yellowstone",
+"a casino", "Heisenberg", "two slits"), the video cuts to **real footage of that thing** and holds the shot until the
+next one (at most 8 s), with a soft swipe on each cut. Video first; a photo with a slow push-in only when no video of
+the right thing can be found (`"photos": false` = moving pictures only). `"auto_broll": { "mode": "accent" }` goes back
+to short 1.5-3 s cutaways now and then.
+
+Where the footage comes from, in the order tried. Only media its owner has released for reuse:
+
+| Source | Needs | What it gives |
+|---|---|---|
+| Pixabay, Pexels | `PIXABAY_API_KEY` / `PEXELS_API_KEY` (free) | clean stock video and photos |
+| Wikimedia Commons | nothing | video (NASA, ESA, labs, museums) and photos: CC0, public domain, CC BY, CC BY-SA |
+| YouTube | `yt-dlp` (`pip install yt-dlp`) | videos their uploader published under YouTube's **Creative Commons** licence, plus any channels you list in `"channels"` (your own, or ones you have cleared). Only the seconds used are downloaded. |
+| Openverse | nothing | photos (mostly Flickr), the fallback |
+
+Standard-licence YouTube videos and clips from TikTok, Instagram or X are not taken automatically: someone
+else owns them. When one of those is the right proof for a point, it goes in the script as a `[[clip … | url: …]]`
+(see Outside clips below), short, talked over and credited, and the creator decides.
 
 ```
 node longform.mjs broll edits/longform/x.json --dry   # list the moments, download nothing
-node longform.mjs broll edits/longform/x.json         # find, place, fetch, lock
+node longform.mjs broll edits/longform/x.json         # find, place, check, fetch, lock
 node longform.mjs build edits/longform/x.json         # the cutaways are in the video; CREDITS.md lists every pick
 ```
 
 - **Finding the moments** (`tools/broll/find.mjs`): the lexicon (`tools/broll/lexicon.json`: countries, cities, states,
   landmarks, settings, objects, a short list of historic scientists) matched longest phrase first. Lowercase
   place names ("fine china"), repeats within 60 s and words that could be a name ("Austin", "Jordan") are left out.
-  Capitalised names the lexicon doesn't know are listed for review only.
+  Capitalised names the lexicon doesn't know are listed for review only. Anything the lexicon misses (a named
+  park, a telescope, an experiment) goes in `"force"` with the search you want.
 - **Placing them** (`tools/broll/place.mjs`): gaps only, never over one of the plan's own visuals. `throughout`
   (default): a shot for every moment at least 1.5 s apart, each held until the next. `accent`: never in the first 3 s
   or the last 8 s, at least 6 s apart, one per 15 s on average. Hard cuts in and out; captions stay on.
-- **Reviewing**: `out/longform/<name>/BROLL.md` lists every moment, the search, the pick and why others were
-  skipped. Change one in `edits/longform/<name>.broll.lock.json`: `"status": "drop"` or `"keep"`, a new `"query"`,
-  or `"pick": 2`, then run `broll` again. Rebuilds use the locked picks.
+- **Checking it is the right thing** (`tools/broll/validate.mjs`), twice:
+  1. *Automatic.* The name that was said must be in the result's own title, tags or description. For a place,
+     landmark or person, every word of it: "Yellowstone National Park" is not satisfied by a video tagged
+     "national park". Compilations, reactions, gameplay, trailers and AI-generated footage are refused. Results
+     that fail are skipped and listed with the reason; the best match wins, not the first result.
+  2. *Eyes.* Each pick gets a check sheet in `out/longform/<name>/broll-check/`: three frames of the exact
+     seconds that will be on screen. **Look at every one.** Right thing: set `"seen": true` on that entry in the
+     lockfile. Wrong thing, a talking head, a title card, a watermark: `"pick": 2`, a new `"query"`, or
+     `"status": "drop"`. The build warns about every video cutaway that hasn't been looked at.
+- **Reviewing**: `out/longform/<name>/BROLL.md` lists every moment, the search, the pick, why it matched and why
+  others were skipped. Change one in `edits/longform/<name>.broll.lock.json`, then run `broll` again. Rebuilds
+  use the locked picks.
 - **Settings** in the plan: `"auto_broll": { "mode": "throughout", "hold": 8, "sfx": "swipe", "skip": ["Vegas"], "layout": "full",
+  "photos": true, "channels": ["@yourchannel"], "sources": ["commons", "youtube", "openverse"],
   "force": [{ "at": "rec#41", "word": "Macau", "query": "Macau casino night" }] }`; `"auto_broll": false` turns it off.
-- Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in `assets/broll/stock/`.
+- Long videos open on titles and talking, so a cutaway from one starts a fifth of the way in (`source_from` in
+  the lockfile says where). Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in
+  `assets/broll/stock/`.
 - Wikimedia rate-limits busy servers (cloud sessions especially). A short limit is waited out; a long block
-  (`Retry-After` of minutes) is not hammered: that source is skipped and the next one tried. Run `broll` on your
-  own computer if a cloud run comes back thin. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
+  (`Retry-After` of minutes) is not hammered: that source is skipped and the next one tried, and a rate-limited
+  Openverse photo comes through Openverse's own copy. Run `broll` on your own computer if a cloud run comes back
+  thin (docs/LESSONS.md). Paste CREDITS.md into the video description: CC BY footage has to be credited.
 
 ## Outside clips
 

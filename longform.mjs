@@ -12,7 +12,7 @@
 //   node longform.mjs clip <id>                   # one clip's numbered sentences (path to its .md)
 //   node longform.mjs words <id> [#n]             # word timings (for exact anchors and cutting false starts)
 //   node longform.mjs check edits/longform/x.json # resolve the plan, list every problem, show the timeline
-//   node longform.mjs broll edits/longform/x.json # automatic B-roll: cut to free-license photos/clips of things named (no key)
+//   node longform.mjs broll edits/longform/x.json # automatic B-roll: validated video (then photos) of the things named, reusable sources only
 //   node longform.mjs stock edits/longform/x.json # download free stock B-roll for "stock" inserts (PEXELS_API_KEY)
 //   node longform.mjs build edits/longform/x.json # preview MP4 + Premiere XML + captions + chapters + report
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
@@ -119,6 +119,8 @@ try {
       r.chapters.forEach((c) => console.log('  ' + c));
       console.log(`retention ${r.retention.score}/100${r.retention.notes.length ? ':' : ' (nothing flagged)'}`);
       r.retention.notes.forEach((n) => console.log('  keep  ' + n));
+      console.log(`depth ${r.depth.score}/100${r.depth.notes.length ? ':' : ' (nothing flagged)'}`);
+      r.depth.notes.forEach((n) => console.log('  deep  ' + n));
       console.log(`reading copy -> ${read}`);
     }
     emit(r);
@@ -188,7 +190,11 @@ try {
     const r = await autoBroll(plan, R, { dry: rest.includes('--dry'), offline: rest.includes('--offline'), log });
     if (!json) {
       if (r.off) console.log(r.note);
-      else console.log(`${r.moments} moments, ${r.placed} placed, ${r.ready} with media (${r.fetched} new) from ${r.sources.join(', ') || 'no source'}\n-> ${relative(ROOT, r.report)}\n-> ${relative(ROOT, r.lock)}`);
+      else {
+        console.log(`${r.moments} moments, ${r.placed} placed, ${r.ready} with media: ${r.videos} video, ${r.photos} photo (${r.fetched} new) from ${r.sources.join(', ') || 'no source'}\n-> ${relative(ROOT, r.report)}\n-> ${relative(ROOT, r.lock)}`);
+        if (r.hint) console.log('  note: ' + r.hint);
+        if (r.toCheck.length) console.log(`  look at ${r.toCheck.length} check sheet(s) in ${relative(ROOT, join(dirname(r.report), 'broll-check'))} and set "seen": true on the right ones`);
+      }
       (r.problems || []).slice(0, 12).forEach((p) => console.log('  ! ' + p));
     }
     emit(r);
@@ -248,6 +254,7 @@ function readmeUsage() {
   node longform.mjs clip <id>          one clip's numbered sentences
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence
   node longform.mjs check <plan.json>  validate a plan and show its timeline
+  node longform.mjs broll <plan.json>  automatic B-roll: validated video (then photos) of the things named
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
