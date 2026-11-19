@@ -54,6 +54,11 @@ Input: clips + word timings (ElevenLabs speech-to-text, or local `openai-whisper
 plan with fillers and pauses over 0.4 s removed, alternating punch-ins to hide jump cuts, and a
 `*.words.json` of the kept words for captions. Needs: `ffmpeg-static`. The plan format is in `docs/EDITOR.md`.
 
+### Cut in and out of other editors (xmeml, EDL)
+`tools/longform/{timecode,xml,edl,interchange}.mjs` + `premiere.mjs`. Writes the A-roll cut as an xmeml timeline or a CMX3600
+EDL (non-drop and drop-frame timecode) and reads a trimmed cut back, matching clips by path then name and length.
+No dependencies (a minimal XML reader is included). Untested in external editors. Docs: `docs/INTERCHANGE.md`.
+
 ### Street-audio clean-up and speaker levelling
 `tools/audio.mjs` (no other kit dependencies). `cleanChain(options)` returns an ffmpeg `-af` chain
 (high-pass, FFT denoise, de-ess, compressor); `loudness(file, { from, dur, chain })` measures LUFS;

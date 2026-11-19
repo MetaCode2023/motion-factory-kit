@@ -358,6 +358,9 @@ Music ducking is baked into the preview, but not into the XML. In Premiere, tag 
 Music in Essential Sound and turn on Ducking. If you move the project folder, Premiere asks you to relink, so
 point it at the same files.
 
+To trim the cut in an editor and bring it back, or to hand it over as an EDL: `node longform.mjs export <plan>` and
+`import <plan> <cut>` (`docs/INTERCHANGE.md`; untested in external editors, checklist in `docs/INTERCHANGE-CHECKLIST.md`).
+
 ## Automatic B-roll
 
 B-roll runs under the whole talk by default: every time the speaker names something you can picture ("Yellowstone",

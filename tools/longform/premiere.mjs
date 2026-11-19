@@ -6,21 +6,20 @@
 //   V2  inserts: animations, B-roll, images, pull placeholders (side layout = scaled box)
 //   A2  music (level per section; turn on auto-ducking in Essential Sound: voice = Dialogue, music = Music)
 //   A3  sound effects                                         A4  the preview mix (muted, for reference)
-//   Sequence markers: chapters (green) and clips to pull (red).
+//   Sequence markers: chapters and clips to pull (no colour is written).
+//   What is written and dropped, and reading a trimmed cut back: docs/INTERCHANGE.md.
 import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { H, ROOT, W, probe } from './common.mjs';
 import { sideBox } from './plan.mjs';
+import { rateOf } from './timecode.mjs';
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const url = (f) => 'file://localhost' + pathToFileURL(resolve(f)).pathname;
-function rateOf(fps) {
-  const ntsc = [23.976, 29.97, 59.94, 47.952, 119.88].find((r) => Math.abs(fps - r) < 0.01);
-  return ntsc ? { timebase: Math.round(ntsc), ntsc: true, fps: Math.round(ntsc) * 1000 / 1001 } : { timebase: Math.round(fps) || 30, ntsc: false, fps: Math.round(fps) || 30 };
-}
 const rateXML = (r) => `<rate><timebase>${r.timebase}</timebase><ntsc>${r.ntsc ? 'TRUE' : 'FALSE'}</ntsc></rate>`;
 
-export function premiereXML(R, plan, { accent } = {}) {
+// probe is injectable so the writer can be tested without media; R.warnings gets a line for anything left out.
+export function premiereXML(R, plan, { accent, probe: probeFn = probe } = {}) {
   const seq = rateOf(plan.fps);
   const F = (s) => Math.round(s * seq.fps);
   const files = new Map();
@@ -30,7 +29,7 @@ export function premiereXML(R, plan, { accent } = {}) {
     const key = resolve(path);
     let info = files.get(key);
     if (!info) {
-      const p = probe(key);
+      const p = probeFn(key);
       const r = rateOf(p.fps || plan.fps);
       info = { id: `file-${++fileN}`, rate: r, width: p.width || W, height: p.height || H, hasVideo: p.hasVideo, hasAudio: p.hasAudio, sr: p.sampleRate, frames: Math.round(p.duration * r.fps), duration: p.duration, key };
       files.set(key, info);
@@ -54,11 +53,10 @@ export function premiereXML(R, plan, { accent } = {}) {
   const item = ({ name, path, start, end, srcIn, kind = 'video', filters = '', links = '', enabled = true, track = 1 }) => {
     const ref = fileRef(path);
     ref.emit?.();
-    const r = ref.info.rate;
-    const inF = Math.round(srcIn * r.fps), len = end - start;
+    const inF = Math.round(srcIn * seq.fps), len = end - start;
     const id = `clipitem-${++itemN}`;
-    const xml = `<clipitem id="${id}"><name>${esc(name)}</name><enabled>${enabled ? 'TRUE' : 'FALSE'}</enabled><duration>${Math.max(ref.info.frames, inF + len)}</duration>${rateXML(seq)}` +
-      `<start>${start}</start><end>${end}</end><in>${inF}</in><out>${inF + Math.round(len * r.fps / seq.fps)}</out>${ref.xml}` +
+    const xml = `<clipitem id="${id}"><name>${esc(name)}</name><enabled>${enabled ? 'TRUE' : 'FALSE'}</enabled><duration>${Math.max(Math.round(ref.info.duration * seq.fps), inF + len)}</duration>${rateXML(seq)}` +
+      `<start>${start}</start><end>${end}</end><in>${inF}</in><out>${inF + len}</out>${ref.xml}` +
       (kind === 'audio' ? `<sourcetrack><mediatype>audio</mediatype><trackindex>${track}</trackindex></sourcetrack>` : '') + filters + links + '</clipitem>';
     return { id, xml };
   };
@@ -72,25 +70,26 @@ export function premiereXML(R, plan, { accent } = {}) {
     const sc = coverScale(info, c.zoom);
     const ow = info.width * sc / 100 - W, oh = info.height * sc / 100 - H;
     const cx = ((0.5 - c.focus[0]) * ow) / W, cy = ((0.5 - c.focus[1]) * oh) / H;
-    const vid = `clipitem-${itemN + 1}`, aid = `clipitem-${itemN + 2}`;
+    const vid = `clipitem-${itemN + 1}`, aid = `clipitem-${itemN + 2}`, ai = a1.length + 1;
     const links = `<link><linkclipref>${vid}</linkclipref><mediatype>video</mediatype><trackindex>1</trackindex><clipindex>${k + 1}</clipindex></link>` +
-      (clip.hasAudio ? `<link><linkclipref>${aid}</linkclipref><mediatype>audio</mediatype><trackindex>1</trackindex><clipindex>${k + 1}</clipindex><groupindex>1</groupindex></link>` : '');
+      (clip.hasAudio ? `<link><linkclipref>${aid}</linkclipref><mediatype>audio</mediatype><trackindex>1</trackindex><clipindex>${ai}</clipindex><groupindex>1</groupindex></link>` : '');
     v1.push(item({ name: `${c.clip} ${c.s.toFixed(1)}s`, path: clip.file, start, end, srcIn: c.s, filters: motion(sc, c.zoom > 1 ? cx : 0, c.zoom > 1 ? cy : 0), links }).xml);
     if (clip.hasAudio) a1.push(item({ name: `${c.clip} ${c.s.toFixed(1)}s`, path: clip.file, start, end, srcIn: c.s, kind: 'audio', links }).xml);
   });
 
   // V2: inserts. Library B-roll points at the original file; everything else at its rendered clip in media/.
-  const v2 = R.inserts.map((ins) => {
+  const v2 = R.inserts.flatMap((ins) => {
     const start = F(ins.at), end = F(ins.at + ins.dur);
     const fromLibrary = ins.kind === 'broll';
     const path = fromLibrary ? ins.file : ins.media;
+    if (!path) { R.warnings.push(`${ins.id}: has no media yet (build the video to render it), so it is left off V2`); return []; }
     const info = infoOf(path);
     let filters;
     if (ins.layout === 'side') {
       const b = sideBox(plan);
       filters = motion(coverScale(info) * b.w / W, (b.x + b.w / 2 - W / 2) / W, (b.y + b.h / 2 - H / 2) / H);
     } else filters = motion(coverScale(info));
-    return item({ name: ins.kind === 'pull' ? `PULL: ${ins.title}` : ins.id, path, start, end, srcIn: fromLibrary ? ins.from : 0, filters }).xml;
+    return [item({ name: ins.kind === 'pull' ? `PULL: ${ins.title}` : ins.id, path, start, end, srcIn: fromLibrary ? ins.from : 0, filters }).xml];
   });
 
   // A2 music (looped clip by clip), A3 effects, A4 the preview mix.

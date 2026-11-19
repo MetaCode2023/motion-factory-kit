@@ -21,8 +21,10 @@ export function ff(args, what) {
   return r;
 }
 
-export function probe(file) {
-  const err = spawnSync(FF, ['-hide_banner', '-i', file], { encoding: 'utf8' }).stderr;
+export const probe = (file) => parseProbe(spawnSync(FF, ['-hide_banner', '-i', file], { encoding: 'utf8' }).stderr);
+
+// tc: the embedded start timecode tag ("01:00:00:00", ";" before the frames in drop-frame), or null.
+export function parseProbe(err) {
   const d = err.match(/Duration: (\d+):(\d+):([\d.]+)/);
   const vline = err.split('\n').find((l) => /Stream.*Video:/.test(l) && !/attached pic/.test(l)) || '';   // ignore mp3 cover art
   const v = vline.match(/Video:.*?(\d{2,5})x(\d{2,5})/);
@@ -32,7 +34,7 @@ export function probe(file) {
   let w = v ? +v[1] : 0, h = v ? +v[2] : 0;
   if (rot && Math.abs(Math.abs(+rot[1]) % 180 - 90) < 1) [w, h] = [h, w];
   return { duration: d ? +d[1] * 3600 + +d[2] * 60 + +d[3] : 0, width: w, height: h, fps: fps ? +fps[1] : 0,
-    hasVideo: !!v, hasAudio: /Audio:/.test(err), sampleRate: hz ? +hz[1] : 48000 };
+    hasVideo: !!v, hasAudio: /Audio:/.test(err), sampleRate: hz ? +hz[1] : 48000, tc: err.match(/timecode\s*:\s*(\d\d:\d\d:\d\d[:;]\d\d)/i)?.[1] ?? null };
 }
 
 export const fileKey = (file) => { const st = statSync(file); return createHash('sha1').update([resolve(file), st.size, st.mtimeMs].join('|')).digest('hex').slice(0, 16); };
