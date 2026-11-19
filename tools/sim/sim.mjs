@@ -12,6 +12,7 @@
 //   sim transcribe <job>                   Parakeet word transcript -> work/<job>/words.json + transcript.txt
 //   sim propose <job> --from plan.json     record the proposed long videos and shorts (docs/SIM.md)
 //   sim build <job> [output]               cut, build with the kit, upload to out/, record FIX lines
+//   sim rate <job> [output] [--rater clef-omni]  score built shorts (stored only)
 //   sim review <job>                       review summary with links; job -> in_review
 //   sim approve <output> / sim reject <output> --note "..."     HUMANS ONLY
 //   sim mark-posted <output> --platform youtube --url <url>
@@ -24,6 +25,7 @@ import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
+import { RATERS, RATINGS_UPSERT, ratingParams, clipParts, smallCopyArgs, fileSha256 } from './rate.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const LEASE_MIN = 30;
@@ -35,7 +37,7 @@ const JOB_STATUS = ['new', 'ingested', 'transcribed', 'planned', 'built', 'in_re
 
 // ---------- arguments, output ----------
 const argv = process.argv.slice(2);
-const FLAGS_WITH_VALUE = new Set(['--every', '--from', '--note', '--platform', '--url', '--agent', '--minutes', '--title']);
+const FLAGS_WITH_VALUE = new Set(['--every', '--from', '--note', '--platform', '--url', '--agent', '--minutes', '--title', '--rater']);
 const flags = {}, pos = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -117,6 +119,10 @@ async function sql(statement, params = []) {
   return { rows: r.results || [], changes: r.meta?.changes ?? 0 };
 }
 const one = async (s, p) => (await sql(s, p)).rows[0];
+async function needBuildId() {
+  try { await sql('SELECT build_id FROM outputs LIMIT 0'); }
+  catch (e) { if (/no such column/i.test(e.message)) fail('the database is missing migration 0004; run "node sim.mjs init" first'); throw e; }
+}
 async function event(job, output, action, detail = {}, actor = ACTOR()) {
   await sql('INSERT INTO events (job_id, output_id, actor, action, detail, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     [job, output, actor, action, JSON.stringify(detail), now()]);
@@ -198,6 +204,11 @@ async function get(key, file) {
   mkdirSync(dirname(file), { recursive: true });
   await pipeline(r.Body, createWriteStream(file));
   return file;
+}
+async function getText(key) {
+  const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+  try { return await (await (await s3()).send(new GetObjectCommand({ Bucket: BUCKET(), Key: key }))).Body.transformToString(); }
+  catch (e) { if (e.$metadata?.httpStatusCode === 404 || e.name === 'NoSuchKey') return null; throw e; }
 }
 async function list(prefix) {
   const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
@@ -448,6 +459,7 @@ function checkPlan(plan, duration) {
 }
 async function cmdPropose(job) {
   if (!job || !flags.from) fail('usage: sim propose <job> --from plan.json');
+  await needBuildId();
   const j = await getJob(job);
   const plan = JSON.parse(readFileSync(flags.from, 'utf8'));
   if (plan.job && plan.job !== job) fail(`plan.json is for job ${plan.job}, not ${job}`);
@@ -462,7 +474,7 @@ async function cmdPropose(job) {
       const desc = it.description || it.hook;
       await sql(`INSERT INTO outputs (id, job_id, kind, start_s, end_s, slug, title, description, status, created_at, updated_at)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'proposed', ?9, ?9)
-        ON CONFLICT(id) DO UPDATE SET start_s = ?4, end_s = ?5, title = ?7, description = ?8, status = 'proposed', updated_at = ?9`,
+        ON CONFLICT(id) DO UPDATE SET start_s = ?4, end_s = ?5, title = ?7, description = ?8, status = 'proposed', build_id = NULL, updated_at = ?9`,
       [id, job, it.kind, it.start_s, it.end_s, it.slug, it.title, desc, now()]);
       await event(job, id, 'proposed', { start_s: it.start_s, end_s: it.end_s, title: it.title, hook: it.hook, why: it.why });
       saved.push(id);
@@ -540,6 +552,7 @@ async function buildOne(job, o, planItem, words, proxy, fromTitle) {
   const mp4 = files['video.mp4'];
   if (!existsSync(mp4)) fail(`build finished but ${relative(ROOT, mp4)} is missing`);
   const length = (await probe(mp4)).duration;
+  const buildId = await fileSha256(mp4);
   // Stills to check before calling it built: 6 frames across the video, and a thumbnail frame.
   const stills = join(dir, `${o.kind}-stills.jpg`), thumb = join(dir, `${o.kind}-thumbnail.jpg`);
   await ff(['-i', mp4, '-vf', `fps=6/${Math.max(1, length).toFixed(2)},scale=${o.kind === 'long' ? 480 : 270}:-2,tile=3x2`, '-frames:v', '1', '-q:v', '3', stills], 'stills');
@@ -554,21 +567,22 @@ async function buildOne(job, o, planItem, words, proxy, fromTitle) {
     job, output_id: o.id, kind: o.kind, slug: o.slug, title: o.title, description: o.description,
     hook: planItem?.hook, why: planItem?.why, source: { start_s: o.start_s, end_s: o.end_s }, duration_s: +length.toFixed(2),
     chapters: existsSync(join(dir, 'CHAPTERS.txt')) && o.kind === 'long' ? readFileSync(join(dir, 'CHAPTERS.txt'), 'utf8').trim() : null,
-    fixes, built_at: now(), built_by: ACTOR(), kit_plan: plan,
+    fixes, built_at: now(), built_by: ACTOR(), build_id: buildId, kit_plan: plan,
   };
   const metaFile = join(dir, `${o.kind}-metadata.json`);
   writeFileSync(metaFile, JSON.stringify(meta, null, 2));
   files['metadata.json'] = metaFile;
   const uploaded = [];
   for (const [nm, f] of Object.entries(files)) if (existsSync(f)) { await put(f, prefix + nm); uploaded.push(prefix + nm); }
-  await sql("UPDATE outputs SET status = 'built', r2_prefix = ?, updated_at = ? WHERE id = ?", [prefix, now(), o.id]);
-  await event(job, o.id, 'built', { r2_prefix: prefix, duration_s: meta.duration_s, files: uploaded.length });
+  await sql("UPDATE outputs SET status = 'built', r2_prefix = ?, build_id = ?, updated_at = ? WHERE id = ?", [prefix, buildId, now(), o.id]);
+  await event(job, o.id, 'built', { r2_prefix: prefix, duration_s: meta.duration_s, files: uploaded.length, build_id: buildId });
   if (fixes.length) await event(job, o.id, 'fix', { lines: fixes });
   say(`    built ${hms(length)} -> ${prefix} (${uploaded.length} files)${fixes.length ? `\n    FIX notes:\n      ${fixes.join('\n      ')}` : ''}\n    check the stills: ${relative(ROOT, stills)}`);
-  return { output: o.id, r2_prefix: prefix, files: uploaded, duration_s: meta.duration_s, fixes, stills, local_video: mp4 };
+  return { output: o.id, r2_prefix: prefix, build_id: buildId, files: uploaded, duration_s: meta.duration_s, fixes, stills, local_video: mp4 };
 }
 async function cmdBuild(job, only) {
   if (!job) fail('usage: sim build <job> [output]');
+  await needBuildId();
   const j = await getJob(job);
   return holding(job, async () => {
     const { rows: all } = await sql('SELECT * FROM outputs WHERE job_id = ? ORDER BY kind, start_s', [job]);
@@ -590,6 +604,76 @@ async function cmdBuild(job, only) {
     const { rows: left } = await sql("SELECT COUNT(*) AS n FROM outputs WHERE job_id = ? AND status = 'proposed'", [job]);
     if (!left[0].n && !failed.length && JOB_STATUS.indexOf(j.status) < JOB_STATUS.indexOf('built')) await setJobStatus(job, 'built', { outputs: results.length });
     return { ok: !failed.length, job, built: results, failed };
+  });
+}
+
+// Score each built short with a rater (Clef-omni) and store it in `ratings`. Stored only: nothing reads ratings yet (docs/LEARNING.md).
+const rateFile = (job, o) => join(workDir(job), 'rate', `${o.kind}-${o.slug}.${o.build_id || 'unknown'}.mp4`);
+async function rateCopy(job, o) {
+  const dir = join(workDir(job), 'rate'), base = `${o.kind}-${o.slug}`;
+  mkdirSync(dir, { recursive: true });
+  let f = rateFile(job, o);
+  if (!o.build_id) rmSync(f, { force: true });
+  if (!existsSync(f)) { say(`    downloading ${o.r2_prefix}video.mp4`); await get(`${o.r2_prefix}video.mp4`, f + '.part'); renameSync(f + '.part', f); }
+  const buildId = await fileSha256(f);
+  if (o.build_id && o.build_id !== buildId) { rmSync(f, { force: true }); fail('the downloaded video does not match the recorded build; run sim rate again, and rebuild the output if this repeats'); }
+  if (!o.build_id) {
+    const named = join(dir, `${base}.${buildId}.mp4`);
+    rmSync(named, { force: true });
+    renameSync(f, named);
+    f = named;
+    if ((await sql('UPDATE outputs SET build_id = ? WHERE id = ? AND build_id IS NULL', [buildId, o.id])).changes) await event(job, o.id, 'build_id_backfilled', { build_id: buildId });
+  }
+  return { file: f, buildId };
+}
+// buildOne writes build_id into metadata.json beside video.mp4; an older clone may have replaced the video without it.
+async function r2BuildId(o) {
+  try { return JSON.parse(await getText(`${o.r2_prefix}metadata.json`) || 'null')?.build_id ?? null; } catch { return null; }
+}
+const ratingKey = 'output_id = ? AND rater = ? AND rubric_version = ? AND pass = 1';
+async function rateOne(job, j, o, rater) {
+  const key = [o.id, rater.name, rater.rubric_version];
+  const current = async (build) => (await sql(`SELECT COUNT(*) AS n FROM ratings WHERE ${ratingKey} AND build_id = ? AND score IS NOT NULL`, [...key, build])).rows[0].n === 4;
+  if (o.build_id && await current(o.build_id)) {
+    if (await r2BuildId(o) === o.build_id) { say(`  ${o.slug}: already rated`); return { skipped: o.id }; }
+    rmSync(rateFile(job, o), { force: true });
+  }
+  const { file, buildId } = await rateCopy(job, o);
+  if (await current(buildId)) { say(`  ${o.slug}: already rated`); return { skipped: o.id }; }
+  const { duration } = await probe(file), parts = [];
+  for (const [i, p] of clipParts(duration).entries()) {
+    const small = file.replace(/\.mp4$/, `.part${i + 1}.mp4`);
+    await ff(smallCopyArgs(file, small, p), 'small copy');
+    parts.push(readFileSync(small));
+  }
+  say(`  ${o.slug}: asking ${rater.name} (${parts.length} part(s), ${parts.map((p) => mb(p.length)).join(' + ')})`);
+  const call = (body) => cf(rater.path, { method: 'POST', body: JSON.stringify(body) });
+  const state = 'A short vertical video from the Simulation YouTube channel, which explains ideas on a whiteboard.';
+  const { rows, usage, checks } = await rater.rate({ call, parts, state, outputId: o.id, buildId });
+  const { rows: old } = await sql(`SELECT dimension, score, probs, stop_reason, build_id, rated_at FROM ratings WHERE ${ratingKey}`, key);
+  await sql(RATINGS_UPSERT, ratingParams(rows, now()));
+  const scores = Object.fromEntries(rows.map((r) => [r.dimension, r.score]));
+  const detail = { rater: rater.name, rubric_version: rater.rubric_version, build_id: buildId, scores, checks, input_tokens: usage?.input_tokens ?? null, parts: parts.length };
+  if (old.length) { const other = old.find((r) => r.build_id !== buildId); if (other) detail.replaced_build_id = other.build_id; detail.previous = old.map((r) => ({ ...r, probs: r.probs ? JSON.parse(r.probs) : null })); }
+  await event(job, o.id, 'rated', detail);
+  say(`  ${o.slug}: ${Object.entries(scores).map(([d, s]) => `${d} ${s ?? '-'}`).join(', ')} (of 5)`);
+  return { output: o.id, scores, input_tokens: detail.input_tokens, parts: parts.length };
+}
+async function cmdRate(job, only) {
+  if (!job) fail('usage: sim rate <job> [output] [--rater clef-omni]');
+  const rater = RATERS[flags.rater || 'clef-omni'] || fail(`unknown rater "${flags.rater}"; available: ${Object.keys(RATERS).join(', ')}`);
+  await needBuildId();
+  const j = await getJob(job);
+  return holding(job, async () => {
+    let { rows: outs } = await sql("SELECT * FROM outputs WHERE job_id = ? AND kind = 'short' AND status IN ('built', 'approved', 'posted') AND r2_prefix IS NOT NULL ORDER BY start_s", [job]);
+    if (only) { const o = await getOutput(only.includes('/') && !only.startsWith(job) ? `${job}/${only}` : only); outs = outs.filter((x) => x.id === o.id); if (!outs.length) fail(`${o.id} is not a built short`); }
+    if (!outs.length) fail('no built shorts to rate (sim build first)');
+    const rated = [], skipped = [], failed = [];
+    for (const o of outs) {
+      try { const r = await rateOne(job, j, o, rater); (r.skipped ? skipped.push(r.skipped) : rated.push(r)); }
+      catch (e) { failed.push({ output: o.id, error: e.message }); await event(job, o.id, 'rate_failed', { rater: rater.name, error: e.message }); say(`    FAILED: ${e.message}`); }
+    }
+    return { ok: !failed.length, job, rater: rater.name, rubric_version: rater.rubric_version, rated, skipped, failed };
   });
 }
 
@@ -680,7 +764,7 @@ async function cmdMarkPosted(ref) {
   return { ok: true, output: o.id, platforms, posted_urls: urls };
 }
 
-const HELP = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 19).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
+const HELP = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 20).map((l) => l.replace(/^\/\/ ?/, '')).join('\n');
 const COMMANDS = {
   init: cmdInit, ingest: cmdIngest, watch: cmdWatch, status: cmdStatus,
   claim: async (job) => { if (!job) fail('usage: sim claim <job>'); await getJob(job); const by = await claim(job, { minutes: +(flags.minutes || LEASE_MIN) }); say(`${job} is yours (${by}) for ${flags.minutes || LEASE_MIN} min; commands renew it while they run. Release it when you stop: node sim.mjs release ${job}`); return { ok: true, job, claimed_by: by }; },
@@ -694,7 +778,7 @@ const COMMANDS = {
     return { ok: true, job, note: text };
   },
   release: async (job) => { if (!job) fail('usage: sim release <job>'); const ok = await release(job); say(ok ? `released ${job}` : `${job} was not claimed by ${ACTOR()}`); return { ok: true, job, released: ok }; },
-  transcribe: cmdTranscribe, propose: cmdPropose, build: cmdBuild, review: cmdReview,
+  transcribe: cmdTranscribe, propose: cmdPropose, build: cmdBuild, rate: cmdRate, review: cmdReview,
   approve: cmdApprove, reject: cmdReject, 'mark-posted': cmdMarkPosted,
 };
 

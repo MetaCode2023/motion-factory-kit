@@ -80,3 +80,37 @@ test('the readout treats a day-7 result as missing until it is final', () => {
   db.exec(`UPDATE metric_snapshots SET status = 'final' WHERE output_id = 'j1/short/a'`);
   assert.deepEqual(one(), { n_published: 1, n_missing: 0, rel_retention_mean: 0.9 });
 });
+
+test('0004 adds build_id to outputs and ratings', () => {
+  const db = fresh();
+  for (const t of ['outputs', 'ratings'])
+    assert.ok(db.prepare(`PRAGMA table_info(${t})`).all().some((r) => r.name === 'build_id'), `${t}.build_id`);
+  const idx = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_ratings_output_build'`).all();
+  assert.equal(idx.length, 1);
+});
+
+test('a ratings upsert always replaces all four rows, whatever build or score they held', async () => {
+  const { RATINGS_UPSERT, ratingParams } = await import('../tools/sim/rate.mjs');
+  const db = fresh();
+  seed(db);
+  const rows = (build, score) => ['hook', 'visuals', 'pacing', 'overall'].map((dimension) => ({
+    output_id: 'j1/short/a', dimension, rater: 'clef-omni', rubric_version: 1, pass: 1, model: 'm', score, probs: { 1: 0.5 }, justification: null, stop_reason: null, build_id: build }));
+  const run = (r) => db.prepare(RATINGS_UPSERT).run(...ratingParams(r, '2026-11-18T00:00:00Z'));
+  const read = () => db.prepare('SELECT dimension, score, build_id FROM ratings ORDER BY dimension').all().map((r) => ({ ...r }));
+  run(rows('A', 3));
+  run(rows('A', 5));
+  assert.equal(read().length, 4);
+  assert.ok(read().every((r) => r.build_id === 'A' && r.score === 5), 'the same build is replaced too (the caller decides when to skip)');
+  run(rows('B', 2));
+  assert.ok(read().every((r) => r.build_id === 'B' && r.score === 2), 'another build replaces');
+  run(rows('C', null));
+  assert.ok(read().every((r) => r.build_id === 'C' && r.score === null));
+  run(rows('C', 4));
+  assert.ok(read().every((r) => r.build_id === 'C' && r.score === 4), 'a NULL score is replaced by a real one');
+});
+
+test('no migration from 0004 on drops a table', () => {
+  const later = readdirSync(DIR).filter((n) => n.endsWith('.sql') && n >= '0004');
+  assert.ok(later.length >= 1);
+  for (const f of later) assert.doesNotMatch(readFileSync(join(DIR, f), 'utf8').replace(/--.*$/gm, ''), /\b(DROP|DELETE|TRUNCATE)\b/i, f);
+});
