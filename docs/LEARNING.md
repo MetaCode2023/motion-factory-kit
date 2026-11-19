@@ -44,4 +44,15 @@ New columns on `outputs`: `duration_s`, `youtube_video_id`, `published_at`, `top
 - Ratings change no edit until one validation test, run once, shows they predict retention.
 - Only a human sets `approved_by`. Agents never approve a lesson, the same as `sim approve`.
 
+## Must be solved before anything writes to these tables
+
+`sim propose` re-uses an output's id when a rejected or proposed output is re-proposed with a new span, and
+`sim build <job> <output>` re-renders under the same id. Today that would leave the old `experiment_id`, `arm`,
+`ruleset_version`, `published_at`, ratings and metric rows attached to a different cut. Before the first writer
+lands, either give each build its own identity in the `ratings`, `metric_snapshots` and `lesson_applications`
+keys, or make propose and build refuse (or clear the learning columns) when an output already has them.
+
+Also not enforced yet: an active lesson can be stored without `approved_by`, an experiment can name the same
+ruleset on both sides, and `arm` can be set without `experiment_id`. Enforce these in the code that writes them.
+
 Test: `node --test tests/sim-migrations.test.mjs` applies every migration to an empty SQLite database.
