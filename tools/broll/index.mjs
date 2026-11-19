@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { ROOT, bare, fmt } from '../longform/common.mjs';
 import { findMoments } from './find.mjs';
-import { PLACE, placeBroll } from './place.mjs';
+import { MODES, PLACE, placeBroll } from './place.mjs';
 import { DEFAULT_SOURCES, available, download, rank, search, tryOrder } from './sources.mjs';
 
 export const STOCK_DIR = () => join(ROOT, 'assets', 'broll', 'stock');
@@ -34,8 +34,11 @@ export function readLock(plan) {
 export function settings(plan) {
   if (plan.auto_broll === false) return null;
   const a = plan.auto_broll || {};
+  const mode = a.mode || 'throughout';
+  if (!MODES[mode]) throw new Error(`auto_broll.mode "${mode}" (try: ${Object.keys(MODES).join(', ')})`);
   return {
-    ...PLACE, ...pickKeys(a, Object.keys(PLACE)),
+    ...PLACE, ...MODES[mode], ...pickKeys(a, Object.keys(PLACE)), mode,
+    sfx: a.sfx === undefined ? 'swipe' : a.sfx,
     sources: a.sources || DEFAULT_SOURCES,
     types: a.types, skip: a.skip || [], force: a.force || [],
     layout: a.layout || 'full', repeat: a.repeat ?? 60, portrait: !!a.portrait,
@@ -74,7 +77,7 @@ export function lockedInserts(plan, { inserts, total, resolveAt, cuts, lib }) {
       const from = kind === 'broll' ? Math.max(0, Math.min(m.media.from ?? 0.5, (m.media.dur || 0) - m.dur - 0.1)) : 0;
       return {
         i: 1000 + k, where: `auto B-roll "${m.said}"`, auto: false, id: `broll-${String(k + 1).padStart(2, '0')}-${bare(m.key).slice(0, 16) || 'shot'}`,
-        kind, at: +m.at.toFixed(3), dur: m.dur, layout: opts.layout, sfx: null, note: `${m.said}: ${m.media.query}`,
+        kind, at: +m.at.toFixed(3), dur: m.dur, layout: opts.layout, sfx: opts.sfx || null, note: `${m.said}: ${m.media.query}`,
         file: m.file, from, audio: 0, autoBroll: true, credit: credit(m.media),
         src: { transition: 'cut', said: m.said, query: m.media.query },
       };

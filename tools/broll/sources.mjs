@@ -1,7 +1,7 @@
 // tools/broll/sources.mjs: free stock search behind one shape, so the picker doesn't care where media comes from.
 //
 //   Openverse  photos            no key   CC0 / PDM / CC BY / CC BY-SA (commercial use + changes allowed), mostly Flickr
-//   Commons    photos            no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only
+//   Commons    videos + photos   no key   Wikimedia Commons; per file: CC0 / PD / CC BY / CC BY-SA only (NASA, ESA, labs, museums)
 //   Pixabay    videos + photos   PIXABAY_API_KEY (optional)   Pixabay Content License
 //   Pexels     videos + photos   PEXELS_API_KEY  (optional; new keys are paused)   Pexels License
 //
@@ -18,7 +18,7 @@ export const SOURCES = {
   openverse: { key: null, kinds: ['photo'] },
   pixabay: { key: 'PIXABAY_API_KEY', kinds: ['video', 'photo'] },
   pexels: { key: 'PEXELS_API_KEY', kinds: ['video', 'photo'] },
-  commons: { key: null, kinds: ['photo'] },
+  commons: { key: null, kinds: ['video', 'photo'] },
 };
 
 // The sources that can run now (a key where one is needed), in the order asked for.
@@ -36,8 +36,10 @@ const pickFile = (files, want = 1920) => {
 async function getJSON(url, { headers = {}, fetchImpl = fetch } = {}) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetchImpl(url, { headers: { 'User-Agent': UA, 'Api-User-Agent': UA, ...headers } });
+    const after = retryAfter(res);
+    if (res.status === 429 && after > 60) throw new Error(`${new URL(url).host} rate limit (retry after ${Math.round(after / 60)} min)`);   // don't hammer a long block; the next source is tried
     if ((res.status === 429 || res.status >= 500) && attempt < 2) {   // rate limit, or Openverse's frequent 504s
-      const wait = Math.min(60, Number(res.headers?.get?.('x-ratelimit-reset')) || (res.status === 429 ? 10 : 2) * (attempt + 1));
+      const wait = Math.min(60, after || Number(res.headers?.get?.('x-ratelimit-reset')) || (res.status === 429 ? 10 : 2) * (attempt + 1));
       await new Promise((r) => setTimeout(r, wait * 1000));
       continue;
     }
@@ -46,6 +48,14 @@ async function getJSON(url, { headers = {}, fetchImpl = fetch } = {}) {
   }
   throw new Error(`${new URL(url).host} rate limit`);
 }
+
+// Seconds from a Retry-After header (seconds or an HTTP date), or 0.
+const retryAfter = (res) => {
+  const v = res.headers?.get?.('retry-after');
+  if (!v) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : Math.max(0, (Date.parse(v) - Date.now()) / 1000) || 0;
+};
 
 const ADAPTERS = {
   openverse: {
@@ -96,6 +106,29 @@ const ADAPTERS = {
     },
   },
   commons: {
+    // Real footage: Commons video (NASA, ESA, university labs, museums). Uses the transcoded copies (720p/1080p),
+    // which Wikimedia serves far more freely than the originals.
+    async video(q, _o, { fetchImpl }) {
+      const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:video`, gsrnamespace: '6', gsrlimit: '15', prop: 'videoinfo', viprop: 'url|size|extmetadata|mime|derivatives', origin: '*' });
+      const j = await getJSON(`https://commons.wikimedia.org/w/api.php?${p}`, { fetchImpl });
+      const pages = Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+      return pages.map((pg) => {
+        const vi = pg.videoinfo?.[0];
+        if (!vi) return null;
+        const m = vi.extmetadata || {};
+        const license = strip(m.LicenseShortName?.value || '');
+        if (!commonsLicenseOk(license)) return null;
+        const dur = Number(vi.duration) || 0;
+        if (dur < 2 || dur > 900) return null;   // stills and hour-long lectures aren't B-roll
+        const ders = (vi.derivatives || []).map((d) => ({ url: d.src, w: Number(d.width) || 0, h: Number(d.height) || 0, type: d.type || '' }))
+          .filter((d) => /webm|mp4|quicktime/.test(d.type) && d.h >= 300);
+        const f = pickFile(ders, 1920) || ders.sort((a, b) => b.h - a.h)[0];   // closest to 1080p, else the biggest there is
+        if (!f) return null;
+        return { source: 'commons', id: String(pg.pageid), kind: 'video', w: f.w, h: f.h, dur, url: f.url, ext: /mp4|quicktime/.test(f.type) ? (/quicktime/.test(f.type) ? 'mov' : 'mp4') : 'webm',
+          title: String(pg.title || '').replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, ''), page: vi.descriptionurl, author: strip(m.Artist?.value || 'unknown'), license,
+          tags: `${pg.title || ''} ${strip(m.ImageDescription?.value || '').slice(0, 200)}` };
+      }).filter(Boolean);
+    },
     async photo(q, _o, { fetchImpl }) {
       const p = new URLSearchParams({ action: 'query', format: 'json', generator: 'search', gsrsearch: `${q} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '15', prop: 'imageinfo', iiprop: 'url|size|extmetadata|mime', iiurlwidth: '1920', origin: '*' });
       const j = await getJSON(`https://commons.wikimedia.org/w/api.php?${p}`, { fetchImpl });
@@ -143,7 +176,7 @@ export function rank(results, { query, need = 2, portrait = false, used = new Se
   return results
     .map((r, k) => {
       const shapeOk = portrait ? r.h >= r.w * 0.9 || r.kind === 'photo' : r.w >= r.h;
-      const sizeOk = Math.max(r.w, r.h) >= (r.kind === 'photo' ? 1000 : 1280);
+      const sizeOk = Math.max(r.w, r.h) >= (r.kind === 'photo' ? 1000 : r.source === 'commons' ? 800 : 1280);   // Commons science footage is often 854 or 1200 wide
       const lenOk = r.kind === 'photo' || r.dur >= need + 0.5;
       const tags = (r.tags || '').toLowerCase();
       const overlap = words.filter((w) => tags.includes(w)).length;
@@ -166,14 +199,27 @@ export function tryOrder(sources, type) {
 }
 
 // Download once per provider id into assets/broll/stock/.
+// Openverse results whose origin (Flickr, Wikimedia) rate-limits us are fetched through Openverse's own image
+// proxy instead (full size; it refuses very large originals with a 424, so it's a fallback, not the default).
 export async function download(r, dir, { fetchImpl = fetch } = {}) {
+  try { return await fetchTo(r, r.url, dir, fetchImpl); }
+  catch (err) {
+    if (r.source !== 'openverse' || !/rate-limited|429/.test(err.message)) throw err;
+    return fetchTo(r, `https://api.openverse.org/v1/images/${r.id}/thumb/?full_size=true`, dir, fetchImpl);
+  }
+}
+
+async function fetchTo(r, url, dir, fetchImpl) {
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${r.source}-${r.id}.${r.ext}`);
   if (existsSync(file) && statSync(file).size > 0) return file;
   for (let attempt = 0; ; attempt++) {
-    const res = await fetchImpl(r.url, { headers: { 'User-Agent': UA } });
-    if (res.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, (attempt + 1) * 20e3)); continue; }
-    if (!res.ok) throw new Error(`download ${res.status} (${r.source} ${r.id})`);
+    const res = await fetchImpl(url, { headers: { 'User-Agent': UA } });
+    const after = retryAfter(res);
+    // Wikimedia answers a busy shared IP (cloud sessions) with Retry-After: 600; retrying sooner only extends the block.
+    if (res.status === 429 && after > 60) throw new Error(`download rate-limited by ${new URL(url).host}, retry after ${Math.round(after / 60)} min (${r.source} ${r.id})`);
+    if (res.status === 429 && attempt < 2) { await new Promise((ok) => setTimeout(ok, (after || (attempt + 1) * 20) * 1e3)); continue; }
+    if (!res.ok) throw new Error(`download ${res.status} from ${new URL(url).host} (${r.source} ${r.id})`);
     const buf = Buffer.from(await res.arrayBuffer());
     if (/^\s*</.test(buf.subarray(0, 64).toString('latin1'))) throw new Error(`download returned a web page, not media (${r.source} ${r.id})`);
     writeFileSync(file, buf);

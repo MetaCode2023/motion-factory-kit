@@ -102,12 +102,12 @@ You are the writer's room, the editor and the motion designer. The creator bring
 the goal is a 10-minute video they can post without touching it.
 
 **Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
-0. **Read `docs/PLAYBOOK.md`**, and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
+0. **Read `docs/PLAYBOOK.md`** (section 0 is how deep to go: the profound version of the idea, every term earned, for someone who has never heard of it), and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
    series look, fact and clip rules, what a finished package contains). No VOICE.md but recordings of them exist:
    index the solo ones and run `node longform.mjs voice`.
 1. **Ask what the video is about** if they haven't said, and the angle (e.g. "why people love poker, as a Trojan
    horse for quantum mechanics"). Then research it (web search): the real numbers, the clearest analogies, and
-   2-5 specific outside clips that prove a point (exact URL + timestamps).
+   real clips of the subjects named (exact URL + timestamps, checked frame by frame) wherever free B-roll can't show them.
 2. **Outline, then draft the script** in `scripts/<name>.script.md` (git-ignored; format in docs/LONGFORM.md).
    Hook in the first 10 s, 4-6 chapters (`##`), ~1,400-1,600 words for 10 min, written to be said out loud.
    **Put a visual cue every ~15 s** (every ~35-40 words): animations for ideas (`stat`, `term`, `compare`,
@@ -228,7 +228,10 @@ M.setup({ ...,
 });
 ```
 
-- Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`.
+- Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`, plus the
+  short-form staples `pageturn beep boop bop ding shutter scratch boom glitch sparkle swipe`
+  (`pageturn` on a new chapter or idea, `bop`/`beep` on key words landing, `boop` on a question, `scratch` on "wait, what?",
+  `boom` on the big reveal, `glitch` when reality breaks, `sparkle` on a mind-blown line, `shutter` on a photo, `swipe` on a card).
   One effect per beat at most: `hit` on the hook, `whoosh` on cuts, `success`/`chime` on the payoff,
   `pop` on badges, `notify` with `B.notification`, `type` with typed text, `coin` on prices.
 - Narration needs `ELEVENLABS_API_KEY` (voice: `ELEVENLABS_VOICE_ID` or `--voice <id>`). Without it the video
@@ -273,10 +276,13 @@ All take `(ctx, t, { at, ... })`; colours and fonts come from `brand.js` (`B.bra
 
 ## Other commands
 
+Read `docs/LESSONS.md` before fetching media or narration from a cloud session (what's blocked, rate limits, workarounds, picking B-roll that shows the subject).
+
 ```
 node render.mjs <scene> --still 4.2            # one PNG at a time (quick look, no sound)
 node render.mjs <scene> --from 8 --to 12       # silent render of one section
 node batch.mjs scenes/mine --sheet             # silent renders of a folder
 node voice.mjs "text" --out out/voice.mp3      # a single narration file
-node tools/make-sounds.mjs                     # regenerate the bundled sound library
+node tools/make-sounds.mjs [names]             # regenerate the bundled sound library (or just those effects)
+node tools/voice-lines.mjs vo.mp3 script.txt   # start/end of each line in a one-take narration
 ```
