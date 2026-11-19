@@ -501,6 +501,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const pl = pullList(R, plan);
   if (pl) write('PULL-LIST.md', pl);
   if (!previewOnly) {
+    mkdirSync(join(dir, 'media'), { recursive: true });   // a plan with no inserts never made it
     copyFileSync(aroll.video, join(dir, 'media', 'a-roll.mp4'));
     write(`${plan.name}.premiere.xml`, premiereXML(R, plan, { dir, accent }));
   }

@@ -24,3 +24,6 @@ scripts/*
 # Content engine: every brand stays private; only the example is shared
 brands/*
 !brands/example/
+
+# Simulation pipeline: local scratch lives in out/sim (git-ignored above); wrangler state
+.wrangler/

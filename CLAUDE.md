@@ -1,5 +1,8 @@
 # Motion Factory Kit — instructions for Claude
 
+> **For the Simulation pipeline** (channel recordings → long videos + shorts, `node sim.mjs ...`, state in
+> Cloudflare): **follow [AGENTS.md](AGENTS.md#simulation-pipeline)**. It overrides anything below where they differ.
+
 This repo turns code into finished short-form videos. You write a **scene** (one HTML file with a
 `draw(ctx, t)` function that paints the frame at `t` seconds), and `make.mjs` renders it frame-exact,
 adds narration, captions, music and sound effects, and writes a postable MP4. It's built for

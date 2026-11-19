@@ -1,0 +1,18 @@
+// Cloudflare resources for the Simulation production pipeline (tools/sim, AGENTS.md).
+// There is no Worker: this file exists so `wrangler d1 migrations apply` and `wrangler r2` know what to talk to.
+// Credentials come from CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID in the environment (or the repo's .env), never from here.
+{
+  "name": "simulation-pipeline",
+  "compatibility_date": "2026-11-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "simulation",
+      "database_id": "7ae37079-3144-4a99-a2b1-e96d49363d6e",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "VIDEOS", "bucket_name": "simulation-videos" }
+  ]
+}
