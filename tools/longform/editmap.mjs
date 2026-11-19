@@ -9,28 +9,38 @@
 //   analyze(clip)        -> { stats, sections, repeats, falseStarts, fluff, hooks, shorts, terms }
 //   editmapMarkdown(map) -> EDITMAP.md
 //   briefTemplate(map)   -> <name>.brief.md, pre-filled with the evidence, decisions left for the editor
+import { readFileSync } from 'node:fs';
 import { FILLERS, bare, fmt } from './common.mjs';
 
-const STOP = new Set(("the a an and or but so to of in on at for with is it its it's that this these those i you he she we they me my your our their be was were are been being have has had do does did not no yes just like really very what when where who why how there here then than as from by about into out up down over if all any some one two can could would should will well okay ok yeah gonna got get go going know think mean thing things right lot kind sort actually basically gotta wanna let's let say said see look also even still now because something someone stuff way want need make made take much many more most them him her us every other another again first next last same different little big good great i'm you're we're they're that's there's don't doesn't didn't can't won't isn't aren't").split(' '));
-const stem = (w) => w.replace(/'s$/, '').replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, '') || w;
-const termsOf = (text) => String(text).toLowerCase().split(/[^a-z0-9']+/).map(bare).filter((w) => w && w.length > 2 && !STOP.has(w) && !FILLERS.has(w)).map(stem);
+// Jargon a first-time viewer may not know: a word list plus technical endings (tools/longform/terms.json).
+const JARGON = JSON.parse(readFileSync(new URL('./terms.json', import.meta.url), 'utf8'));
+const JWORDS = new Set(JARGON.words.map(stemOf));
+function stemOf(w) { return String(w).toLowerCase().replace(/'s$/, '').replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, '') || w; }
+export const isJargon = (word) => {
+  const w = String(word).toLowerCase();
+  return JWORDS.has(stemOf(w)) || (w.length >= (JARGON.minSuffixLength || 9) && JARGON.suffixes.some((x) => w.endsWith(x)));
+};
+
+export const STOP = new Set(("the a an and or but so to of in on at for with is it its it's that this these those i you he she we they me my your our their be was were are been being have has had do does did not no yes just like really very what when where who why how there here then than as from by about into out up down over if all any some one two can could would should will well okay ok yeah gonna got get go going know think mean thing things right lot kind sort actually basically gotta wanna let's let say said see look also even still now because something someone stuff way want need make made take much many more most them him her us every other another again first next last same different little big good great i'm you're we're they're that's there's don't doesn't didn't can't won't isn't aren't").split(' '));
+export const stem = (w) => w.replace(/'s$/, '').replace(/(ies)$/, 'y').replace(/(ing|ed|es|s)$/, '') || w;
+export const termsOf = (text) => String(text).toLowerCase().split(/[^a-z0-9']+/).map(bare).filter((w) => w && w.length > 2 && !STOP.has(w) && !FILLERS.has(w)).map(stem);
 const wordsOf = (text) => String(text).split(/\s+/).filter(Boolean);
 const fillerCount = (text) => wordsOf(text).filter((w) => FILLERS.has(bare(w))).length;
 
 // Table talk: lines about the recording, not about the subject.
-const META = [/\b(is (this|it) (on|recording)|can (you|everyone) (see|hear|read) (this|me|that|it|the (board|screen|camera))|hold on|one sec(ond)?|where was i|let me (start|try|say) (that |this )?(again|over)|start (that )?(again|over)|let me (just )?(erase|clean|wipe|move|grab|fix)|i lost my (train|place)|scratch that|never ?mind|sorry,? (let me|i)|take two|cut (that|this)|we'?ll (edit|cut) (that|this)|(okay|alright|all right),? (so )?(um|uh)?,? ?(where|what) was)\b/i];
+export const META = [/\b(is (this|it) (on|recording)|can (you|everyone) (see|hear|read) (this|me|that|it|the (board|screen|camera))|hold on|one sec(ond)?|where was i|let me (start|try|say) (that |this )?(again|over)|start (that )?(again|over)|let me (just )?(erase|clean|wipe|move|grab|fix)|i lost my (train|place)|scratch that|never ?mind|sorry,? (let me|i)|take two|cut (that|this)|we'?ll (edit|cut) (that|this)|(okay|alright|all right),? (so )?(um|uh)?,? ?(where|what) was)\b/i];
 // What makes a line worth opening on (cheap signals; the editor still reads them).
-const HOOK = [
+export const HOOK = [
   [/\b(\d[\d,.]*|hundred|thousand|million|billion|trillion|percent|half|twice|ten times)\b/i, 2, 'a number'],
-  [/\b(most people|everyone|nobody|no one|you'?ve been told|the truth|secret|actually|wrong|myth|lie|backwards|opposite|turns out|surprising|weird|strange|crazy|impossible|paradox)\b/i, 2, 'a turn'],
+  [/\b(most people|everyone|nobody|no one|you'?ve been told|the truth|secret|wrong|myth|lie|backwards|opposite|turns out|surprising|weird|strange|crazy|impossible|paradox)\b/i, 2, 'a turn'],
   [/\?$/, 1.5, 'a question'],
   [/\b(never|always|only|every|nothing|all of)\b/i, 1, 'absolute'],
-  [/\b(imagine|picture this|what if|here'?s the thing|the reason|why)\b/i, 1, 'pulls forward'],
+  [/\b(imagine|picture this|what if|here'?s the thing|the reason|why|nobody tells you|no one tells you)\b/i, 1.5, 'pulls forward'],
   [/\b(universe|reality|simulation|infinite|quantum|time|death|consciousness|money|god)\b/i, 1, 'big stakes'],
 ];
 // Lines that only work after something else (bad openers, bad Short starts).
-const DEPENDENT = /^(and|but|so|because|which|that|then|also|or|like i said|as i said|this is why|that'?s why|it|they|he|she|this|these|those)\b/i;
-const DEFINES = /\b(is called|called|means|is when|is basically|is just|is the idea|stands for|defined as|in other words|think of it as)\b/i;
+export const DEPENDENT = /^(?:(?:so|okay|ok|alright|well|um+|uh+|now)[,.]?\s+)*(and|but|because|which|that|then|also|or|like i said|as i said|this is why|that'?s why|it|they|he|she|this|these|those)\b/i;
+export const DEFINES = /\b(is called|called|means|is when|is basically|is just|is the idea|stands for|defined as|in other words|think of it as)\b/i;
 
 function cosine(a, b) {
   let dot = 0, na = 0, nb = 0;
@@ -46,6 +56,8 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
     const text = s.text.trim();
     return { n: s.n, s: s.s, e: s.e, text, words: wordsOf(text).length, fillers: fillerCount(text), terms: termsOf(text) };
   });
+  // A "sentence" that starts mid-thought (the transcript split a long run-on, or it starts lowercase) can't open anything.
+  sents.forEach((s, i) => { const p = sents[i - 1]; s.cont = !!(p && !/[.?!]$/.test(p.text) && s.s - p.e < 0.9) || /^[a-z]/.test(s.text); });
   const dur = clip.duration || (sents.length ? sents[sents.length - 1].e : 0);
   const df = new Map();
   for (const s of sents) for (const t of new Set(s.terms)) df.set(t, (df.get(t) || 0) + 1);
@@ -118,7 +130,7 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
 
   // ---- hooks: lines that could open the video (wherever they were said)
   const hookOf = (s) => {
-    if (s.words < 6 || s.words > 28 || cutSet.has(s.n)) return null;
+    if (s.words < 6 || s.words > 28 || cutSet.has(s.n) || s.cont) return null;
     let score = 0; const why = [];
     for (const [re, w, label] of HOOK) if (re.test(s.text)) { score += w; why.push(label); }
     if (DEPENDENT.test(s.text)) { score -= 1.5; why.push('leans on the line before'); }
@@ -149,15 +161,21 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
     if (pickedShorts.length >= 5) break;
   }
 
-  // ---- terms a newcomer needs: specific words said repeatedly, and whether the speaker ever defines them
-  const surface = new Map();
-  for (const s of sents) for (const raw of wordsOf(s.text)) { const w = bare(raw); if (w.length > 4 && !STOP.has(w)) { const t = stem(w); if (!surface.has(t)) surface.set(t, raw.replace(/[^\w'-]/g, '')); } }
-  const tf = bag(sents);
-  const terms = [...tf].filter(([t, n]) => n >= 3 && t.length > 4 && surface.has(t)).map(([t, n]) => {
-    const first = sents.find((s) => s.terms.includes(t));
-    const defined = sents.find((s) => s.terms.includes(t) && DEFINES.test(s.text));
-    return { term: surface.get(t), count: n, first: first.n, firstAt: first.s, defined: defined ? defined.n : null };
-  }).sort((a, b) => b.count - a.count).slice(0, 12);
+  // ---- terms a newcomer needs: jargon said here (tools/longform/terms.json), and whether the speaker ever defines it
+  const lower = sents.map((x) => x.text.toLowerCase());
+  const found = new Map();   // term -> sentence indexes
+  for (const ph of JARGON.phrases) lower.forEach((t, i) => { if (t.includes(ph)) found.set(ph, [...(found.get(ph) || []), i]); });
+  sents.forEach((x, i) => { for (const raw of wordsOf(x.text)) {
+    const w = raw.toLowerCase().replace(/[^a-z'-]/g, '').replace(/'s$/, '');
+    if (w.length < 4 || !isJargon(w) || [...found.keys()].some((ph) => ph.includes(w) && lower[i].includes(ph))) continue;
+    const key = stemOf(w), prev = [...found.keys()].find((k) => stemOf(k) === key) || w;
+    found.set(prev, [...new Set([...(found.get(prev) || []), i])]);
+  } });
+  const terms = [...found].map(([term, idx]) => {
+    const own = new RegExp(`\\b${term.replace(/[^a-z' -]/g, '')}s? (is|are|means) (a|an|the|when|what|how|just|basically|like)\\b`, 'i');
+    const def = idx.find((i) => own.test(sents[i].text) || DEFINES.test(sents[i].text) || (sents[i + 1] && DEFINES.test(sents[i + 1].text) && sents[i + 1].text.toLowerCase().includes(term.split(' ')[0])));
+    return { term, count: idx.length, first: sents[idx[0]].n, firstAt: sents[idx[0]].s, defined: def != null ? sents[def].n : null };
+  }).sort((a, b) => b.count - a.count || a.firstAt - b.firstAt).slice(0, 15);
 
   const talk = sents.reduce((a, s) => a + (s.e - s.s), 0);
   const cutTime = sents.filter((s) => cutSet.has(s.n)).reduce((a, s) => a + (s.e - s.s), 0);
@@ -167,6 +185,15 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
     stats: { sentences: sents.length, talking: +talk.toFixed(1), silence: +Math.max(0, dur - talk).toFixed(1), fillers, cutCandidates: cutSet.size, keepable: +Math.max(0, talk - cutTime - fillers * 0.35).toFixed(1) },
     sections, repeats, falseStarts, fluff, hooks, shorts: pickedShorts, terms,
   };
+}
+
+// One line's strength as an opener (the same signals analyze uses), for checks outside a full map.
+export function hookScore(text, { fillers = 0 } = {}) {
+  let score = 0;
+  for (const [re, w] of HOOK) if (re.test(text)) score += w;
+  if (DEPENDENT.test(text)) score -= 1.5;
+  if (META.some((r) => r.test(text))) score -= 3;
+  return +(score - fillers).toFixed(1);
 }
 
 export function editmapMarkdown(m) {

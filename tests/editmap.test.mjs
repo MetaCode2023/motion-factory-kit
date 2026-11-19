@@ -84,3 +84,22 @@ test('the map and brief render, and the brief leaves the decisions to the editor
   const b = briefTemplate(m, 'sim-video');
   for (const h of ['The one idea', 'Hook', 'Structure', 'Cut, and why', 'Added depth', 'Formats', 'Open questions']) assert.match(b, new RegExp('## ' + h));
 });
+
+// ---- the critic: reads a plan like a first-time viewer
+import { critique } from '../tools/longform/critique.mjs';
+import { resolvePlan } from '../tools/longform/plan.mjs';
+
+test('critique flags table talk at the open, repeats kept, an undefined term, a long static stretch', () => {
+  const c = clip();
+  const lib = { clips: { board: { ...c, file: '/x/board.mp4', key: 'k', hasAudio: true } } };
+  const R = resolvePlan({ name: 'raw', fps: 30, tighten: false, a_roll: [{ clip: 'board' }], inserts: [] }, lib, { autoBroll: false });
+  assert.deepEqual(R.errors, []);
+  const kinds = critique({ name: 'raw' }, R, { staticMax: 15 }).notes.map((n) => n.kind);
+  for (const k of ['opener', 'repeats', 'fluff', 'static']) assert.ok(kinds.includes(k), `${k} in ${kinds}`);
+  // Open on the strong line, drop the table talk and the second take: those notes go away.
+  const n = (t) => c.sentences.find((s) => s.text.startsWith(t)).n;
+  const drop = ['Okay is this', 'Can you see', 'Hold on', 'Um so uh', 'Every tick'].map((t) => `board#${n(t)}`);
+  const R2 = resolvePlan({ name: 'cut', fps: 30, tighten: { drop }, a_roll: [{ clip: 'board', from: `#${n('Most people')}` }], inserts: [] }, lib, { autoBroll: false });
+  const k2 = critique({ name: 'cut' }, R2, { staticMax: 15 }).notes.map((x) => x.kind);
+  for (const k of ['opener', 'repeats', 'fluff']) assert.ok(!k2.includes(k), `${k} gone (${k2})`);
+});

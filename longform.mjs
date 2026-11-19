@@ -99,6 +99,7 @@ try {
     if (!json) {
       r.errors.forEach((e) => console.log('ERROR  ' + e));
       r.warnings.forEach((w) => console.log('warn   ' + w));
+      if (r.editor?.notes.length) { console.log(`editor ${r.editor.score}/100 (docs/EDITORIAL.md):`); r.editor.notes.forEach((n) => console.log(`  ${n.kind.padEnd(8)} ${n.t != null ? fmt(n.t) + '  ' : ''}${n.text}\n           -> ${n.fix}`)); }
       if (r.ok) { console.log(`OK: ${fmt(r.duration)} (from ${fmt(r.source)} of talking, ${r.pieces} pieces)`); r.timeline.forEach((l) => console.log('  ' + l)); r.chapters.forEach((l) => console.log('  ' + l)); }
     }
     emit(r);

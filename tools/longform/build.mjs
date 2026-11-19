@@ -9,6 +9,7 @@ import { FF, H, ROOT, W, bare, ff, fmt, fmtChapter, frameAt, probe, sheet } from
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
+import { critique, critiqueMarkdown } from './critique.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -528,9 +529,13 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);
+  // The editor's second look (docs/EDITORIAL.md step 7): what a first-time viewer would trip on.
+  const crit = critique(plan, R, { briefFile: briefStatus(planFile, plan).file });
+  for (const [a, d] of R.frozen) if (d >= 6) crit.notes.push({ kind: 'static', t: a, text: `The picture doesn't change for ${d.toFixed(0)} s at ${fmt(a)}.`, fix: 'Cut tighter, or give that stretch a visual that moves.' });
+  writeFileSync(join(dir, 'CRITIQUE.md'), critiqueMarkdown(plan.name, crit));
   rmSync(aroll.video, { force: true }); rmSync(aroll.audio, { force: true });
-  log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md)`);
-  return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
+  log(`  done in ${((Date.now() - started) / 1000).toFixed(0)}s -> ${relative(ROOT, video)} (${rep.fixes} FIX in REPORT.md, editor ${crit.score}/100 with ${crit.notes.length} note(s) in CRITIQUE.md)`);
+  return { ok: true, video, dir, review: join(dir, 'review.html'), report: join(dir, 'REPORT.md'), critique: join(dir, 'CRITIQUE.md'), editorScore: crit.score, sheet: sheetFile, duration: +R.total.toFixed(2), inserts: R.inserts.length, fixes: rep.fixes, warnings: R.warnings };
 }
 
 // Same picture, new sound (e.g. no voice): re-mix and lay it under the already-built video.
@@ -567,7 +572,8 @@ export function check(planFile) {
   const R = resolvePlan(plan);
   const brief = briefStatus(planFile, plan);
   if (brief.warning) R.warnings.push(brief.warning);
-  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, brief: brief.file, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
+  const editor = R.errors.length ? { score: null, notes: [] } : critique(plan, R, { briefFile: brief.file });
+  return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, brief: brief.file, editor, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
     pieces: R.cuts?.length, timeline: (R.inserts || []).map((i) => `${fmt(i.at)}  ${i.id}  ${i.kind}/${i.layout}  ${i.dur}s`),
     chapters: (R.chapters || []).map((c) => `${fmtChapter(c.at)} ${c.title}`) };
 }
