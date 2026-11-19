@@ -103,7 +103,7 @@ export function critique(plan, R, { briefFile, staticMax = 20, slowWpm = 105 } =
       if (hid) add('board', hid.at, `${hid.id} covers the board while it's being drawn on (${fmt(oa)}-${fmt(oe)}).`, 'Use layout split or pip there, or move the visual to after the drawing.');
     }
     const drawingTime = b.active.reduce((x, [a, e]) => x + e - a, 0);
-    if (drawingTime > 20 && !(plan.punch_in)) add('board', null, `${id} is a whiteboard session with ${Math.round(drawingTime)} s of drawing.`, 'Set punch_in (zoom with focus on the board) so the writing reads on a phone, and keep the board visible while it is drawn.');
+    if (drawingTime > 20 && !plan.punch_in?.focus) add('board', null, `${id} is a whiteboard session with ${Math.round(drawingTime)} s of drawing.`, 'Set punch_in.focus on the board (default punch-ins aim at the face) so the writing reads on a phone, and keep the board visible while it is drawn.');
   }
 
   // ---- the same visual twice in a row

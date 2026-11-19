@@ -54,7 +54,8 @@ A "hook candidate" that leans on the line before it is not a hook. A "repeat" mi
 
 ## The brief
 
-`analyze` writes a template. Fill in every section before you write the plan. Keep it short: one or two lines per
+`analyze` writes a template, ending with a generated starting point for the plan (cold open on the top hook, then
+the sections, flagged lines dropped): the map's guess, to reorder and cut, not the edit. Fill in every section before you write the plan. Keep it short: one or two lines per
 decision, each with its reason. Worked example: `examples/longform/physics-of-poker.brief.md`.
 
 | Section | The question it answers |

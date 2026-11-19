@@ -44,7 +44,7 @@ export function settings(plan) {
   if (!MODES[mode]) throw new Error(`auto_broll.mode "${mode}" (try: ${Object.keys(MODES).join(', ')})`);
   return {
     ...PLACE, ...MODES[mode], ...pickKeys(a, Object.keys(PLACE)), mode,
-    sfx: a.sfx === undefined ? 'swipe' : a.sfx,
+    sfx: a.sfx ?? null,   // null: the sound design picks (swipe/click on each cut; none with sound: off)
     sources: a.sources || DEFAULT_SOURCES,
     types: a.types, skip: a.skip || [], force: a.force || [],
     layout: a.layout || 'full', repeat: a.repeat ?? 60, portrait: !!a.portrait,

@@ -31,7 +31,8 @@ in every format, with minimal hand-holding. How it should think: `docs/EDITORIAL
 | Native vertical Short from a long-form plan | `tools/longform/vertical.mjs` | Merged into #7 from PR #2 |
 
 Runs on the cloud box: rendering, mixing, captions, animations, transcripts (faster-whisper). Needs the owner's
-laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Details: `docs/LESSONS.md`.
+laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Automatic B-roll lists YouTube (Creative Commons only) as a
+source, but it is skipped wherever yt-dlp isn't installed or YouTube is blocked, so in the cloud it never runs. Details: `docs/LESSONS.md`.
 
 ## Open pull requests
 

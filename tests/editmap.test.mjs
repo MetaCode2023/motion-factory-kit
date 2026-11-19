@@ -20,7 +20,7 @@ const LINES = [
   'Now the second idea is about the observer.',
   'Why would a simulation only render what an observer looks at?',
   'Because rendering costs compute, and a game engine only draws what the camera sees.',
-  'The observer is the camera, and the camera decides what gets computed.',
+  'The observer works like the camera, and the camera decides what gets computed.',
   'Quantum experiments show the observer changes the outcome, which is exactly what an engine saving compute would do.',
   'So the observer and the camera might be the same thing.',
   'That is a wild claim, and the observer question is the one physicists still argue about.',
@@ -158,4 +158,20 @@ test('drop folder: a file is only picked up once its size holds still, and brief
     assert.ok(ex(join(inbox, 'take.mp4')));
     assert.match(rf(r2.queue, 'utf8'), /write the brief/);
   } finally { if (prevLib === undefined) delete process.env.LONGFORM_LIBRARY; else process.env.LONGFORM_LIBRARY = prevLib; }
+});
+
+test('audit fixes: parallel examples are not repeats; a finished line is not a false start; terms count every use', () => {
+  const mk = (lines) => { const words = []; let t = 0; for (const l of lines) { for (const w of l.split(' ')) { words.push({ w, s: t, e: t + 0.3 }); t += 0.36; } t += 1.2; } return { id: 'c', words, sentences: sentencesOf(words), duration: t }; };
+  const m = analyze(mk([
+    'The probability of drawing an ace from the deck is four in fifty two.',
+    'The probability of drawing a king from the deck is four in fifty two.',
+    'And the dealer shuffles the deck.',
+    'And the cards come out one at a time.',
+    'Superposition is called the cloud of maybe.',
+    'Now superposition shows up again, and superposition once more.',
+  ]));
+  assert.equal(m.repeats.length, 0, JSON.stringify(m.repeats));
+  assert.equal(m.falseStarts.length, 0, JSON.stringify(m.falseStarts));
+  const sp = m.terms.find((t) => t.term === 'superposition');
+  assert.ok(sp && sp.count >= 2 && sp.defined, JSON.stringify(m.terms));
 });

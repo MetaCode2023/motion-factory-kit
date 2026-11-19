@@ -57,11 +57,14 @@ export async function auto({ inbox = join(ROOT, 'footage', 'inbox'), plans = joi
     const idea = (readFileSync(join(plans, f), 'utf8').split(/^## The one idea\s*$/m)[1] || '').split(/^## /m)[0].replace(/<!--[\s\S]*?-->/g, '').trim();
     if (!idea) { needBrief.push(name); continue; }
     if (!existsSync(planFile)) { needPlan.push(name); continue; }
-    const plan = loadPlan(planFile), pkg = join(ROOT, 'out', 'longform', plan.name, 'PACKAGE.md');
+    let plan;
+    try { plan = loadPlan(planFile); } catch (e) { failed.push({ name, errors: [`plan does not load: ${e.message}`] }); continue; }
+    const pkg = join(ROOT, 'out', 'longform', plan.name, 'PACKAGE.md');
     const changed = !existsSync(pkg) || statSync(pkg).mtimeMs < Math.max(statSync(planFile).mtimeMs, statSync(join(plans, f)).mtimeMs);
     if (!changed || !build) continue;
     log(`packaging ${name}`);
-    const r = await packageAll(planFile, { log });
+    let r;
+    try { r = await packageAll(planFile, { log }); } catch (e) { r = { ok: false, errors: [String(e.message || e).split('\n')[0]] }; }
     (r.ok ? packaged : failed).push(r.ok ? { name, package: r.package, missing: r.missing } : { name, errors: r.errors });
   }
 

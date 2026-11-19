@@ -20,7 +20,7 @@ export function scanFrames(file, { fps = 2 } = {}) {
 }
 
 // frames: arrays of W*H gray bytes at `fps`. Pure, so it can be tested without video.
-export function boardFromFrames(frames, { fps = 2, bright = 170, changed = 18, minActive = 0.0015, maxActive = 0.25, minLen = 2 } = {}) {
+export function boardFromFrames(frames, { fps = 2, bright = 170, changed = 18, minActive = 0.0015, maxActive = 0.08, minLen = 2, maxActiveShare = 0.6 } = {}) {
   if (!frames.length) return { white: false, whiteShare: 0, active: [] };
   const share = frames.map((f) => { let b = 0; for (const v of f) if (v >= bright) b++; return b / f.length; });
   const whiteShare = share.reduce((a, x) => a + x, 0) / share.length;
@@ -39,7 +39,11 @@ export function boardFromFrames(frames, { fps = 2, bright = 170, changed = 18, m
   // merge stretches less than a second apart
   const merged = [];
   for (const a of active) { const l = merged[merged.length - 1]; if (l && a[0] - l[1] < 1) l[1] = a[1]; else merged.push([...a]); }
-  return { white: whiteShare > 0.45, whiteShare: +whiteShare.toFixed(2), active: merged };
+  // A talking head in front of a light wall moves most of the time; drawing comes in bursts. If "activity" covers
+  // most of the clip, it's a person moving, not a board being drawn on: report it as not a whiteboard.
+  const activeShare = merged.reduce((a, [s, e]) => a + e - s, 0) / Math.max(1, frames.length / fps);
+  const white = whiteShare > 0.45 && activeShare <= maxActiveShare;
+  return { white, whiteShare: +whiteShare.toFixed(2), activeShare: +activeShare.toFixed(2), active: white ? merged : [] };
 }
 
 export const scanBoard = (file) => boardFromFrames(scanFrames(file));

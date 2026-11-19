@@ -39,8 +39,8 @@ export const HOOK = [
   [/\b(universe|reality|simulation|infinite|quantum|time|death|consciousness|money|god)\b/i, 1, 'big stakes'],
 ];
 // Lines that only work after something else (bad openers, bad Short starts).
-export const DEPENDENT = /^(?:(?:so|okay|ok|alright|well|um+|uh+|now)[,.]?\s+)*(and|but|because|which|that|then|also|or|like i said|as i said|this is why|that'?s why|it|they|he|she|this|these|those)\b/i;
-export const DEFINES = /\b(is called|called|means|is when|is basically|is just|is the idea|stands for|defined as|in other words|think of it as)\b/i;
+export const DEPENDENT = /^(?:(?:so|okay|ok|alright|well|um+|uh+|now)[,.]?\s+)*(and|but|because|which|that|then|also|or|meaning|which means|one of|of course|like i said|as i said|this is why|that'?s why|it|they|he|she|this|these|those|there|here we)\b/i;
+export const DEFINES = /\b(is called|are called|we call (it|this|that)|physicists call|means|is when|is the idea|stands for|defined as|in other words|think of it as|a word for)\b/i;
 
 function cosine(a, b) {
   let dot = 0, na = 0, nb = 0;
@@ -50,6 +50,16 @@ function cosine(a, b) {
 }
 const bag = (sents) => { const m = new Map(); for (const s of sents) for (const t of s.terms) m.set(t, (m.get(t) || 0) + 1); return m; };
 const jaccard = (a, b) => { const A = new Set(a), B = new Set(b); let n = 0; for (const x of A) if (B.has(x)) n++; return n / (A.size + B.size - n || 1); };
+
+// Teaching runs on parallel examples ("the odds of an ace are...", "the odds of a king are..."): same frame, a
+// different specific word. Those are not retakes. A retake swaps at most one content word, and says it both times
+// in a similar length; two lines that each have a word the other lacks, and are the same length, are parallel.
+function parallel(a, b) {
+  if (a.length !== b.length || a.length < 3) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff++;
+  return diff >= 1 && diff <= 2;   // same frame, same order, one or two words swapped in place
+}
 
 export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minShort = 20 } = {}) {
   const sents = clip.sentences.map((s) => {
@@ -78,6 +88,7 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
   for (const d of [...depth].sort((a, b) => b.depth - a.depth)) {
     if (d.depth < 0.25) break;
     const t = sents[d.i].s;
+    if (sents[d.i].cont) continue;   // never start a section mid-sentence
     if ([0, ...cuts.map((i) => sents[i].s), dur].some((x) => Math.abs(x - t) < minSection)) continue;
     cuts.push(d.i);
   }
@@ -99,7 +110,7 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
     const group = [i];
     for (let j = i + 1; j < sents.length; j++) {
       if (inCluster.has(j) || sents[j].terms.length < 4) continue;
-      if (jaccard(sents[i].terms, sents[j].terms) >= 0.5) group.push(j);
+      if (jaccard(sents[i].terms, sents[j].terms) >= 0.5 && !parallel(sents[i].terms, sents[j].terms)) group.push(j);
     }
     if (group.length < 2) continue;
     group.forEach((g) => inCluster.add(g));
@@ -114,7 +125,7 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
   for (let i = 0; i < sents.length - 1; i++) {
     const a = sents[i], b = sents[i + 1];
     const aw = wordsOf(a.text).map(bare).filter((w) => w && !FILLERS.has(w)), bw = wordsOf(b.text).map(bare).filter((w) => w && !FILLERS.has(w));
-    if (aw.length && aw.length <= 8 && bw.length > aw.length && aw.slice(0, 2).join(' ') === bw.slice(0, 2).join(' ')) falseStarts.push({ n: a.n, s: a.s, text: a.text, restart: b.n });
+    if (aw.length && aw.length <= 8 && bw.length > aw.length && !/[.?!]$/.test(a.text) && aw.slice(0, 2).join(' ') === bw.slice(0, 2).join(' ')) falseStarts.push({ n: a.n, s: a.s, text: a.text, restart: b.n });
     else if (aw.length <= 4 && !/[.?!]$/.test(a.text) && b.s - a.e < 1.5 && termsOf(a.text).every((t) => b.terms.includes(t)) && termsOf(a.text).length) falseStarts.push({ n: a.n, s: a.s, text: a.text, restart: b.n });
   }
 
@@ -165,9 +176,9 @@ export function analyze(clip, { window = 6, minSection = 45, maxShort = 55, minS
   const lower = sents.map((x) => x.text.toLowerCase());
   const found = new Map();   // term -> sentence indexes
   for (const ph of JARGON.phrases) lower.forEach((t, i) => { if (t.includes(ph)) found.set(ph, [...(found.get(ph) || []), i]); });
-  sents.forEach((x, i) => { for (const raw of wordsOf(x.text)) {
+  sents.forEach((x, i) => { const phrasesHere = JARGON.phrases.filter((ph) => lower[i].includes(ph)); for (const raw of wordsOf(x.text)) {
     const w = raw.toLowerCase().replace(/[^a-z'-]/g, '').replace(/'s$/, '');
-    if (w.length < 4 || !isJargon(w) || [...found.keys()].some((ph) => ph.includes(w) && lower[i].includes(ph))) continue;
+    if (w.length < 4 || !isJargon(w) || phrasesHere.some((ph) => ph.split(' ').includes(w))) continue;
     const key = stemOf(w), prev = [...found.keys()].find((k) => stemOf(k) === key) || w;
     found.set(prev, [...new Set([...(found.get(prev) || []), i])]);
   } });
@@ -224,6 +235,23 @@ export function editmapMarkdown(m) {
   return L.join('\n') + '\n';
 }
 
+// A starting point for the plan, not the answer: cold-open on the strongest hook, then the sections, with every
+// flagged repeat, false start and table-talk line dropped. The editor reorders and cuts from here.
+export function draftPlan(m, name = m.clip) {
+  const h = m.hooks[0];
+  const drop = [...new Set([...m.repeats.flatMap((r) => r.drop), ...m.falseStarts.map((f) => f.n), ...m.fluff.map((f) => f.n)])].sort((a, b) => a - b).map((n) => `${m.clip}#${n}`);
+  const a_roll = [];
+  if (h) a_roll.push({ clip: m.clip, from: `#${h.n}`, to: `#${h.n}` });
+  for (const sec of m.sections) {
+    if (h && h.n >= sec.from && h.n <= sec.to) {
+      if (h.n > sec.from) a_roll.push({ clip: m.clip, from: `#${sec.from}`, to: `#${h.n - 1}` });
+      if (h.n < sec.to) a_roll.push({ clip: m.clip, from: `#${h.n + 1}`, to: `#${sec.to}` });
+    } else a_roll.push({ clip: m.clip, from: `#${sec.from}`, to: `#${sec.to}` });
+  }
+  return { name, title: '', a_roll, tighten: { drop },
+    chapters: m.sections.map((sec) => ({ at: `${m.clip}#${sec.from}`, title: sec.topics.slice(0, 3).join(' / ') })) };
+}
+
 export function briefTemplate(m, name = m.clip) {
   const h = m.hooks[0];
   return `# Brief: ${name}
@@ -257,6 +285,13 @@ changed after review. Guide: docs/EDITORIAL.md. Evidence: EDITMAP.md for ${m.cli
 
 ## Open questions (only what can't be decided from the footage, TASTE.md or the series bible)
 <!-- Each with the default you'll use if nobody answers. -->
+
+## Starting point for the plan (generated: reorder, cut and rename before using)
+<!-- Cold open on the top hook, then the sections, with flagged repeats / false starts / table talk dropped.
+     Chapter titles are topic words, not titles. This is the map's guess, not an edit. -->
+\`\`\`json
+${JSON.stringify(draftPlan(m, name), null, 2)}
+\`\`\`
 `;
 }
 

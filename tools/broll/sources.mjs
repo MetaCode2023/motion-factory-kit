@@ -254,7 +254,8 @@ export function tryOrder(sources, type, { photos = true } = {}) {
 export async function download(r, dir, { fetchImpl = fetch, run = runTool, ytdlp = findYtdlp(), ffmpeg } = {}) {
   if (r.fetch === 'ytdlp') {
     mkdirSync(dir, { recursive: true });
-    const file = join(dir, `${r.source}-${r.id}.${r.ext}`);
+    // Only the seconds used are downloaded, so the file name carries them (a longer or later piece is a new file).
+    const file = join(dir, `${r.source}-${r.id}-${Math.round((r.from || 0) * 10)}-${Math.round((r.take || 6) * 10)}.${r.ext}`);
     if (existsSync(file) && statSync(file).size > 0) return file;
     if (!ytdlp) throw new Error('yt-dlp is not installed (pip install yt-dlp)');
     const from = Math.max(0, r.from || 0), to = from + (r.take || 6);
