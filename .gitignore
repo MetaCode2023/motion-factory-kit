@@ -24,3 +24,4 @@ scripts/*
 # Content engine: every brand stays private; only the example is shared
 brands/*
 !brands/example/
+assets/vo/

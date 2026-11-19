@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Quantum mechanics: the observer (B-roll test v2)</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/blocks.js"></script>
+<script src="../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// ~40 s, 16:9. B-roll under every second of the narration: real footage first (Wikimedia Commons video),
+// photos with a slow push where no footage exists. Captions build word by word; KEY WORDS (caps) pop.
+// Every shot is credited on screen and in out/quantum-v2.CREDITS.md.
+const W = 1920, H = 1080;
+const F = B.brand.fonts;
+const ACC = '#5CE1FF';
+const S = '../../assets/broll/stock/';
+const VO = '../../assets/vo/quantum-v2/';
+
+// One narration line per shot.
+const LINES = [
+  { say: 'Down at the SMALLEST scale, things don’t have one place.', media: 'openverse-6555477b.jpg', z: [1.05, 1.35], fx: 0.3, fy: 0.3, credit: '"Atom Model, American Museum of Science", US DOE, CC0, via Openverse', sfx: 'boom' },
+  { say: 'An ELECTRON isn’t here or there.', media: 'vid-tube.webm', from: 0.5, credit: '"Electron Diffraction Tube Graphite", BalticLabor, CC BY 4.0, Wikimedia Commons', sfx: 'bop' },
+  { say: 'It’s a cloud of maybe, called a SUPERPOSITION.', media: 'vid-wave.webm', from: 0.5, credit: 'Sean Kelley / The Quantum Atlas, CC BY-SA 4.0, Wikimedia Commons', sfx: 'sparkle' },
+  { say: 'Fire electrons one at a time at TWO SLITS,', media: 'vid-qds.webm', from: 0.5, credit: 'Sean Kelley / The Quantum Atlas, CC BY-SA 4.0, Wikimedia Commons', sfx: 'swipe' },
+  { say: 'and dot by dot they paint STRIPES, like a WAVE that went through both.', media: 'vid-buildup.mov', from: 36, speed: 7, label: 'REAL ELECTRONS, ONE AT A TIME', credit: 'Bach, Pope, Liou & Batelaan 2013, New J. Phys. 15 033018, CC BY 3.0, Wikimedia Commons', sfx: 'beep' },
+  { say: 'Now WATCH which slit each one takes, and the stripes DISAPPEAR.', media: 'vid-particle.webm', from: 0.5, credit: 'Sean Kelley / The Quantum Atlas, CC BY-SA 4.0, Wikimedia Commons', sfx: 'glitch', sfxAt: 0.75 },
+  { say: 'LOOKING changes the result.', media: 'openverse-7ed5b0db.jpg', z: [1.25, 1.05], label: 'CMS DETECTOR, CERN', credit: '"YB-0 and optical fibres", µµ, CC BY-SA 2.0, via Flickr', sfx: 'scratch' },
+  { say: 'COPENHAGEN says the act of measuring forces nature to pick ONE answer.', media: 'openverse-041ba444.jpg', z: [1.0, 1.3], fx: 0.6, fy: 0.75, label: 'BOHR, HEISENBERG, EINSTEIN · 1927', credit: 'Solvay Conference 1927, Benjamin Couprie, public domain, via Flickr', sfx: 'pageturn' },
+  { say: 'MANY WORLDS says nature never picks.', media: 'vid-wave.webm', from: 0.3, split: true, credit: 'Sean Kelley / The Quantum Atlas, CC BY-SA 4.0, Wikimedia Commons', sfx: 'pageturn' },
+  { say: 'Every answer happens, and you SPLIT along with it.', media: 'vid-buildup.mov', from: 30, speed: 2.5, split: true, credit: 'Bach et al. 2013, CC BY 3.0, Wikimedia Commons', sfx: 'boop' },
+  { say: 'Either way, the OBSERVER isn’t outside the experiment.', media: 'vid-buildup.mov', from: 60, speed: 2, credit: 'Bach et al. 2013, New J. Phys., CC BY 3.0, Wikimedia Commons', sfx: 'bop' },
+  { say: 'You ARE the universe, looking at itself.', media: 'vid-tube.webm', from: 0.2, speed: 0.8, credit: '"Electron Diffraction Tube Graphite", BalticLabor, CC BY 4.0, Wikimedia Commons', sfx: 'boom' },
+];
+// One narration take (Higgsfield TTS, ElevenLabs engine); each line's start/end measured from its pauses.
+const VO_AT = 0.35;
+const TIMES = [[0, 3.37], [4.0, 5.98], [6.38, 9.17], [9.83, 11.72], [12.03, 17.68], [18.57, 22.25], [22.94, 24.4], [25.27, 30.1], [30.93, 33.4], [33.98, 36.83], [37.7, 40.92], [41.43, 43.8]];
+const CUES = TIMES.map(([s, e], i) => ({ start: s + VO_AT, end: e + VO_AT, text: LINES[i].say }));
+const VOICE = [{ at: VO_AT, file: VO + 'full.mp3', text: LINES.map((l) => l.say).join(' ').replace(/\b[A-Z]{2,}\b/g, (w) => w.toLowerCase()) }];
+const END = +(CUES[CUES.length - 1].end + 1.6).toFixed(2);
+LINES.forEach((l, i) => {
+  l.at = i === 0 ? 0 : CUES[i].start - 0.12;   // cut just before the line starts
+  l.vs = CUES[i].start; l.ve = CUES[i].end;
+});
+LINES.forEach((l, i) => { l.end = LINES[i + 1] ? LINES[i + 1].at : END; });
+const CUTS = LINES.slice(1).map((l) => l.at);
+const isVideo = (l) => /\.(webm|mov|mp4)$/.test(l.media);
+const clips = {};
+LINES.forEach((l) => {
+  if (!isVideo(l)) { l.img = M.image(S + l.media); return; }
+  // One player per shot, started at the shot's cut, so each shot plays its own stretch.
+  l.vid = M.video(S + l.media, { at: l.at, trim: l.from || 0, speed: l.speed || 1, audio: false });
+});
+M.fonts(['800 90px "Plus Jakarta Sans"', '600 26px "JetBrains Mono"']);
+
+const ASPECT = { 'vid-qds.webm': 854 / 470, 'vid-wave.webm': 854 / 470, 'vid-particle.webm': 854 / 470, 'vid-buildup.mov': 640 / 288 };
+
+function shot(c, t, l, x = 0, y = 0, w = W, h = H) {
+  const p = M.clamp((t - l.at) / (l.end - l.at + 0.4));
+  if (!isVideo(l)) {
+    M.cover(c, l.img, x, y, w, h, { dim: 0.3, fx: l.fx ?? 0.5, fy: l.fy ?? 0.5, zoom: M.lerp(l.z[0], l.z[1], M.ease.inOutCubic(p)) });
+    return;
+  }
+  const a = ASPECT[l.media];
+  if (!a || w < W) { l.vid.draw(c, t, x, y, w, h, { zoom: 1.02 + 0.05 * p }); return; }
+  // Low-res science footage: a blurred copy fills the frame, the sharp copy sits in a card.
+  c.save(); c.filter = 'blur(30px)'; l.vid.draw(c, t, -60, -60, W + 120, H + 120, { zoom: 1.1 }); c.restore();
+  c.fillStyle = 'rgba(4,10,20,0.5)'; c.fillRect(0, 0, W, H);
+  const ch = Math.min(580, 1500 / a), cw = ch * a, cx = (W - cw) / 2, cy = 215 + (580 - ch) / 2;
+  const k = 1 + 0.035 * p;
+  c.save(); c.translate(W / 2, cy + ch / 2); c.scale(k, k); c.translate(-W / 2, -(cy + ch / 2));
+  c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 50; c.fillStyle = '#000'; M.roundRect(c, cx, cy, cw, ch, 18); c.fill(); c.shadowBlur = 0;
+  l.vid.draw(c, t, cx, cy, cw, ch, { radius: 18, zoom: 1.08 });   // trims the clips' own progress bars
+  c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = 2; M.roundRect(c, cx, cy, cw, ch, 18); c.stroke();
+  c.restore();
+}
+
+// Many Worlds: the frame splits into copies that drift apart, one world per branch.
+function splitShot(c, t, l) {
+  const d = t - l.vs;
+  const n = d < 0.6 ? 1 : d < 1.6 ? 2 : 4;
+  const e = M.ease.outCubic(M.clamp(n === 2 ? (d - 0.6) / 0.5 : n === 4 ? (d - 1.6) / 0.5 : 0));
+  if (n === 1) { shot(c, t, l); return; }
+  const cols = 2, rows = n === 2 ? 1 : 2;
+  const gap = 18 * e;
+  const cw = (W - gap * (cols + 1)) / cols, chh = (H - gap * (rows + 1)) / rows;
+  c.fillStyle = '#02060C'; c.fillRect(0, 0, W, H);
+  for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) {
+    const x = gap + k * (cw + gap), y = gap + r * (chh + gap);
+    c.save(); M.roundRect(c, x, y, cw, chh, 14 * e); c.clip();
+    c.translate(x + cw / 2, y + chh / 2); c.rotate((k ? 1 : -1) * (r ? 1 : -1) * 0.004 * e); c.translate(-(x + cw / 2), -(y + chh / 2));
+    shot(c, t + (r * 2 + k) * 0.35, l, x, y, cw, chh);   // each world a moment apart
+    c.restore();
+  }
+}
+
+function caption(c, t, l) {
+  const words = l.say.split(' ');
+  const dur = l.ve - l.vs, per = dur / words.reduce((s, w) => s + 0.18 + w.length * 0.045, 0);
+  let acc = l.vs;
+  const base = 62, big = 104;
+  const isKey = (w) => { const s = w.replace(/[^A-Za-z]/g, ''); return s.length > 1 && s === s.toUpperCase(); };
+  const parts = words.map((w) => {
+    const key = isKey(w);
+    c.font = `800 ${key ? big : base}px ${F.display}`;
+    const o = { text: w, key, w: c.measureText(w + ' ').width, at: acc };
+    acc += (0.18 + w.length * 0.045) * per;
+    return o;
+  });
+  const lines = [[]]; let lw = 0;
+  for (const p of parts) { if (lw + p.w > 1560 && lines[lines.length - 1].length) { lines.push([]); lw = 0; } lines[lines.length - 1].push(p); lw += p.w; }
+  const lineH = 118, y0 = 1000 - (lines.length - 1) * lineH;
+  lines.forEach((line, li) => {
+    const total = line.reduce((s, p) => s + p.w, 0);
+    let x = (W - total) / 2;
+    for (const p of line) {
+      const d = t - p.at + 0.08;
+      if (d >= 0) {
+        const e = M.clamp(d / 0.2);
+        const pop = p.key ? 1 + 0.3 * Math.exp(-d * 7) * Math.sin(Math.min(Math.PI, d * 14)) : 1;
+        c.save();
+        c.font = `800 ${p.key ? big : base}px ${F.display}`;
+        const cx = x + p.w / 2, cy = y0 + li * lineH;
+        c.translate(cx, cy); c.scale(pop, pop); c.translate(-cx, -cy);
+        c.globalAlpha = e;
+        c.lineJoin = 'round'; c.lineWidth = p.key ? 14 : 10; c.strokeStyle = 'rgba(0,0,0,0.85)';
+        c.strokeText(p.text, x, cy + (1 - e) * 18);
+        c.fillStyle = p.key ? ACC : '#FFFFFF';
+        c.fillText(p.text, x, cy + (1 - e) * 18);
+        c.restore();
+      }
+      x += p.w;
+    }
+  });
+}
+
+function chrome(c, t, l) {
+  c.save();
+  c.font = `600 26px ${F.mono}`; c.fillStyle = ACC;
+  c.fillText('QUANTUM MECHANICS · THE OBSERVER', 96, 84);
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(96, 104, 560, 4);
+  c.fillStyle = ACC; c.fillRect(96, 104, 560 * M.clamp(t / END), 4);
+  if (l.label) {
+    const a = M.clamp((t - l.at - 0.3) / 0.3);
+    c.globalAlpha = a; c.font = `700 28px ${F.mono}`;
+    const w = c.measureText(l.label).width;
+    c.fillStyle = ACC; M.roundRect(c, 96, 140, w + 36, 50, 10); c.fill();
+    c.fillStyle = '#02101A'; c.fillText(l.label, 114, 175);
+    c.globalAlpha = 1;
+  }
+  c.font = `600 19px ${F.mono}`; c.textAlign = 'right';
+  c.globalAlpha = 0.75 * M.clamp((t - l.at - 0.2) / 0.3);
+  const w = c.measureText(l.credit).width;
+  c.fillStyle = 'rgba(0,0,0,0.45)'; M.roundRect(c, W - 96 - w - 16, 54, w + 32, 38, 8); c.fill();
+  c.fillStyle = '#E8EEF5'; c.fillText(l.credit, W - 96, 80);
+  c.restore();
+}
+
+function endTitle(c, t) {
+  const at = CUES[CUES.length - 1].end + 0.1, k = M.ease.outCubic(M.clamp((t - at) / 0.5));
+  if (k <= 0) return;
+  c.fillStyle = `rgba(3,8,16,${0.5 * k})`; c.fillRect(0, 0, W, H);
+  FX.text(c, t, 'You are the experiment.', W / 2, 470, { at, mode: 'rise', align: 'center', font: `800 120px ${F.display}`, accent: 'experiment.', accentColor: ACC, maxWidth: 1600 });
+}
+
+M.setup({
+  preset: 'youtube', duration: END, cuts: CUTS, background: '#03080F', look: 'cinematic',
+  motionBlur: { samples: 4, around: true },
+  voice: VOICE,
+  music: { track: 'calm', volume: 0.3 },
+  sfx: LINES.map((l) => ({ at: l.sfxAt != null ? l.vs + l.sfxAt : Math.max(0, l.at), name: l.sfx, volume: l.sfx === 'boom' ? 0.55 : 0.4 })),
+  cover: LINES[4].vs + 1.5,
+  post: { caption: 'Fire electrons one at a time through two slits and they still build a wave. Watch which slit they take, and the wave vanishes. Copenhagen vs. Many Worlds in 40 seconds, with real footage.', hashtags: ['quantummechanics', 'physics', 'doubleslit', 'manyworlds', 'science'] },
+  draw: (ctx, t) => {
+    const l = [...LINES].reverse().find((x) => t >= x.at) || LINES[0];
+    const open = 1 + 0.18 * (1 - M.ease.outCubic(M.clamp(t / 1.1)));   // the first second pushes in
+    const end = FX.camera(ctx, t, { zoom: open, punch: CUTS, punchAmount: 0.025 });
+    if (l.split) splitShot(ctx, t, l); else shot(ctx, t, l);
+    end();
+    FX.vignette(ctx, { strength: 0.5 });
+    const g = ctx.createLinearGradient(0, H - 380, 0, H);   // a soft dark band so captions read over busy footage
+    g.addColorStop(0, 'rgba(2,6,12,0)'); g.addColorStop(1, 'rgba(2,6,12,0.82)');
+    ctx.fillStyle = g; ctx.fillRect(0, H - 380, W, 380);
+    chrome(ctx, t, l);
+    if (t < CUES[CUES.length - 1].end + 0.1) caption(ctx, t, l);
+    endTitle(ctx, t);
+  },
+});
+</script>
+</body>
+</html>
