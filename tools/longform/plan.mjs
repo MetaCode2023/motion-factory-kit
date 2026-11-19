@@ -6,6 +6,7 @@ import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs'
 import { loadLibrary } from './library.mjs';
 import { lockedInserts } from '../broll/index.mjs';
 import { designSound } from './sound.mjs';
+import { parseTransition } from './transitions.mjs';
 
 export const KINDS = ['animation', 'broll', 'pull', 'image', 'face'];
 // full: the visual fills the frame. side: a box beside the speaker. pip: the visual fills the frame and the
@@ -142,6 +143,10 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   let cuts = [];
   try { cuts = cutList(plan, lib); } catch (e) { errors.push(e.message); return { errors, warnings }; }
   const total = cuts.reduce((a, c) => a + c.d, 0);
+  const checkTransition = (t, where, then = "the plan's cycle is used instead") => {
+    try { const x = parseTransition(t); if (x?.type === 'unknown') warnings.push(`${where}: unknown transition "${x.name}"; ${then}`); return x; } catch (e) { errors.push(`${where}: ${e.message}`); return null; }
+  };
+  (Array.isArray(plan.transitions) ? plan.transitions : plan.transitions ? [plan.transitions] : []).forEach((t, i) => checkTransition(t, `transitions[${i}]`, "it is left out of the cycle"));
   const source = (plan.a_roll || []).reduce((a, r) => { const c = lib.clips[r.clip]; return a + (c ? (r.to == null ? c.duration : String(r.to).startsWith('#') ? parseAnchor(r.clip + r.to, lib, { end: true }).t : seconds(r.to)) - (r.from == null ? 0 : String(r.from).startsWith('#') ? parseAnchor(r.clip + r.from, lib).t : seconds(r.from)) : 0); }, 0);
 
   const inserts = [];
@@ -155,6 +160,7 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
     const layout = ins.layout || 'full';
     if (!LAYOUTS.includes(layout)) errors.push(`${where}: layout must be ${LAYOUTS.join(' or ')}`);
     const r = { i, where, auto, maxDur: ins.max_dur, id: ins.id || `${ins.kind}-${i + 1}`, kind: ins.kind, at: +Math.max(0, at).toFixed(3), dur, layout, sfx: ins.sfx === undefined ? (layout === 'full' ? 'whoosh' : 'pop') : ins.sfx, note: ins.note || '', src: ins };
+    if (ins.transition != null) r.transition = checkTransition(ins.transition, where);
     if (ins.kind === 'animation') {
       if (!ins.scene || !existsSync(rel(ins.scene))) errors.push(`${where}: scene file not found: ${ins.scene}`);
       r.scene = ins.scene && rel(ins.scene); r.data = { ...(plan.theme || {}), ...(ins.data || {}) };

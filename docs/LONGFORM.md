@@ -186,6 +186,10 @@ up to the next full-frame visual for that reason.
 - `transition: circleopen` on one cue (or `"transition"` on one insert) sets that one. Names are ffmpeg
   xfade transitions (`smoothleft/right/up/down`, `slideleft/right/up/down`, `wipeleft/…`, `circleopen`,
   `circleclose`, `hblur`, `dissolve`, `fadeblack`, `zoomin`, `radial`, `pixelize`).
+- Twenty soft-edged wipes (iris, clock, blinds, checker, noise, ...): `transition: wipe:iris(softness=0.2 dur=0.6)` on a
+  cue, or `"transitions": ["wipe:iris", "smoothleft"]` in a plan, mixed with the names above. No commas, pipes or
+  semicolons in the brackets. A bad wipe spec is an error; an unknown plain name is a warning. Every family, the
+  grammar and the limits (not exported to Premiere): [TRANSITIONS.md](TRANSITIONS.md).
 - `side` boxes still fade.
 
 Every 2D template shares one camera (`LF.drift` in `lf.js`): it lands (arrives slightly close and settles),

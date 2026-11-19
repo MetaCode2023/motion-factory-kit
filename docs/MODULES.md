@@ -86,6 +86,11 @@ the word), `title-explainer.html` (creator in the corner over the thing itself, 
 `meme-caption.html`. Caption style `word` in `kit/motion.js` (one word as spoken, mid-frame). These need
 the kit's renderer (`make.mjs`); the layouts and timings are the part worth copying.
 
+### Wipe transitions (long-form)
+`tools/longform/wipes.mjs` (twenty procedural mask shapes, pure JavaScript, PNG frames via skia-canvas) and
+`tools/longform/transitions.mjs` (the `wipe:<family>(softness=0.2)` grammar and the ffmpeg `alphamerge` + `overlay`
+graph). The shapes lift out on their own; the graph assumes the chunked compositor in `build.mjs`. Details: [TRANSITIONS.md](TRANSITIONS.md).
+
 ## Rules the kit keeps (worth keeping wherever these pieces go)
 
 - Never invent quotes, names, or poll numbers. Question cards use the words the host actually said;

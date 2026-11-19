@@ -35,6 +35,8 @@ If you speak MCP, connect `mcp/server.mjs` (docs/MCP.md) and every step is a too
 
 Already have your own pipeline? `docs/MODULES.md` maps the pieces you can lift out on their own.
 
+Wipe transitions between long-form visuals (`wipe:iris` and nineteen more): `docs/TRANSITIONS.md`.
+
 ## Before you finish
 
 Update `docs/STATUS.md` (and its handoff queue), add to `docs/DECISIONS.md` for choices a later agent might undo,

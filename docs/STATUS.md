@@ -29,6 +29,7 @@ in every format, with minimal hand-holding. How it should think: `docs/EDITORIAL
 | Overlays on a finished clip | `tools/overlay.py` (docs/OVERLAYS.md) | Stable |
 | Weekly content for a brand | `content.mjs` (docs/CONTENT.md) | Stable |
 | Native vertical Short from a long-form plan | `tools/longform/vertical.mjs` | Merged into #7 from PR #2 |
+| **Wipe transitions** (20 soft-edged shapes: `wipe:iris`, ...) | `tools/longform/wipes.mjs`, `transitions.mjs`, docs/TRANSITIONS.md | New; masks and two real renders tested at 64x36, not yet looked at on real 1080p footage. Not exported to Premiere. |
 
 Runs on the cloud box: rendering, mixing, captions, animations, transcripts (faster-whisper). Needs the owner's
 laptop: YouTube/social pulls (yt-dlp) and ElevenLabs. Automatic B-roll lists YouTube (Creative Commons only) as a
@@ -69,6 +70,8 @@ Finished files live in the project's shared folder, not in git. Per-video decisi
 4. Self-learning engine, step 1 (docs/SELF-LEARNING-ENGINE.md): once R2/D1 exist, upload each build's
    `decisions.json` and the run reports.
 5. Re-run `broll` on Physics of Poker v3 (built before B-roll existed).
+6. Wipes: build one real video with a few `wipe:` families, look at them at 1080p (also with `pip` and `split`), keep
+   the ones that read well and put them in the default cycle. Details and limits: docs/TRANSITIONS.md.
 
 ## Before you finish (every agent)
 
