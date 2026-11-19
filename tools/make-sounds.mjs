@@ -229,6 +229,124 @@ const SFX = {
     }
     return fadeEdges(peakNorm(reverb(x, { mix: 0.2 }), 0.6), 0.002, 0.1);
   },
+
+  // ---- the short-form staples (Reels / TikTok / Shorts explainers) ----
+  // A page turning: a papery flutter (filtered noise in quick flaps) that ends on a soft slap.
+  pageturn() {
+    const x = buf(0.55), f = svf(), g = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / 0.42;
+      const flutter = 0.55 + 0.45 * Math.sin(TAU * (18 + 22 * p) * t);
+      const sweep = p < 1 ? Math.pow(Math.sin(Math.PI * p), 1.5) : 0;
+      const slap = t > 0.4 ? g(rand(), 900, 0.9).lp * env(t - 0.4, 0.001, 0.03) * 1.6 : 0;
+      x[n] = f(rand(), 2500 + 3500 * p, 0.8).bp * sweep * flutter + slap;
+    }
+    return fadeEdges(peakNorm(x, 0.6));
+  },
+  // A clean UI beep: a short square-ish tone, for a fact or label landing.
+  beep() {
+    const x = buf(0.16), f = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      x[n] = f(Math.tanh(3 * Math.sin(TAU * 1320 * t)), 3000, 0.7).lp * (t < 0.11 ? Math.min(1, t / 0.003) : Math.exp(-(t - 0.11) / 0.01));
+    }
+    return fadeEdges(peakNorm(x, 0.45));
+  },
+  // A round, cartoony boop: a soft sine sliding down, for a question or a playful turn.
+  boop() {
+    const x = buf(0.28);
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      ph += TAU * (520 * Math.exp(-t / 0.18) + 180) / SR;
+      x[n] = (Math.sin(ph) + 0.15 * Math.sin(2 * ph)) * env(t, 0.006, 0.09);
+    }
+    return fadeEdges(peakNorm(x, 0.7));
+  },
+  // Bop: a short pitched-up bloop, for words popping on screen (lighter than pop).
+  bop() {
+    const x = buf(0.14);
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      ph += TAU * (500 + 900 * (1 - Math.exp(-t / 0.02))) / SR;
+      x[n] = Math.sin(ph) * env(t, 0.002, 0.035);
+    }
+    return fadeEdges(peakNorm(x, 0.6));
+  },
+  // A bright single ding, for "here's the point".
+  ding() {
+    const x = buf(1.2);
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, f0 = midi(91);
+      x[n] = [1, 2.4, 3.9].reduce((s, r, i) => s + Math.sin(TAU * f0 * r * t) * env(t, 0.001, [0.45, 0.18, 0.07][i]) * [1, 0.3, 0.12][i], 0);
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.2 }), 0.55), 0.002, 0.15);
+  },
+  // Camera shutter: two mechanical clicks, for a photo or a "snapshot" fact.
+  shutter() {
+    const x = buf(0.22), f = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      const c1 = env(t, 0.0003, 0.006), c2 = t > 0.09 ? env(t - 0.09, 0.0003, 0.01) * 0.8 : 0;
+      x[n] = f(rand(), 3200, 1.2).bp * (c1 + c2) + Math.sin(TAU * 180 * t) * c1 * 0.4;
+    }
+    return fadeEdges(peakNorm(x, 0.6));
+  },
+  // Record scratch: a fast pitch wobble on a noisy tone, for "wait, what?".
+  scratch() {
+    const x = buf(0.45), f = svf();
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / 0.45;
+      const sp = Math.sin(TAU * 4.5 * t) * (1 - p);
+      ph += TAU * (220 + 380 * sp) / SR;
+      const tone = ((ph / TAU) % 1) * 2 - 1;
+      x[n] = f(tone * 0.6 + rand() * 0.5, 1800 + 1500 * Math.abs(sp), 1.5).bp * Math.min(1, t / 0.01) * (1 - p * 0.6);
+    }
+    return fadeEdges(peakNorm(x, 0.6), 0.002, 0.06);
+  },
+  // A deep cinematic boom with a long tail, for the big reveal (heavier than hit).
+  boom() {
+    const x = buf(2.2), f = svf();
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      ph += TAU * (38 + 70 * Math.exp(-t / 0.08)) / SR;
+      x[n] = Math.tanh(2.2 * Math.sin(ph)) * env(t, 0.003, 0.6) + f(rand(), 300, 0.7).lp * env(t, 0.002, 0.25) * 0.8;
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.25, size: 1.4, damp: 0.6 }), 0.9), 0.002, 0.3);
+  },
+  // Digital glitch: chopped bursts of bit-crushed noise and tone, for a "reality breaks" moment.
+  glitch() {
+    const x = buf(0.4);
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, slot = Math.floor(t / 0.035);
+      const on = [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1][slot % 12];
+      const tone = Math.sign(Math.sin(TAU * [880, 220, 1760, 440][slot % 4] * t));
+      x[n] = on * (Math.round((tone * 0.6 + rand() * 0.4) * 4) / 4) * (1 - t / 0.42);
+    }
+    return fadeEdges(peakNorm(x, 0.45));
+  },
+  // Sparkle: a quick run of high bell tones, for something magical or "mind-blown".
+  sparkle() {
+    const x = buf(1.0);
+    const notes = [96, 100, 103, 108, 103, 108];
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR;
+      notes.forEach((m, i) => { const at = i * 0.045; if (t >= at) x[n] += Math.sin(TAU * midi(m) * (t - at)) * env(t - at, 0.001, 0.12) * (1 - i * 0.1); });
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.35 }), 0.45), 0.002, 0.2);
+  },
+  // Swipe: a short, bright air swish, for sliding a card or switching an idea (shorter than whoosh).
+  swipe() {
+    const x = buf(0.25), f = svf();
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / 0.25;
+      x[n] = f(rand(), 1500 + 6000 * p, 1.8).bp * Math.pow(Math.sin(Math.PI * p), 2);
+    }
+    return fadeEdges(peakNorm(x, 0.55));
+  },
 };
 
 // ---- music beds ---------------------------------------------------------------------------------
@@ -357,7 +475,10 @@ const MUSIC = {
   }),
 };
 
+// `node tools/make-sounds.mjs pageturn boop` writes only those; no names writes everything.
+const only = process.argv.slice(2);
+const want = (name) => !only.length || only.includes(name);
 console.log('sound effects:');
-for (const [name, make] of Object.entries(SFX)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), make());
+for (const [name, make] of Object.entries(SFX)) { const x = make(); if (want(name)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), x); }
 console.log('music beds:');
-for (const [name, make] of Object.entries(MUSIC)) save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());
+for (const [name, make] of Object.entries(MUSIC)) if (want(name)) save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());

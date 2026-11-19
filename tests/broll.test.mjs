@@ -129,7 +129,7 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   const dir = mkdtempSync(join(tmpdir(), 'broll-plan-'));
   const lib = fakeLib();
   const planFile = join(dir, 'vegas.json');
-  const plan = { name: 'vegas', fps: 30, _file: planFile, tighten: false, a_roll: [{ clip: 'rec' }], inserts: [], auto_broll: { every: 8, end: 3 } };
+  const plan = { name: 'vegas', fps: 30, _file: planFile, tighten: false, a_roll: [{ clip: 'rec' }], inserts: [], auto_broll: { mode: 'accent', every: 8, end: 3 } };
   writeFileSync(planFile, JSON.stringify(plan));
   const R = resolvePlan(plan, lib, { autoBroll: false });
   assert.deepEqual(R.errors, []);
@@ -167,4 +167,13 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   assert.ok(!resolvePlan(plan, lib).inserts.some((i) => i.autoBroll && /Vegas/.test(i.src.said)));
   // auto_broll: false turns it off without deleting anything.
   assert.ok(!resolvePlan({ ...plan, auto_broll: false }, lib).inserts.some((i) => i.autoBroll));
+});
+
+test('fill mode (auto_broll "throughout") holds each shot until the next, without overlapping visuals', () => {
+  const moments = [{ at: 1, end: 1.4, score: 3 }, { at: 5, end: 5.5, score: 3 }, { at: 30, end: 30.5, score: 3 }];
+  const { placed } = placeBroll(moments, [{ at: 12, dur: 5 }], 40, { every: 2, min: 1.2, max: 8, hook: 0, end: 0, spacing: 1.5, fill: true, hold: 8 });
+  assert.equal(placed.length, 3);
+  assert.equal(placed[0].dur, +(placed[1].at - placed[0].at).toFixed(2), 'runs up to the next shot');
+  assert.ok(placed[1].at + placed[1].dur <= 12 - 0.5 + 1e-6, 'stops before the next visual');
+  assert.equal(placed[2].dur, 8, 'never held longer than hold');
 });
