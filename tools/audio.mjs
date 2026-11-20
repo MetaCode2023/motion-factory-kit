@@ -65,3 +65,100 @@ export function speakerGains(pieces) {
   }
   return gains;
 }
+
+// ---- Word edges from the audio ---------------------------------------------------------------
+// Transcript word times are guesses, off in both directions: ends usually run 0.1-0.4 s early (chopping
+// "infla-", "clas-"), starts are sometimes late or early by ~0.15 s. These helpers read the clip's 10 ms
+// envelope (voice loudness plus a hiss channel, so a trailing "ss"/"t"/"f" counts as speech) and place each
+// cut where the voice really stops/starts: at a real pause, or the quietest spot between two words that run
+// together, never past the middle of the neighbouring word.
+const HOP = 0.01, ENV = new Map();
+
+export function speechEnvelope(file) {
+  if (ENV.has(file)) return ENV.get(file);
+  const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-i', file, '-vn', '-ac', '1', '-ar', '16000', '-f', 's16le', '-'], { maxBuffer: 1 << 30 });
+  const pcm = r.status === 0 ? new Int16Array(r.stdout.buffer, r.stdout.byteOffset, r.stdout.length >> 1) : new Int16Array(0);
+  const h = 160, n = Math.floor(pcm.length / h), lo = new Float32Array(n), hi = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    let a = 0, b = 0;
+    for (let j = i * h; j < (i + 1) * h; j++) { const x = pcm[j] / 32768, d = x - (j ? pcm[j - 1] / 32768 : 0); a += x * x; b += d * d; }
+    lo[i] = Math.sqrt(a / h + 1e-12); hi[i] = Math.sqrt(b / h + 1e-12);
+  }
+  const p90lo = pct(lo, 0.9) || 1, p90hi = pct(hi, 0.9) || 1, env = new Float32Array(n);
+  for (let i = 0; i < n; i++) env[i] = Math.max(lo[i] / p90lo, hi[i] / p90hi);
+  const out = { env, floor: pct(env, 0.1) };
+  ENV.set(file, out);
+  return out;
+}
+
+function pct(a, q) { const s = Float32Array.from(a).sort(); return s.length ? s[Math.min(s.length - 1, Math.floor(s.length * q))] : 0; }
+const at = (t) => Math.round(t / HOP);
+
+function valley({ env }, lo, hi) {
+  const i0 = Math.max(1, at(lo)), i1 = Math.min(env.length - 2, at(hi));
+  let best = i0, bv = Infinity;
+  for (let i = i0; i <= i1; i++) { const v = env[i - 1] + env[i] + env[i + 1]; if (v < bv) { bv = v; best = i; } }
+  return i1 > i0 ? best * HOP : lo;
+}
+
+// Where word w really ends (dir +1) or starts (dir -1). ow = the neighbouring word on that side (or null).
+function boundary(E, w, dir, ow, tail) {
+  const { env, floor } = E, n = env.length;
+  const ref = pct(env.subarray(Math.max(0, at(w.s - 0.05)), Math.max(at(w.s - 0.05) + 1, at(Math.max(w.e, w.s + 0.15) + 0.1))), 0.8) || 1;
+  const thr = Math.max(0.15 * ref, 2.5 * floor), deep = Math.max(0.07 * ref, 1.5 * floor);
+  const t = dir > 0 ? w.e : w.s;
+  const other = ow ? (dir > 0 ? ow.s : ow.e) : null, wall = ow ? (ow.s + ow.e) / 2 : null;
+  let i = at(t), hit = -1;
+  for (let k = 0; k < 80; k++, i += dir) {
+    if (i < 2 || i >= n - 10) break;
+    if (wall != null && (i * HOP - wall) * dir > 0) break;
+    let quiet = true; for (let q = 0; q < 8; q++) if (env[i + q * dir] >= thr) { quiet = false; break; }
+    const near = other != null && Math.abs(other - i * HOP) < 0.18;
+    if (quiet || (env[i] < deep && near)) { hit = i; break; }
+  }
+  if (hit < 0) {
+    if (other == null || Math.abs(other - t) > 0.6) return t + 0.12 * dir;
+    let lo = dir > 0 ? t - 0.05 : other - 0.12, hi = dir > 0 ? other + 0.12 : t + 0.12;
+    if (dir > 0) hi = Math.min(hi, wall); else lo = Math.max(lo, wall);
+    return valley(E, Math.min(lo, hi), Math.max(lo, hi));
+  }
+  let best = hit, bv = env[hit], j = hit;
+  for (let k = 0; k < Math.round(tail / HOP); k++) {
+    j += dir;
+    if (j < 0 || j >= n || env[j] >= thr) return best * HOP + (dir > 0 ? HOP : 0);
+    if (env[j] <= bv) { best = j; bv = env[j]; }
+  }
+  return j * HOP;
+}
+
+// 'Silence' near word w: a little above the local room noise (10th percentile within +-3 s).
+function quietLevel(E, w) {
+  const { env } = E, ref = pct(env.subarray(Math.max(0, at(w.s - 0.05)), Math.max(at(w.s - 0.05) + 1, at(Math.max(w.e, w.s + 0.15) + 0.1))), 0.8) || 1;
+  return Math.max(0.04 * ref, 3.5 * pct(env.subarray(Math.max(0, at(w.s - 3)), at(w.e + 3)), 0.1));
+}
+// First run of >= minQ s below `lo`, walking from t in dir (+1 forward / -1 back); returns its near edge or null.
+function pauseFrom({ env }, t, lo, dir, minQ = 0.2, look = 1.0) {
+  const need = Math.round(minQ / HOP), i0 = at(t);
+  let run = 0;
+  for (let k = 0; k < Math.round((look + minQ) / HOP); k++) {
+    const i = i0 + k * dir;
+    if (i < 0 || i >= env.length) break;
+    if (env[i] < lo) { if (++run >= need) return (dir > 0 ? i - need + 1 : i + need) * HOP; } else run = 0;
+  }
+  return null;
+}
+
+// Cut points [a, b] for a run of words first..last; prev/next are the words just outside it (or null).
+// Phrase endings: if a real pause (>= 0.2 s) starts before the middle of the next word, keep EVERYTHING up to it
+// plus 0.15 s. Final consonants (t, k, x) are released after a short silent closure and endings decay quietly,
+// so trimming close to the word clips them. Only words that run straight on are cut in the dip between them.
+export function speechCut(E, first, last, prev, next, { room = 0.15, lead = 0.08 } = {}) {
+  if (!E || !E.env.length) return [Math.max(0, first.s - lead), last.e + 0.3];
+  let b;
+  { const wall = next ? (next.s + next.e) / 2 : last.e + 1, p = pauseFrom(E, last.e, quietLevel(E, last), 1);
+    b = p != null && p <= wall ? p + room : valley(E, last.e - 0.03, Math.max(Math.min((next ? next.s : last.e) + 0.25, wall), last.e + 0.05)) + 0.01; }
+  let a;
+  { const wall = prev ? (prev.s + prev.e) / 2 : first.s - 1, p = pauseFrom(E, first.s, quietLevel(E, first), -1, 0.2, 0.6);
+    a = p != null && p >= wall ? Math.max(p - lead, wall) : valley(E, Math.min(Math.max((prev ? prev.e : first.s) - 0.25, wall), first.s - 0.05), first.s + 0.03); }
+  return [Math.max(0, a), b];
+}

@@ -90,6 +90,14 @@ Transcripts come from, in order: a `<clip>.words.json` / `.srt` / `.vtt` next to
    `node footage.mjs feedback out/<batch>/review.json`, read `FEEDBACK.md`, edit only the flagged plans to do what
    the notes ask, then `node footage.mjs build edits/ --redo out/<batch>/review.json --batch <batch>`. If a note asks
    for something the footage can't give (a line nobody said), say so instead of faking it.
+The cutter places every cut on the audio (`speechCut` in tools/audio.mjs), not on the transcript's word times,
+which run early and chop last syllables. At a phrase ending it keeps everything up to the real pause plus 0.15 s:
+final t/k/x sounds are released after a short silent gap, and trimming close to the word clips them. Only words
+that run straight into the next are cut in the dip between them (give those a ~0.15 s breath when stitching).
+If you stitch footage any other way, do the same. Before handing over, run `tools/verify_words.py` on the cut:
+every captioned word must be heard and nothing extra (a leaked "...cause", an invented word in a silence). If in
+doubt about one edge, transcribe ~1.5 s from that cut on its own. Transition sound effects go in a pause after
+the last word, never on it; leave ~0.5 s of room tone at chapter changes for them.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
 
 ## Long-form YouTube (`longform.mjs`, details in `docs/LONGFORM.md`)
@@ -222,7 +230,7 @@ creator.draw(ctx, t, 0, 0, 1080, 1920, { zoom: 1.03 });   // cover-fit; any size
 ```js
 M.setup({ ...,
   captions: true,                                       // word-by-word captions; keep content above y≈1250
-  music: { track: 'pulse', volume: 0.2 },                // sounds/music: pulse, calm, drive (or your own file)
+  music: { track: 'pulse', volume: 0.2 },                // sounds/music: pulse, calm, reflect, drive (or your own file)
   sfx: [{ at: 0, name: 'hit' }, { at: 4.6, name: 'whoosh', volume: 0.45 }],
   voice: [{ at: 0.3, text: 'One sentence per beat.' }],  // ElevenLabs narration (or file: 'x.mp3')
 });
@@ -236,6 +244,8 @@ M.setup({ ...,
   to get each line's real start/end, then set cut times to match.
 - Music ducks automatically under narration and under clips with `speech`. Output is loudness-normalized (−14 LUFS).
 - In UGC ads keep music low (0.10–0.15): the creator's voice is the point.
+- `reflect` is a slow piano bed with a ~2-minute loop, meant for long horizontal pieces (lectures, 3–5 min explainers).
+  Vary the track between videos in a series so the audience doesn't hear the same bed every time.
 
 ## Blocks (`kit/blocks.js`, all on `B`; details in `docs/BLOCKS.md`)
 

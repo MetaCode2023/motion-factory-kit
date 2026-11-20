@@ -21,7 +21,7 @@ import { applyFeedback, writeReview } from './tools/review.mjs';
 import { cropFilter, pickTrack } from './tools/reframe.mjs';
 import { readSidecar } from './tools/transcripts.mjs';
 import { checkPlan } from './tools/plans.mjs';
-import { audioOptions, cleanChain, loudness, speakerGains } from './tools/audio.mjs';
+import { audioOptions, cleanChain, loudness, speakerGains, speechEnvelope, speechCut } from './tools/audio.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
@@ -254,7 +254,19 @@ function rangesFor(seg, clip, plan) {
     if (!cur || w.s - cur.e > maxGap) runs.push(cur = { s: w.s, e: w.e, words: [] });
     cur.e = w.e; cur.words.push(w);
   }
-  return runs.map((r) => [Math.max(0, r.s - 0.06), Math.min(clip.duration, r.e + 0.12)]);
+  // Cut on the audio, not the transcript (whose word ends run early and chop the last syllable):
+  // each run ends where the voice really stops and starts where it really starts. Runs whose
+  // "pause" turns out to be speech are merged so nothing plays twice.
+  const E = clip.hasAudio ? speechEnvelope(resolve(ROOT, clip.path)) : null;
+  const all = clip.words, out = [];
+  for (const r of runs) {
+    const first = r.words[0], last = r.words[r.words.length - 1];
+    const i0 = all.indexOf(first), i1 = all.indexOf(last);
+    let [a, b] = speechCut(E, first, last, all[i0 - 1] || null, all[i1 + 1] || null);
+    a = Math.max(0, a); b = Math.min(clip.duration, b);
+    if (out.length && a <= out[out.length - 1][1] + 0.08) out[out.length - 1][1] = b; else out.push([a, b]);
+  }
+  return out;
 }
 
 async function cut(planFile, { quiet = false } = {}) {
