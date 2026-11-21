@@ -139,7 +139,10 @@ the goal is a 10-minute video they can post without touching it.
 4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
    Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
    `broll` (automatic: cutaways to free-license photos of the places and things named, no key; review BROLL.md),
-   `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
+ `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders. Run
+ `node longform.mjs board <plan>` and open `board.html`: one finished-looking still per cue. Apply its
+ `review.json` notes with `feedback`; do not run the expensive full build until the creator says **go**.
+ Then `build`.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
 5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).

@@ -232,3 +232,19 @@ test('a visual right after a stat inherits its figure; one after a gap does not'
   assert.equal(next.carried, true);
   assert.equal(animData(later, R).carry, undefined);
 });
+
+test('storyboard model keeps cue order and exports notes through the review format', async () => {
+  const { boardHTML, boardModel } = await import('../tools/longform/board.mjs');
+  const plan = { name: 'test-board', title: 'Test board', _file: '/x/plan.json' };
+  const R = { total: 12, inserts: [
+    { id: 'first', at: 2, dur: 3, kind: 'animation', layout: 'full', note: 'A number', scene: '/x/stat.html' },
+    { id: 'second', at: 7, dur: 2, kind: 'image', layout: 'pip', note: 'The proof' },
+  ] };
+  const model = boardModel(plan, R);
+  assert.deepEqual(model.cues.map((x) => x.id), ['first', 'second']);
+  model.cues.forEach((x) => { x.frame = `board/${x.id}.jpg`; });
+  const html = boardHTML(model);
+  assert.match(html, /Visual flow approved/);
+  assert.match(html, /stage:'board'/);
+  assert.match(html, /first/);
+});

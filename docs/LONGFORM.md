@@ -16,8 +16,10 @@ case anything needs a touch.
                                     node longform.mjs script x.script.md   -> runtime, visual cadence, teleprompter copy
 3. You record it                  camera + mic, or just the mic. Read the reading copy. Flubbed a line? Just
                                     re-read it: the last take wins.
-4. Finished video                 node longform.mjs from-script x.script.md recording.mp4 --build
-                                    -> aligned word by word, retakes cut, every cue on its word, built
+4. Approve the storyboard         node longform.mjs board edits/longform/x.json
+                                    -> board.html, one finished-looking frame per cue; revise until "go"
+5. Finished video                 node longform.mjs build edits/longform/x.json
+                                    -> every approved cue on its word, fully rendered
 ```
 
 **From footage you already have** (podcast archives): index the library, search everything you've said, and
@@ -235,6 +237,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
+| `node longform.mjs board <plan>` | Renders one representative still per cue into `board.html`. Save cue notes as review JSON, run `feedback`, revise, and get approval before a full build. |
 | `node longform.mjs stock <plan>` | Downloads Pexels B-roll for `"stock"` inserts into `assets/broll/` and adds credits to `assets/broll/CREDITS.md`. |
 | `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. Animations render several at a time (`LONGFORM_JOBS=3` to set how many). Also writes `review.html`. |
 | `node longform.mjs voice [clip ids]` | Measures how the creator talks from their indexed recordings (pace, sentence length, real phrases) into `scripts/VOICE.md`. Scripts are then timed at that pace. See `docs/PLAYBOOK.md`. |

@@ -17,7 +17,9 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
    can) and check a still of each.
 5. `node longform.mjs from-script scripts/<name>.script.md <recording> ` → read the alignment report →
    `broll` (automatic free-license cutaways; read BROLL.md, drop or re-search bad picks in the lockfile) →
-   `stock` / `pull` → `build`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
+   `stock` / `pull` → **`board`**. Open `board.html`; revise its cue notes through `feedback` until the
+   visual flow is approved ("go"). Only then run `build`. Read `REVIEW.md` first, then REPORT.md and
+   `<name>.inserts.jpg`; fix the ranked notes before handing over.
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).

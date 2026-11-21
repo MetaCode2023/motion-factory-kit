@@ -34,6 +34,7 @@ import { autoBroll } from './tools/broll/index.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
 import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
+import { board } from './tools/longform/board.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
 const json = rest.includes('--json');
@@ -134,6 +135,12 @@ try {
     const r = feedback(args[0], args[1]);
     if (!json) { console.log(`${r.notes.length} note(s), ${r.approved ? 'approved once done' : 'not approved yet'} -> ${relative(ROOT, r.file)}`); r.notes.forEach((n) => console.log(`  ${fmt(n.t)}  ${n.insert ? n.insert.id : '(speaker)'}  ${n.text.split('\n')[0].slice(0, 80)}`)); }
     emit(r);
+  } else if (cmd === 'board') {
+    const r = await board(args[0], { log });
+    if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
+    else if (!json) console.log(`storyboard -> ${relative(ROOT, r.file)} (${r.cues} cues); approve it before build`);
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
   } else if (cmd === 'voice') {
     // node longform.mjs voice [clip ids…]: how the creator actually talks, measured from their own recordings
     const r = voiceProfile(args.filter((a) => a !== opt('out')), { out: opt('out') });
@@ -219,6 +226,7 @@ function readmeUsage() {
   node longform.mjs clip <id>          one clip's numbered sentences
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence
   node longform.mjs check <plan.json>  validate a plan and show its timeline
+  node longform.mjs board <plan.json>  render one approval still per visual cue
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
