@@ -143,6 +143,8 @@ the goal is a 10-minute video they can post without touching it.
  `node longform.mjs board <plan>` and open `board.html`: one finished-looking still per cue. Apply its
  `review.json` notes with `feedback`; do not run the expensive full build until the creator says **go**.
  Then `build`.
+ For captions throughout, use `captions: {"burn":true}` in the script header; mark important spoken words
+ as `*words to pop*`. Keep groups short and set face avoidance/position in the caption options when needed.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
 5. **Check like a viewer**: read `REVIEW.md` **before** REPORT.md. It is a score-free second pass that only

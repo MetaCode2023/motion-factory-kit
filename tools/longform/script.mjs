@@ -86,7 +86,13 @@ export function parseScript(text) {
     if (/^##+\s/.test(l)) { chapters.push({ title: l.replace(/^#+\s+/, '').trim(), word: words.length }); continue; }
     const re = /\[\[([\s\S]*?)\]\](?!\])/g;
     let last = 0, m;
-    const pushText = (s) => { for (const w of s.replace(/[*_`]/g, '').split(/\s+/).filter(Boolean)) if (bare(w)) words.push({ w, b: bare(w) }); };
+    const pushText = (s) => {
+      // Single asterisks are spoken emphasis, not literal teleprompter text: "*never again*".
+      for (const part of s.split(/(\*[^*]+\*)/g).filter(Boolean)) {
+        const emphasis = /^\*[^*]+\*$/.test(part);
+        for (const w of part.replace(/[*_`]/g, '').split(/\s+/).filter(Boolean)) if (bare(w)) words.push({ w, b: bare(w), ...(emphasis ? { emphasis: true } : {}) });
+      }
+    };
     while ((m = re.exec(l))) { pushText(l.slice(last, m.index)); cues.push({ ...parseCue(m[1]), word: words.length }); last = re.lastIndex; }
     pushText(l.slice(last));
   }
@@ -276,11 +282,13 @@ export function planFromScript(text, clip, { name } = {}) {
     ...(theme ? { theme } : {}),
     ...(transitions ? { transitions } : {}),
     ...(S.meta.base ? { base: S.meta.base } : {}),
+    ...(S.meta.captions !== undefined ? { captions: typeof S.meta.captions === 'object' ? S.meta.captions : { burn: S.meta.captions } } : {}),
     a_roll: [{ clip: clip.id, from: +Math.max(0, first.s - 0.3).toFixed(3), to: +Math.min(clip.duration, last.e + 0.4).toFixed(3) }],
     tighten: { fillers: true, max_pause: S.meta.max_pause ?? 0.45, cut },
     ...(S.meta.punch_in ? { punch_in: S.meta.punch_in } : {}),
     chapters: [], inserts: [], music: [], sfx: [],
   };
+  plan.caption_emphasis = S.words.flatMap((w, i) => w.emphasis && map[i] >= 0 ? [{ clip: clip.id, t: clip.words[map[i]].s }] : []);
   S.chapters.forEach((ch) => { const at = anchor(ch.word, `chapter "${ch.title}"`); if (at) plan.chapters.push({ at, title: ch.title }); });
   let n = 0;
   for (const c of S.cues) {

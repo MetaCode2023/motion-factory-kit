@@ -30,6 +30,8 @@ prints a retention score with notes: fix them. On-camera layouts: `full`, `side`
 Around the video:
 - New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).
 - Give each video a look in the script header: `theme: blueprint | noir | sunset | paper | terminal` (default aurora).
+- For captions throughout use `captions: {"burn":true}`; mark key spoken phrases `*like this*` so they
+  pop in the accent colour. Keep the dim box over bright footage and move captions away from the face.
 - Every build writes `review.html`. Notes come back as `<name>.review.json` → `node longform.mjs feedback <file>` →
   read `FEEDBACK.md`, change only what the notes ask for, rebuild. This also grows the private Never again
   list in `scripts/SERIES.md`; after approval run `freeze <plan> --name <series>` to version the proven defaults.

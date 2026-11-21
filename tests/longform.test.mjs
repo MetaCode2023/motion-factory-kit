@@ -276,3 +276,15 @@ test('series feedback memory grows without overwriting hand-written rules', asyn
   assert.match(text, /Hold the chart longer/);
   assert.match(text, /Theme: paper/);
 });
+
+test('longform captions group at short pauses and preserve script emphasis', async () => {
+  const { captionGroups } = await import('../tools/longform/build.mjs');
+  const parsed = parseScript('This is *the key phrase* right now.');
+  assert.deepEqual(parsed.words.filter((w) => w.emphasis).map((w) => w.b), ['the', 'key', 'phrase']);
+  const groups = captionGroups([
+    { w: 'one', s: 0, e: .2 }, { w: 'two', s: .25, e: .45 }, { w: 'three', s: .5, e: .7 },
+    { w: 'four', s: .9, e: 1.1 }, { w: 'five', s: 1.15, e: 1.35 }, { w: 'six', s: 1.4, e: 1.6 },
+  ]);
+  assert.deepEqual(groups.map((g) => g.map((w) => w.w)), [['one', 'two', 'three'], ['four', 'five', 'six']]);
+  assert.ok(groups.every((g) => g.length >= 3 && g.length <= 5));
+});

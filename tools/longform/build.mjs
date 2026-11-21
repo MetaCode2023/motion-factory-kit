@@ -383,7 +383,19 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 }
 
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
-function assCaptions(R, accent, file) {
+export function captionGroups(words, { min = 3, max = 5, pause = 0.15, maxChars = 42 } = {}) {
+  const lines = []; let cur = [];
+  words.forEach((w, i) => {
+    cur.push(w);
+    const next = words[i + 1];
+    const width = cur.reduce((n, x) => n + String(x.w).length * (x.emphasis ? 1.15 : 1) + 1, 0);
+    const natural = /[.?!,;:]$/.test(w.w) || (next && next.s - w.e >= pause);
+    if (!next || cur.length >= max || width >= maxChars || (cur.length >= min && natural)) { lines.push(cur); cur = []; }
+  });
+  return lines;
+}
+
+export function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
   const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
@@ -391,27 +403,23 @@ function assCaptions(R, accent, file) {
   const bgr = (hex) => { const h = hex.replace('#', ''); return `&H${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
   const ts = (s) => { const cs = Math.round(Math.max(0, s) * 100); return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, '0')}:${String(Math.floor(cs / 100) % 60).padStart(2, '0')}.${String(cs % 100).padStart(2, '0')}`; };
   const esc = (t) => t.replace(/[{}\\]/g, '');
-  const lines = [];
-  let cur = [];
-  R.words.forEach((w, i) => {
-    cur.push(w);
-    const next = R.words[i + 1], text = cur.map((x) => x.w).join(' ');
-    if (/[.?!,;:]$/.test(w.w) && text.length > 14 || /[.?!]$/.test(w.w) || text.length > (center ? 26 : 34) || (next && next.s - w.e > 0.5)) { lines.push(cur); cur = []; }
-  });
-  if (cur.length) lines.push(cur);
+  const lines = captionGroups(R.words, { maxChars: center ? 26 : 38 });
   const ev = [];
   for (const ln of lines) {
     const end = ln[ln.length - 1].e + 0.15;
     ln.forEach((w, k) => {
       const a = w.s, b = k + 1 < ln.length ? ln[k + 1].s : end;
       if (gapsOnly && covered(a, b)) return;
-      const text = ln.map((x, j) => (j === k ? `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}` : esc(x.w))).join(' ');
+      const pop = Math.round(100 * (R.captions.pop ?? 1.12));
+      const active = (x) => `{\\c${bgr(accent)}${x.emphasis ? `\\fscx${pop}\\fscy${pop}` : ''}${R.captions.underline && x.emphasis ? '\\u1' : ''}${R.captions.highlight && x.emphasis ? `\\bord8\\3c${bgr(accent)}` : ''}}${esc(x.w)}{\\rC}`;
+      const text = ln.map((x, j) => (j === k ? active(x) : esc(x.w))).join(' ');
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
   }
-  const style = center
-    ? 'Style: C,Plus Jakarta Sans,92,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,5,160,160,0,1'
-    : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
+  const top = R.captions.position === 'top' || (R.captions.avoid_face && R.captions.face_area === 'bottom');
+  const align = center ? 5 : top ? 8 : 2, margin = center ? 0 : 70;
+  const box = R.captions.box === false ? 1 : 3;
+  const style = `Style: C,Plus Jakarta Sans,${center ? 92 : 58},&H00FFFFFF,&H00FFFFFF,&H00101010,&H${R.captions.box === false ? '00000000' : '90000000'},-1,0,0,0,100,100,0,0,${box},${center ? 4 : 3},0,${align},160,160,${margin},1`;
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
     style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');

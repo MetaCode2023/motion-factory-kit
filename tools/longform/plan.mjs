@@ -1,6 +1,6 @@
 // tools/longform/plan.mjs: read a long-form edit plan, cut the talking (A-roll) word-exact, and map
 // every anchor ("clip@1:23.4", "clip#12", "clip#12" + word) onto the finished video's timeline.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs';
 import { loadLibrary } from './library.mjs';
@@ -24,6 +24,14 @@ export function loadPlan(file) {
   plan.name = plan.name || file.replace(/^.*[\\/]/, '').replace(/\.json$/, '');
   plan.fps = plan.fps || 30;
   if (typeof plan.theme === 'string') plan.theme = { style: plan.theme };   // "theme": "blueprint"
+  // A frozen/approved series caption default applies only when this plan did not choose one.
+  if (plan.captions == null) {
+    try {
+      const text = readFileSync(join(ROOT, 'scripts', 'SERIES.md'), 'utf8');
+      const m = text.match(/^Default: Captions:\s*(.+)$/m);
+      if (m) plan.captions = JSON.parse(m[1]);
+    } catch {}
+  }
   plan._file = resolve(file);
   return plan;
 }
@@ -277,9 +285,13 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   });
 
   // The words that stay, on the output timeline (captions and the report).
+  const emph = plan.caption_emphasis || [];
   const words = [];
-  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
+  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({
+    w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3),
+    emphasis: emph.some((x) => x.clip === c.clip && Math.abs(x.t - w.s) < 0.08),
+  });
 
   const burn = plan.captions?.burn ?? (voiceOnly ? 'gaps' : false);
-  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn } };
+  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { ...(plan.captions || {}), burn } };
 }

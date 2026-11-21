@@ -49,6 +49,7 @@ aren't read aloud. `[[cues]]` are visuals, and each one lands on the word right 
 ---
 title: The Physics of Poker
 theme: {"color": "#3CE0FF", "tint": "#0C1B2A"}     // every animation in this colour
+captions: {"burn": true, "pop": 1.15, "highlight": true, "avoid_face": true}
 cadence: 15                                         // target seconds between visuals (the check warns past ~27)
 wpm: 150                                            // your reading pace, for the runtime estimate
 base: backdrop                                      // optional: never show the camera (voice-only look)
@@ -97,6 +98,13 @@ with their times. Each step, item, bar, slice, node, event, note or object appea
 label or `say:` words), the number finishes counting as it is said, and anything not said spreads evenly between.
 Every template also drifts slowly, so nothing sits frozen after its last beat. Write cue labels with the words
 the script actually uses and the sync takes care of itself.
+
+**Captions can stay on throughout.** Set `"captions": { "burn": true }` in a plan (or the same `captions:`
+JSON in the script header). Captions use 3–5 word groups and break on pauses of 150 ms or more. Mark a phrase
+`*like this*` in the script to pop those spoken words in the accent colour; `underline`, `highlight`, `pop`,
+`position: "top"` and `box: false` are optional style controls. The default dim box protects bright footage.
+`avoid_face: true` with `face_area: "bottom"` moves captions to the top. Approved caption settings saved in
+`scripts/SERIES.md` apply when a plan does not override them.
 
 **Sound design comes with the animations.** Every template declares its own effects in `M.setup({ sfx })`,
 timed to its own beats: a pop as a number lands, ticks while it counts, a pop per list item, a riser into a
@@ -381,5 +389,5 @@ marker, so you can review them before you post.
 - Automatic B-roll is photos only so far (with a slow push-in). Video from NASA, CERN, the Internet Archive and Commons is next.
 - Animations render on your computer: a 10-minute video with ~40 visuals takes a few minutes the first time,
   and rebuilds reuse everything that didn't change.
-- No burned-in captions. Upload the `.srt` to YouTube instead.
+- Burned-in captions are opt-in (`captions.burn: true`); an `.srt` is still always written.
 - One shot of the speaker. Multi-camera switching isn't automatic. Put the second angle in the library and use it as `broll`.
