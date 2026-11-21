@@ -30,3 +30,7 @@ Read project preferences, render distinct options, and recheck the line before s
 For talking-head reels, consult [reel effects](../../../docs/REEL-EFFECTS.md).
 Choose the primary effect by story purpose and available assets, time it to the spoken cue,
 then inspect the entrance, readable hold, and exit before the final export.
+
+For a recurring character, follow [character animation](../../../docs/CHARACTER-ANIMATION.md).
+Use its approved shared asset, choose named poses based on what the viewer should notice,
+and time each gesture to the relevant story cue. Hold the pose while the viewer reads the result.

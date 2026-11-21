@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8"><title>Pipette's wave lab</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/simulation.js"></script>
+<script src="../../kit/character.js"></script>
+<script src="../../assets/characters/pipette.js"></script>
+<script>
+const duration=12, mint='#a1f6d9', orange='#ffba87', ink='#eafffb';
+const phaseStart=3.8, phaseEnd=8.2;
+const character=CharacterMotion.poseAt([
+  {at:0,pose:'neutral'}, {at:.6,pose:'neutral'}, {at:1.4,pose:'point'},
+  {at:3.4,pose:'point'}, {at:4.5,pose:'inspect'}, {at:8.3,pose:'inspect'},
+  {at:9.25,pose:'relieved'}, {at:10.3,pose:'neutral'}, {at:10.46,pose:'blink'},
+  {at:10.58,pose:'neutral'},
+],Pipette.poses);
+function type(ctx,text,x,y,font,color=ink){
+  M.text(ctx,text,x,y,{font,color});
+}
+function wave(ctx,t,base,color,value){
+  ctx.beginPath();
+  for(let i=0;i<=230;i++){
+    const x=366+i*2.36,y=base-value(i/230*16-t*4.5);
+    if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);
+  }
+  ctx.lineWidth=4;ctx.strokeStyle=color;ctx.stroke();
+}
+M.setup({width:960,height:540,fps:30,duration,background:'#132d37',
+  music:{track:'reflect',volume:.16},sfx:[{at:phaseEnd,name:'chime',volume:.17}],
+  draw(ctx,t){
+    const wash=ctx.createRadialGradient(664,256,20,640,280,640);
+    wash.addColorStop(0,'#295255');wash.addColorStop(1,'#0d212e');ctx.fillStyle=wash;ctx.fillRect(0,0,960,540);
+    type(ctx,'PIPETTE’S WAVE LAB',48,60,'600 17px monospace',mint);
+    type(ctx,t<phaseEnd?'Can two waves cancel?':'Two waves. Zero sum.',46,116,'bold 48px sans-serif');
+    ctx.fillStyle='#102932ce';M.roundRect(ctx,348,146,580,306,20);ctx.fill();
+    ctx.lineWidth=1;ctx.strokeStyle='#477176';ctx.stroke();
+    for(const y of [216,302,395]){
+      ctx.strokeStyle='#3d6268';ctx.beginPath();ctx.moveTo(365,y);ctx.lineTo(910,y);ctx.stroke();
+    }
+    const phase=Math.PI*M.prog(t,phaseStart,phaseEnd-phaseStart,M.ease.inOutCubic);
+    wave(ctx,t,216,mint,a=>17*Math.sin(a));
+    wave(ctx,t,302,orange,a=>17*Math.sin(a+phase));
+    wave(ctx,t,395,ink,a=>17*(Math.sin(a)+Math.sin(a+phase)));
+    type(ctx,'WAVE A',369,180,'600 13px monospace',mint);
+    type(ctx,'WAVE B',369,269,'600 13px monospace',orange);
+    type(ctx,'SUM',369,352,'600 13px monospace',ink);
+    Pipette.draw(ctx,{x:174,y:450,scale:1.35,pose:character(t),t});
+    const line=t<phaseStart?'Start with two equal waves.':t<phaseEnd?'Shift one by half a cycle.':'Each crest meets an equal trough.';
+    type(ctx,line,49,503,'600 25px sans-serif',ink);
+  }
+});
+</script>

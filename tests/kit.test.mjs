@@ -76,3 +76,17 @@ test('one-take simulation frames match after jumping from the reveal back to imp
   assert.notDeepEqual(scene.frame(14), frame);
   assert.deepEqual(scene.frame(collision + 0.1), frame);
 });
+
+test('both lab scenes can seek without changing the shared character poses', async () => {
+  const { open } = await import('../engines/skia.mjs');
+  for (const name of ['character-wave-lab', 'character-light-lab']) {
+    const scene = await open('scenes/examples/' + name + '.html');
+    try {
+      const frame = scene.frame(3.25);
+      assert.notDeepEqual(scene.frame(0.25), frame);
+      assert.deepEqual(scene.frame(3.25), frame);
+    } finally {
+      await scene.close();
+    }
+  }
+});
