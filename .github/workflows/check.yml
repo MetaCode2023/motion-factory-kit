@@ -28,6 +28,8 @@ jobs:
           node make.mjs scenes/examples/ugc-ad.html --variants --fast
           node render.mjs scenes/examples/blocks-gallery.html --sheet
           node make.mjs scenes/examples/street-interview.html --fast
+          node make.mjs scenes/examples/whiteboard-simulation.html
+          if grep -qE "^- FIX" out/whiteboard-simulation.report.md; then exit 1; fi
       - name: Footage editor demo (no keys)
         run: npm run demo
       - name: Every template renders
@@ -47,3 +49,34 @@ jobs:
             out/*.report.md
             out/demo/
           retention-days: 14
+
+  simulation-integrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Browser preview and seeking
+        run: CHROME_BIN="$(command -v google-chrome)" node tests/simulation-browser.mjs
+      - name: Render and composite a Manim shot
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev libpango1.0-dev pkg-config
+          python -m pip install manim==0.22.1
+          manim render -ql --disable_caching --media_dir out/manim examples/manim/sine-trace.py SineTrace
+          shot="$(find out/manim/videos -name SineTrace.mp4 -print -quit)"
+          test -s "$shot"
+          cp "$shot" out/manim/sine-trace.mp4
+          node make.mjs examples/manim/sine-composite.html --fast
+          grep -q 'PASS.*1 clip(s) found' out/sine-composite.report.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manim-composite
+          path: out/sine-composite.mp4

@@ -28,4 +28,11 @@ With [Manim Community installed](https://docs.manim.community/en/stable/installa
 manim render -ql --disable_caching --media_dir out/manim examples/manim/sine-trace.py SineTrace
 ```
 
-Copy the generated `SineTrace.mp4` to your project's asset folder. In the Kit scene, create the clip with `M.video(relativePath, { at: startTime, audio: false })` and call its `draw(ctx, t, x, y, width, height)` during that beat. Render the full scene with the usual Kit build command.
+To try the full handoff, copy the generated clip to the path used by [the compositing example](../examples/manim/sine-composite.html) and build the scene:
+
+```sh
+cp "$(find out/manim/videos -name SineTrace.mp4 -print -quit)" out/manim/sine-trace.mp4
+node make.mjs examples/manim/sine-composite.html --fast
+```
+
+For your own scene, place the clip in your assets, create it with `M.video(relativePath, { at: startTime, audio: false })`, and call its `draw(ctx, t, x, y, width, height)` during that beat.
