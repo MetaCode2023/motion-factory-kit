@@ -138,9 +138,11 @@ export function feedback(reviewFile, planFile) {
   if (!notes.length) lines.push('No notes.', '');
   const out = join(dirname(resolve(reviewFile)), 'FEEDBACK.md');
   writeFileSync(out, lines.join('\n'));
-  const series = updateSeriesDefaults(plan, notes, { approved: !!rv.approved });
+  const series = updateSeriesDefaults(plan, notes, { approved: finalApproval(rv) });
   return { ok: true, file: out, approved: !!rv.approved, notes, plan: pf, series };
 }
+
+export const finalApproval = (review) => !!review.approved && review.stage !== 'board';
 
 const SERIES_START = '<!-- feedback-defaults:start -->';
 const SERIES_END = '<!-- feedback-defaults:end -->';

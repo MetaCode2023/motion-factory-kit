@@ -115,7 +115,7 @@ function speakerCutout(R, plan, aroll, log) {
   if (!command) throw new Error('behind:true needs a matting wrapper: set plan.cutout.command or MF_CUTOUT_CMD (see docs/LONGFORM.md)');
   const args = [...(plan.cutout?.args || [])];
   const ext = plan.cutout?.ext || '.mov';
-  return cached(hash('speaker-cutout-v1', R.cuts.map((c) => [c.clip, c.s, c.e, c.out]), command, args), ext, (out) => {
+  return cached(hash('speaker-cutout-v2', R.cuts.map((c) => [c.clip, R.lib.clips[c.clip]?.key, c.s, c.e, c.out, c.zoom, c.focus]), plan.base, command, args), ext, (out) => {
     log('  matting speaker once for behind:true cues');
     const r = spawnSync(command, [...args, aroll, out], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
     if (r.status !== 0 || !existsSync(out)) throw new Error(`speaker matting failed: ${(r.stderr || r.stdout || '').slice(-800)}`);
@@ -429,7 +429,8 @@ export function captionGroups(words, { min = 3, max = 5, pause = 0.15, maxChars 
     const next = words[i + 1];
     const width = cur.reduce((n, x) => n + String(x.w).length * (x.emphasis ? 1.15 : 1) + 1, 0);
     const natural = /[.?!,;:]$/.test(w.w) || (next && next.s - w.e >= pause);
-    if (!next || cur.length >= max || (cur.length >= min && (width >= maxChars || natural))) { lines.push(cur); cur = []; }
+    const pauseBreak = next && next.s - w.e >= pause;
+    if (!next || pauseBreak || cur.length >= max || (cur.length >= min && (width >= maxChars || natural))) { lines.push(cur); cur = []; }
   });
   return lines;
 }

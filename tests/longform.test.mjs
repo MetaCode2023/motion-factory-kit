@@ -287,6 +287,8 @@ test('longform captions group at short pauses and preserve script emphasis', asy
   ]);
   assert.deepEqual(groups.map((g) => g.map((w) => w.w)), [['one', 'two', 'three'], ['four', 'five', 'six']]);
   assert.ok(groups.every((g) => g.length >= 3 && g.length <= 5));
+  const pause = captionGroups([{ w: 'two', s: 0, e: .2 }, { w: 'words', s: .25, e: .45 }, { w: 'later', s: 5, e: 5.2 }]);
+  assert.deepEqual(pause.map((g) => g.map((w) => w.w)), [['two', 'words'], ['later']], 'a real pause wins over the 3-word target');
 });
 
 test('transcript hardening drops words wholly in silence and aligns repeated words positionally', async () => {
@@ -334,14 +336,23 @@ test('behind-speaker cues are explicit and stay off for voice-only recordings', 
 test('editor exports include modern FCPXML and CMX3600 events', async () => {
   const { edl, fcpxml } = await import('../tools/longform/premiere.mjs');
   const R = {
-    total: 2, cuts: [{ clip: 'a', s: .5, e: 2.5, out: 0, d: 2 }],
-    inserts: [], lib: { clips: { a: { file: '/tmp/a.mp4' } } },
+    total: 4, cuts: [{ clip: 'a', s: .5, e: 2.5, out: 0, d: 2 }, { clip: 'a', s: 3, e: 5, out: 2, d: 2 }],
+    inserts: [{ id: 'proof', kind: 'image', layout: 'full', at: 2.5, dur: 1, media: '/tmp/proof.mp4' }],
+    lib: { clips: { a: { file: '/tmp/a.mp4' } } },
   };
   const plan = { name: 'export-test', title: 'Export test', fps: 30 };
   assert.match(edl(R, plan), /TITLE: Export test[\s\S]*001[\s\S]*00:00:00:15/);
   const xml = fcpxml(R, plan);
   assert.match(xml, /<fcpxml version="1\.10">/);
-  assert.match(xml, /<spine><asset-clip/);
+  assert.match(xml, /start="90\/30s" duration="60\/30s"><asset-clip name="proof"/, 'insert is attached to the spanning second A-roll clip');
+  assert.doesNotMatch(edl(R, plan), /^\d+\s+PROOF/m, 'EDL does not pretend an overlapping V2 event is on V1');
+  assert.match(edl(R, plan), /V2 INSERTS/);
+});
+
+test('storyboard approval does not freeze final series defaults', async () => {
+  const { finalApproval } = await import('../tools/longform/extras.mjs');
+  assert.equal(finalApproval({ approved: true, stage: 'board' }), false);
+  assert.equal(finalApproval({ approved: true }), true);
 });
 
 test('PiP shrink motion animates in and back out while remaining opt-in', async () => {

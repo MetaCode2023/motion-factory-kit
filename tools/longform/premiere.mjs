@@ -142,8 +142,8 @@ export function edl(R, plan) {
     lines.push(`${String(n++).padStart(3, '0')}  ${c.clip.slice(0, 8).toUpperCase().padEnd(8)} V     C        ${tc(c.s, fps)} ${tc(c.e, fps)} ${tc(c.out, fps)} ${tc(c.out + c.d, fps)}`,
       `* FROM CLIP NAME: ${basename(R.lib.clips[c.clip].file)}`);
   }
-  for (const i of R.inserts) lines.push(`${String(n++).padStart(3, '0')}  ${i.id.slice(0, 8).toUpperCase().padEnd(8)} V     C        ${tc(i.from || 0, fps)} ${tc((i.from || 0) + i.dur, fps)} ${tc(i.at, fps)} ${tc(i.at + i.dur, fps)}`,
-    `* TO V2: ${i.id} (${i.kind}/${i.layout})`);
+  if (R.inserts.length) lines.push('', '* V2 INSERTS (CMX3600 cannot represent overlapping video tracks; use .fcpxml/.resolve.xml):',
+    ...R.inserts.map((i) => `* ${tc(i.at, fps)}-${tc(i.at + i.dur, fps)} ${i.id} (${i.kind}/${i.layout})`));
   return lines.join('\n') + '\n';
 }
 
@@ -161,7 +161,10 @@ export function fcpxml(R, plan) {
   R.inserts.forEach((i) => add(i.kind === 'broll' ? i.file : i.media));
   const sec = (s) => `${Math.round(s * den)}/${den}s`;
   const resources = [...assets].map(([file, id]) => `<asset id="${id}" name="${esc(basename(file))}" src="${esc(url(file))}" start="0s" hasVideo="1" hasAudio="1"/>`).join('');
-  const inserts = R.inserts.map((i) => `<asset-clip name="${esc(i.id)}" ref="${add(i.kind === 'broll' ? i.file : i.media)}" lane="1" offset="${sec(i.at)}" start="${sec(i.kind === 'broll' ? i.from : 0)}" duration="${sec(i.dur)}"/>`);
-  const primary = R.cuts.map((c, k) => `<asset-clip name="${esc(c.clip)}" ref="${add(R.lib.clips[c.clip].file)}" offset="${sec(c.out)}" start="${sec(c.s)}" duration="${sec(c.d)}">${k === 0 ? inserts.join('') : ''}</asset-clip>`).join('');
+  const primary = R.cuts.map((c) => {
+    const children = R.inserts.filter((i) => i.at >= c.out - 1e-3 && i.at < c.out + c.d - 1e-3).map((i) =>
+      `<asset-clip name="${esc(i.id)}" ref="${add(i.kind === 'broll' ? i.file : i.media)}" lane="1" offset="${sec(c.s + i.at - c.out)}" start="${sec(i.kind === 'broll' ? i.from : 0)}" duration="${sec(i.dur)}"/>`).join('');
+    return `<asset-clip name="${esc(c.clip)}" ref="${add(R.lib.clips[c.clip].file)}" offset="${sec(c.out)}" start="${sec(c.s)}" duration="${sec(c.d)}">${children}</asset-clip>`;
+  }).join('');
   return `<?xml version="1.0" encoding="UTF-8"?><fcpxml version="1.10"><resources><format id="r1" name="FFVideoFormat1080p${fps}" frameDuration="1/${fps}s" width="${W}" height="${H}"/>${resources}</resources><library><event name="${esc(plan.name)}"><project name="${esc(plan.title || plan.name)}"><sequence format="r1" duration="${sec(R.total)}" tcStart="0s" tcFormat="NDF"><spine>${primary}</spine></sequence></project></event></library></fcpxml>\n`;
 }
