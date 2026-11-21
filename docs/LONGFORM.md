@@ -29,6 +29,9 @@ write a plan from the best takes. See "Plans from existing footage" below.
 out/longform/<name>/
   <name>.mp4              the video: picture, voice, music ducked under it, effects, YouTube loudness
   <name>.premiere.xml     the same edit as a timeline (Premiere, Resolve, FCP), pointing at your original files
+  <name>.resolve.xml      Resolve-labelled FCP 7 XML
+  <name>.fcpxml           modern Final Cut Pro timeline
+  <name>.edl              portable CMX3600 cut list
   <name>.srt              captions for YouTube
   CHAPTERS.txt            paste into the description
   PULL-LIST.md            outside clips still to grab, with sources and timestamps
@@ -278,6 +281,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
+| `node longform.mjs cut <plan> --preview` | Prints every source in/out and resulting timeline cut without rendering or changing files. |
 | `node longform.mjs board <plan>` | Renders one representative still per cue into `board.html`. Save cue notes as review JSON, run `feedback`, revise, and get approval before a full build. |
 | `node longform.mjs stock <plan>` | Downloads Pexels B-roll for `"stock"` inserts into `assets/broll/` and adds credits to `assets/broll/CREDITS.md`. |
 | `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. Animations render several at a time (`LONGFORM_JOBS=3` to set how many). Also writes `review.html`. |

@@ -330,3 +330,16 @@ test('behind-speaker cues are explicit and stay off for voice-only recordings', 
   assert.equal(voice.inserts[0].behind, false);
   assert.ok(voice.warnings.some((x) => /no speaker picture/.test(x)));
 });
+
+test('editor exports include modern FCPXML and CMX3600 events', async () => {
+  const { edl, fcpxml } = await import('../tools/longform/premiere.mjs');
+  const R = {
+    total: 2, cuts: [{ clip: 'a', s: .5, e: 2.5, out: 0, d: 2 }],
+    inserts: [], lib: { clips: { a: { file: '/tmp/a.mp4' } } },
+  };
+  const plan = { name: 'export-test', title: 'Export test', fps: 30 };
+  assert.match(edl(R, plan), /TITLE: Export test[\s\S]*001[\s\S]*00:00:00:15/);
+  const xml = fcpxml(R, plan);
+  assert.match(xml, /<fcpxml version="1\.10">/);
+  assert.match(xml, /<spine><asset-clip/);
+});

@@ -7,7 +7,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, 
 import { dirname, join, relative } from 'node:path';
 import { FF, H, PY, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
-import { premiereXML } from './premiere.mjs';
+import { edl, fcpxml, premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
 import { harshReview, readabilityChecks } from './critic.mjs';
 import { aroundCuts } from '../stills.mjs';
@@ -541,6 +541,9 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   if (!previewOnly) {
     copyFileSync(aroll.video, join(dir, 'media', 'a-roll.mp4'));
     write(`${plan.name}.premiere.xml`, premiereXML(R, plan, { dir, accent }));
+    write(`${plan.name}.resolve.xml`, premiereXML(R, plan, { dir, accent }));
+    write(`${plan.name}.fcpxml`, fcpxml(R, plan));
+    write(`${plan.name}.edl`, edl(R, plan));
   }
   // Self-check: a still in the middle of every insert, plus the A-roll at a few points.
   const tmp = join(dir, '.frames');
@@ -606,4 +609,17 @@ export function check(planFile) {
   return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
     pieces: R.cuts?.length, timeline: (R.inserts || []).map((i) => `${fmt(i.at)}  ${i.id}  ${i.kind}/${i.layout}  ${i.dur}s`),
     chapters: (R.chapters || []).map((c) => `${fmtChapter(c.at)} ${c.title}`) };
+}
+
+export function previewCuts(planFile) {
+  const plan = loadPlan(planFile), R = resolvePlan(plan);
+  if (R.errors.length) return { ok: false, errors: R.errors, warnings: R.warnings };
+  return {
+    ok: true, duration: +R.total.toFixed(3), source: +R.source.toFixed(3),
+    cuts: R.cuts.map((c, i) => ({
+      n: i + 1, clip: c.clip, source_in: +c.s.toFixed(3), source_out: +c.e.toFixed(3),
+      timeline_in: +c.out.toFixed(3), timeline_out: +(c.out + c.d).toFixed(3), duration: +c.d.toFixed(3),
+      reason: i && R.cuts[i - 1].clip === c.clip ? 'tightened pause/filler boundary' : 'source range',
+    })),
+  };
 }
