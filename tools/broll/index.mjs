@@ -137,13 +137,13 @@ export async function autoBroll(plan, R, { dry = false, offline = false, env = p
     for (const [src, kind, query] of queries.flatMap((q) => tryOrder(sources, e.type).map(([a, b]) => [a, b, q]))) {
       if (got) break;
       try {
-        const results = rank(await search(src, kind, query, { portrait: opts.portrait, cacheDir, env, fetchImpl, offline }), { query, need: p.dur, portrait: opts.portrait, used });
+        const results = rank(await search(src, kind, query, { portrait: opts.portrait, cacheDir, env, fetchImpl, offline }), { query, narration: e.sentence || e.said, need: p.dur, portrait: opts.portrait, used });
         const r = results[want.pick - 1];
         if (!r) continue;
         const file = offline ? join(stockDir, `${r.source}-${r.id}.${r.ext}`) : await download(r, stockDir, { fetchImpl });
         if (!existsSync(file)) continue;
         if (r.source === 'commons' && !offline && pause) await new Promise((ok) => setTimeout(ok, pause));   // Commons rate-limits quickly
-        got = { source: r.source, via: r.via, title: r.title || '', id: r.id, kind: r.kind, file: relative(ROOT, file).replace(/\\/g, '/'), w: r.w, h: r.h, dur: r.dur, from: r.kind === 'video' ? Math.min(0.5, Math.max(0, r.dur - p.dur - 0.1)) : 0, page: r.page, author: r.author, license: r.license, query: want.query, found_with: query, pick: want.pick };
+        got = { source: r.source, via: r.via, title: r.title || '', id: r.id, kind: r.kind, file: relative(ROOT, file).replace(/\\/g, '/'), w: r.w, h: r.h, dur: r.dur, from: r.kind === 'video' ? Math.min(0.5, Math.max(0, r.dur - p.dur - 0.1)) : 0, page: r.page, author: r.author, license: r.license, query: want.query, found_with: query, pick: want.pick, relevance_score: r.relevance_score, relevance_reason: r.relevance_reason };
       } catch (err) { problems.push(`${e.said}: ${src} ${kind}: ${err.message}`); }
     }
     if (got) { e.media = got; used.add(`${got.source}-${got.id}`); fetched++; log(`  ${fmt(p.at)}  "${e.said}" -> ${got.source} ${got.kind} ${got.id} (${want.query})`); }
@@ -164,10 +164,13 @@ function brollReport(plan, lock, sources, dry) {
   const rows = lock.entries.map((e, k) => {
     const pick = e.media ? `${e.media.source} ${e.media.kind} ${e.media.id}${e.media.dur ? `, ${e.media.dur} s` : ''}, ${e.media.w}x${e.media.h}` : '';
     const st = e.placed && e.media ? 'used' : e.placed ? 'placed, no media' : e.status === 'auto' || e.status === 'keep' ? 'not placed' : e.status;
-    return `| ${k + 1} | ${fmt(e.at_out ?? 0)} | ${e.said.replace(/\|/g, '/')} | ${e.type} | ${(e.media?.query || e.query).replace(/\|/g, '/')} | ${pick} | ${st} | ${(e.why || '').replace(/\|/g, '/')} |`;
+    const relevance = e.media ? `${Math.round((e.media.relevance_score || 0) * 100)}% — ${e.media.relevance_reason || 'not scored'}` : '';
+    return `| ${k + 1} | ${fmt(e.at_out ?? 0)} | ${e.said.replace(/\|/g, '/')} | ${e.type} | ${(e.media?.query || e.query).replace(/\|/g, '/')} | ${pick} | ${relevance.replace(/\|/g, '/')} | ${st} | ${(e.why || '').replace(/\|/g, '/')} |`;
   });
   return [`# Automatic B-roll: ${plan.title || plan.name}`, '',
     `Sources: ${sources.length ? sources.join(', ') : 'none'}${dry ? ' · dry run, nothing downloaded' : ''}.`,
     `Edit \`${relative(ROOT, lockPath(plan)).replace(/\\/g, '/')}\` to change a moment: \`"status": "drop"\` or \`"keep"\`, a new \`"query"\`, or \`"pick": 2\`; then run \`node longform.mjs broll\` again and rebuild.`, '',
-    '| # | At | Said | Type | Search | Pick | Status | Why |', '|---|---|---|---|---|---|---|---|', ...rows, ''].join('\n');
+    'Rows stay in narration order. Picks are ranked by relevance before size/source tie-breakers.',
+    process.env.BROLL_RELEVANCE_CMD ? `Local scorer: \`${process.env.BROLL_RELEVANCE_CMD}\`.` : 'Relevance uses the transparent metadata fallback. Set `BROLL_RELEVANCE_CMD` to a local OpenCLIP/SigLIP JSON-lines scorer for image-text scores.', '',
+    '| # | At | Said | Type | Search | Pick | Relevance | Status | Why |', '|---|---|---|---|---|---|---|---|---|', ...rows, ''].join('\n');
 }

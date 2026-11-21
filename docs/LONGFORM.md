@@ -377,6 +377,12 @@ node longform.mjs build edits/longform/x.json         # the cutaways are in the 
 - **Settings** in the plan: `"auto_broll": { "every": 15, "min": 1.5, "max": 3, "skip": ["Vegas"], "layout": "full",
   "force": [{ "at": "rec#41", "word": "Macau", "query": "Macau casino night" }] }`; `"auto_broll": false` turns it off.
 - Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in `assets/broll/stock/`.
+- Search moments and report rows stay in narration order. Candidate clips are ranked against the complete
+  script line, and BROLL.md records a relevance score plus a plain-English reason. The dependency-free
+  fallback compares narration to titles/tags. For real local image-text scoring, set `BROLL_RELEVANCE_CMD`
+  to an executable that reads JSON lines (`text`, `image`, `media`) and returns
+  `{"score": 0..1, "reason": "..."}`; an OpenCLIP/SigLIP wrapper can plug in without becoming a required
+  heavyweight dependency.
 - Wikimedia rate-limits busy servers (cloud sessions especially): the tool waits and retries, and falls back to the next
   source. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
 

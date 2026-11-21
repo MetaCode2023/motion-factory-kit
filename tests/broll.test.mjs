@@ -11,6 +11,7 @@ import { findMoments } from '../tools/broll/find.mjs';
 import { placeBroll } from '../tools/broll/place.mjs';
 import { commonsLicenseOk, rank, search, tryOrder } from '../tools/broll/sources.mjs';
 import { autoBroll, lockPath } from '../tools/broll/index.mjs';
+import { metadataRelevance } from '../tools/broll/relevance.mjs';
 
 // Timed words from a sentence list, 0.3 s per word, 0.6 s between sentences.
 function words(text, start = 0) {
@@ -88,6 +89,19 @@ test('ranking keeps the right shape and size, prefers matching tags and bigger f
   assert.deepEqual(tryOrder(['openverse', 'commons'], 'landmark')[0], ['commons', 'photo'], 'Commons first for named landmarks');
 });
 
+test('relevance scoring explains matches and can rank against the full narration line', () => {
+  const strong = metadataRelevance('The casino floor in Las Vegas was empty', { title: 'Las Vegas casino floor', tags: 'night interior' });
+  const weak = metadataRelevance('The casino floor in Las Vegas was empty', { title: 'generic office', tags: 'people working' });
+  assert.ok(strong.score > weak.score);
+  assert.match(strong.reason, /casino|vegas/);
+  const ranked = rank([
+    { source: 'x', id: 'weak', kind: 'photo', w: 1920, h: 1080, tags: 'office desk' },
+    { source: 'x', id: 'strong', kind: 'photo', w: 1920, h: 1080, tags: 'casino floor las vegas' },
+  ], { query: 'casino', narration: 'Walking across a Las Vegas casino floor' });
+  assert.equal(ranked[0].id, 'strong');
+  assert.ok(Number.isFinite(ranked[0].relevance_score));
+});
+
 // A stub of Openverse + Commons + file downloads.
 function stubFetch(calls = []) {
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
@@ -144,6 +158,7 @@ test('broll fetches, locks the picks, and the plan places them in gaps with cred
   assert.equal(vegas.media.source, 'openverse');
   assert.ok(existsSync(join(dir, 'stock', `openverse-${vegas.media.id}.jpg`)));
   assert.match(readFileSync(join(dir, 'out', 'BROLL.md'), 'utf8'), /Las Vegas/);
+  assert.match(readFileSync(join(dir, 'out', 'BROLL.md'), 'utf8'), /Relevance|metadata matches/);
 
   // A second run reuses the lock: no requests at all.
   const again = [];

@@ -10,6 +10,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { localRelevance } from './relevance.mjs';
 
 const UA = 'motion-factory-kit/1.0 (automatic B-roll; https://github.com/metacode2023/motion-factory-kit)';
 const DAY = 86400e3;
@@ -138,7 +139,7 @@ export async function search(source, kind, query, { portrait = false, cacheDir, 
 }
 
 // Rank results for a moment: right shape, long enough, not used yet, words in common with the search.
-export function rank(results, { query, need = 2, portrait = false, used = new Set() }) {
+export function rank(results, { query, narration = query, need = 2, portrait = false, used = new Set(), relevance = localRelevance }) {
   const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
   return results
     .map((r, k) => {
@@ -148,7 +149,8 @@ export function rank(results, { query, need = 2, portrait = false, used = new Se
       const tags = (r.tags || '').toLowerCase();
       const overlap = words.filter((w) => tags.includes(w)).length;
       const big = Math.min(1, Math.max(r.w, r.h) / 1920);
-      return { r, ok: shapeOk && sizeOk && lenOk && !used.has(`${r.source}-${r.id}`), score: overlap * 2 + big * 2 - k * 0.1 };
+      const rel = relevance(narration, r);
+      return { r: { ...r, relevance_score: rel.score, relevance_reason: rel.reason }, ok: shapeOk && sizeOk && lenOk && !used.has(`${r.source}-${r.id}`), score: rel.score * 8 + overlap * 2 + big * 2 - k * 0.1 };
     })
     .filter((x) => x.ok)
     .sort((a, b) => b.score - a.score)
