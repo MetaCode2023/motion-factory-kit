@@ -42,7 +42,11 @@ async function cueFrame(ins, R, plan, out, accent) {
     const words = R.words.filter((w) => w.s >= ins.at && w.s < ins.at + ins.dur).map((w) => ({ w: w.w, t: +(w.s - ins.at).toFixed(3) }));
     const data = join(out, '..', `.${ins.id}.json`);
     writeFileSync(data, JSON.stringify({ ...ins.data, dur: ins.dur, words }));
-    const r = spawnSync(process.execPath, [join(ROOT, 'render.mjs'), ins.scene, '--data', data, '--still', String(Math.min(ins.dur * 0.62, Math.max(0.6, ins.dur - 0.2))), '--out', out], { cwd: ROOT, encoding: 'utf8' });
+    const at = String(Math.min(ins.dur * 0.62, Math.max(0.6, ins.dur - 0.2)));
+    const renderer = /[\\/]3d[\\/]/.test(ins.scene)
+      ? [join(ROOT, 'tools', 'longform', 'render3d.mjs'), ins.scene, '--data', data, '--still', at, '--out', out]
+      : [join(ROOT, 'render.mjs'), ins.scene, '--data', data, '--still', at, '--out', out];
+    const r = spawnSync(process.execPath, renderer, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
     rmSync(data, { force: true });
     if (r.status === 0 && existsSync(out)) return;
   }

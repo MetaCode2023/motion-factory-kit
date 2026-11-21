@@ -350,9 +350,11 @@ test('editor exports include modern FCPXML and CMX3600 events', async () => {
 });
 
 test('storyboard approval does not freeze final series defaults', async () => {
-  const { finalApproval } = await import('../tools/longform/extras.mjs');
+  const { finalApproval, reviewInsert } = await import('../tools/longform/extras.mjs');
   assert.equal(finalApproval({ approved: true, stage: 'board' }), false);
   assert.equal(finalApproval({ approved: true }), true);
+  const inserts = [{ id: 'stable', at: 20, dur: 3 }, { id: 'old-time', at: 4, dur: 3 }];
+  assert.equal(reviewInsert({ insert: 'stable', t: 4.2 }, inserts).id, 'stable', 'stable cue id wins after plan timing changes');
 });
 
 test('PiP shrink motion animates in and back out while remaining opt-in', async () => {

@@ -98,7 +98,7 @@ $('add').onclick = () => { const text = $('tx').value.trim(); if (!text) return;
 $('ok').onchange = (e) => { approved = e.target.checked; store(); };
 $('clear').onclick = () => { notes = []; approved = false; store(); draw(); };
 $('save').onclick = () => {
-  const blob = new Blob([JSON.stringify({ name: DATA.name, plan: DATA.plan, duration: DATA.duration, approved, notes }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ name: DATA.name, plan: DATA.plan, duration: DATA.duration, stage: 'video', approved, notes }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = DATA.name + '.review.json'; a.click();
 };
 draw();
@@ -118,7 +118,7 @@ export function feedback(reviewFile, planFile) {
   const plan = loadPlan(pf), R = resolvePlan(plan);
   if (R.errors.length) throw new Error('the plan no longer resolves: ' + R.errors[0]);
   const notes = (rv.notes || []).slice().sort((a, b) => a.t - b.t).map((n) => {
-    const ins = R.inserts.find((i) => n.t >= i.at - 0.3 && n.t < i.at + i.dur + 0.3);
+    const ins = reviewInsert(n, R.inserts);
     const near = ins ? null : R.inserts.filter((i) => i.at > n.t).sort((a, b) => a.at - b.at)[0];
     const said = R.words.filter((w) => w.s >= n.t - 4 && w.s <= n.t + 4).map((w) => w.w).join(' ');
     const ch = R.chapters.filter((c) => c.at <= n.t).pop();
@@ -126,7 +126,8 @@ export function feedback(reviewFile, planFile) {
       insert: ins && { id: ins.id, kind: ins.kind, index: ins.i, scene: ins.scene ? relative(ROOT, ins.scene) : null, from: +ins.at.toFixed(1), to: +(ins.at + ins.dur).toFixed(1) },
       next: near && { id: near.id, at: +near.at.toFixed(1) } };
   });
-  const lines = [`# Feedback: ${plan.title || plan.name}`, '', rv.approved ? '**Approved** once the notes below are done.' : '**Not approved yet.**', '',
+  const stage = rv.stage === 'board' ? 'Pre-build storyboard' : 'Finished video';
+  const lines = [`# Feedback: ${plan.title || plan.name}`, '', `Stage: **${stage}**.`, '', rv.approved ? '**Approved** once the notes below are done.' : '**Not approved yet.**', '',
     `${notes.length} note(s). Plan: \`${relative(ROOT, pf)}\`. Change only what a note asks for, then rebuild (unchanged visuals are cached).`, ''];
   notes.forEach((n, k) => {
     lines.push(`## ${k + 1}. ${fmtChapter(n.t)}${n.chapter ? `  ·  ${n.chapter}` : ''}`, '', `> ${n.text.replace(/\n/g, '\n> ')}`, '');
@@ -143,6 +144,9 @@ export function feedback(reviewFile, planFile) {
 }
 
 export const finalApproval = (review) => !!review.approved && review.stage !== 'board';
+export const reviewInsert = (note, inserts) =>
+  (note.insert && inserts.find((i) => i.id === note.insert)) ||
+  inserts.find((i) => note.t >= i.at - 0.3 && note.t < i.at + i.dur + 0.3);
 
 const SERIES_START = '<!-- feedback-defaults:start -->';
 const SERIES_END = '<!-- feedback-defaults:end -->';
