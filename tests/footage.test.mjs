@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,10 +10,20 @@ import { spawnSync } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { Canvas } from 'skia-canvas';
 import { pickTrack, placement, followExpr, cropFilter } from '../tools/reframe.mjs';
-import { audioOptions, cleanChain, levelGain, speakerGains, loudness } from '../tools/audio.mjs';
+import { audioOptions, cleanChain, levelGain, speakerGains, loudness, speechCut, speechEnvelope } from '../tools/audio.mjs';
 
 const ff = (args) => { const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 const wide = { id: 'C01', width: 1920, height: 1080 };
+
+function wav(file, seconds, sample) {
+  const rate = 16000, n = Math.round(seconds * rate), data = Buffer.alloc(n * 2);
+  for (let i = 0; i < n; i++) data.writeInt16LE(Math.max(-32767, Math.min(32767, Math.round(sample(i / rate) * 32767))), i * 2);
+  const h = Buffer.alloc(44);
+  h.write('RIFF'); h.writeUInt32LE(36 + data.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 2, 28);
+  h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(data.length, 40);
+  writeFileSync(file, Buffer.concat([h, data]));
+}
 
 test('reframe: a still face gets one crop centred on it; manual focus wins', () => {
   const track = pickTrack([[0, [[0.7, 0.4, 0.2]]], [1, [[0.71, 0.4, 0.2]]], [2, [[0.7, 0.41, 0.2]]]]);
@@ -66,6 +76,166 @@ test('audio: cleaning lowers street noise and levelling evens a loud and a quiet
     // the rumble below 120 Hz is mostly gone
     const low = (c) => loudness(f, { from: 3, dur: 3, chain: [c, 'lowpass=f=100'].filter(Boolean).join(',') });
     assert.ok(low(chain) < low('') - 6, 'low-frequency noise down by more than 6 dB');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('audio: speech cuts keep a phrase through its real release and room tone', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-speech-'));
+  try {
+    const file = join(dir, 'pause.wav');
+    wav(file, 2, (t) => ((t >= 0.2 && t < 0.72) || (t >= 1.2 && t < 1.7)) ? 0.3 * Math.sin(2 * Math.PI * 220 * t) : 0);
+    const first = { w: 'first', s: 0.22, e: 0.55 }, next = { w: 'next', s: 1.2, e: 1.55 };
+    const [a, b] = speechCut(speechEnvelope(file), first, first, null, next);
+    assert.ok(a >= 0 && a < first.s, `lead starts before word: ${a}`);
+    assert.ok(b >= 0.84 && b <= 0.92, `cut follows the 0.72s release plus room: ${b}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('audio: run-together words cut in the energy dip, not after a fake pause', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-speech-'));
+  try {
+    const file = join(dir, 'joined.wav');
+    wav(file, 1.6, (t) => {
+      if (t < 0.2 || t >= 1.5) return 0;
+      const amp = t >= 0.78 && t < 0.84 ? 0.015 : 0.3;
+      return amp * Math.sin(2 * Math.PI * 220 * t);
+    });
+    const first = { w: 'one', s: 0.2, e: 0.7 }, next = { w: 'two', s: 0.86, e: 1.3 };
+    const [, b] = speechCut(speechEnvelope(file), first, first, null, next);
+    assert.ok(b >= 0.77 && b <= 0.86, `cut lands in dip: ${b}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('audio: first and final word cuts stay inside the decoded clip', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-speech-'));
+  try {
+    const file = join(dir, 'edge.wav');
+    wav(file, 1, (t) => t >= 0.02 ? 0.2 * Math.sin(2 * Math.PI * 180 * t) : 0);
+    const only = { w: 'edge', s: 0.02, e: 0.95 };
+    const [a, b] = speechCut(speechEnvelope(file), only, only, null, null);
+    assert.ok(a >= 0, `start is non-negative: ${a}`);
+    assert.ok(b >= 0.99, `continuous speech is preserved through the decoded end: ${b}`);
+    assert.ok(b <= 1, `end is clamped to decoded duration: ${b}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('audio: percentile normalization keeps quiet and noisy speech cut timing stable', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-speech-'));
+  try {
+    const variants = [{ amp: 0.3, noise: 0 }, { amp: 0.006, noise: 0 }, { amp: 0.12, noise: 0.008 }];
+    const cuts = variants.map(({ amp, noise }, i) => {
+      const file = join(dir, `level-${i}.wav`);
+      wav(file, 1.5, (t) => (t >= 0.2 && t < 0.72 ? amp * Math.sin(2 * Math.PI * 240 * t) : 0)
+        + noise * (Math.sin(2 * Math.PI * 977 * t) + Math.sin(2 * Math.PI * 1231 * t)) / 2);
+      const word = { w: 'quiet', s: 0.22, e: 0.55 };
+      return speechCut(speechEnvelope(file), word, word, null, null)[1];
+    });
+    assert.ok(cuts.every((cut) => Math.abs(cut - cuts[0]) <= 0.03), `cuts differ: ${cuts.join(', ')}`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('audio: failed envelope decode is reported and retried instead of cached', () => {
+  const missing = join(tmpdir(), `missing-audio-${process.pid}.wav`);
+  const warnings = [], old = console.warn;
+  console.warn = (message) => warnings.push(String(message));
+  try {
+    assert.equal(speechEnvelope(missing).env.length, 0);
+    assert.equal(speechEnvelope(missing).env.length, 0);
+  } finally { console.warn = old; }
+  assert.equal(warnings.length, 2, `one warning per failed attempt: ${warnings.join(' | ')}`);
+  assert.ok(warnings.every((w) => w.includes('audio envelope') && w.includes(missing)));
+});
+
+test('footage captions hold the final word until the audio-aware cut ends', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-caption-'));
+  const name = `caption-timing-${process.pid}`, out = fileURLToPath(new URL(`../out/edits/${name}`, import.meta.url));
+  try {
+    const words = JSON.parse(readFileSync(new URL('../examples/demo/footage/street-02.words.json', import.meta.url)));
+    const clip = fileURLToPath(new URL('../examples/demo/footage/street-02.mp4', import.meta.url));
+    writeFileSync(join(dir, 'index.json'), JSON.stringify({ clips: [{
+      id: 'C01', path: clip, duration: 8, width: 1280, height: 720, fps: 30, hasAudio: true, words,
+      sentences: [{ n: 0, s: words[0].s, e: words[6].e, from: 0, to: 6 }], speech: [], thumb: '',
+    }] }));
+    const plan = join(dir, 'plan.json');
+    writeFileSync(plan, JSON.stringify({ name, audio: false, segments: [{ clip: 'C01', sentence: 0 }] }));
+    const r = spawnSync(process.execPath, [fileURLToPath(new URL('../footage.mjs', import.meta.url)), 'cut', plan], {
+      cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, FOOTAGE_DIR: dir }, encoding: 'utf8',
+    });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    const captions = JSON.parse(readFileSync(join(out, 'aroll.words.json'), 'utf8'));
+    const data = JSON.parse(readFileSync(join(out, 'data.json'), 'utf8'));
+    assert.ok(captions.length);
+    assert.equal(captions.at(-1).e, data.segments[0].end, 'last caption reaches the piece/cut boundary');
+
+    writeFileSync(plan, JSON.stringify({ name, audio: false, segments: [{ clip: 'C01', from: 0, to: 6, tight: false }] }));
+    const loose = spawnSync(process.execPath, [fileURLToPath(new URL('../footage.mjs', import.meta.url)), 'cut', plan], {
+      cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, FOOTAGE_DIR: dir }, encoding: 'utf8',
+    });
+    assert.equal(loose.status, 0, loose.stderr || loose.stdout);
+    const looseCaptions = JSON.parse(readFileSync(join(out, 'aroll.words.json'), 'utf8'));
+    const looseData = JSON.parse(readFileSync(join(out, 'data.json'), 'utf8'));
+    assert.ok(looseCaptions.at(-1).e < looseData.segments[0].end - 0.2, 'untightened trailing silence does not hold the caption');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(out, { recursive: true, force: true });
+  }
+});
+
+test('verify_words reports tool failures clearly and normalizes numeric words', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mfk-verify-'));
+  try {
+    const verify = fileURLToPath(new URL('../tools/verify_words.py', import.meta.url));
+    const mp4 = join(dir, 'cut.mp4'), caps = join(dir, 'cut.words.json'), record = join(dir, 'wav-path.txt');
+    writeFileSync(mp4, '');
+    writeFileSync(caps, JSON.stringify([{ w: 'Eight,', s: 0, e: 0.5 }]));
+    const fakeFfmpeg = join(dir, 'ffmpeg');
+    writeFileSync(fakeFfmpeg, `#!/bin/sh\nfor last do :; done\nprintf wav > "$last"\nprintf '%s' "$last" > "${record}"\n`);
+    chmodSync(fakeFfmpeg, 0o755);
+    const okTranscribe = join(dir, 'ok.py');
+    writeFileSync(okTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"8","s":0,"e":0.5}]}))\n');
+    let r = spawnSync('python3', [verify, fakeFfmpeg, mp4, okTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 differences/);
+    assert.notEqual(readFileSync(record, 'utf8'), join(tmpdir(), 'verify_cut.wav'), 'uses an isolated temporary file');
+
+    writeFileSync(caps, JSON.stringify([{ w: '105', s: 0, e: 0.5 }, { w: "don't", s: 0.5, e: 1 }]));
+    const expandedTranscribe = join(dir, 'expanded.py');
+    writeFileSync(expandedTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"one","s":0,"e":0.1},{"w":"hundred","s":0.1,"e":0.2},{"w":"five","s":0.2,"e":0.5},{"w":"dont","s":0.5,"e":1}]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, expandedTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 differences/);
+
+    writeFileSync(caps, JSON.stringify([{ w: 'Eight,', s: 0, e: 0.5 }]));
+    const mismatchTranscribe = join(dir, 'mismatch.py');
+    writeFileSync(mismatchTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"nine","s":0,"e":0.5}]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, mismatchTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /1 differences/);
+
+    const errorTranscribe = join(dir, 'error.py');
+    writeFileSync(errorTranscribe, 'import json\nprint(json.dumps({"error":"faster-whisper unavailable"}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, errorTranscribe], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /faster-whisper unavailable/);
+
+    const failedTranscribe = join(dir, 'failed.py');
+    writeFileSync(failedTranscribe, 'import sys\nprint("model failed", file=sys.stderr)\nraise SystemExit(9)\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, failedTranscribe], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /transcription failed.*model failed/i);
+
+    const malformedTranscribe = join(dir, 'malformed.py');
+    writeFileSync(malformedTranscribe, 'import json\nprint(json.dumps({"words":[7]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, malformedTranscribe], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /transcribed word 0.*containing 'w'/i);
+
+    const failedFfmpeg = join(dir, 'bad-ffmpeg');
+    writeFileSync(failedFfmpeg, '#!/bin/sh\necho decode-broke >&2\nexit 7\n');
+    chmodSync(failedFfmpeg, 0o755);
+    r = spawnSync('python3', [verify, failedFfmpeg, mp4, okTranscribe], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /ffmpeg.*decode-broke/i);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 

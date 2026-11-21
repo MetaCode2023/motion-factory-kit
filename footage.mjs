@@ -318,10 +318,15 @@ async function cut(planFile, { quiet = false } = {}) {
       '-t', dur.toFixed(3), file], `cut ${p.clip.id} ${p.a.toFixed(2)}-${p.b.toFixed(2)}`);
     files.push(file);
     if (p.si !== prevSeg) { segStarts[p.si] = t; prevSeg = p.si; }
-    for (const w of p.clip.words) if (w.s >= p.a - 0.01 && w.e <= p.b + 0.05 && !(w.filler && !(p.seg.keepFillers ?? plan.keepFillers))) {
+    const pieceWords = p.clip.words.filter((w) => w.s >= p.a - 0.01 && w.e <= p.b + 0.05 && !(w.filler && !(p.seg.keepFillers ?? plan.keepFillers)));
+    for (const w of pieceWords) {
       words.push({ w: w.w, s: +(t + w.s - p.a).toFixed(3), e: +(t + Math.min(w.e, p.b) - p.a).toFixed(3) });
       (segWords[p.si] ||= []).push(w.w);
     }
+    // Transcript word ends are commonly early. Hold the piece's final caption through the real
+    // audio-aware cut so it does not disappear while the last consonant/release is still audible.
+    const tightened = p.seg.tight ?? plan.tight ?? true;
+    if (tightened && p.clip.hasAudio && pieceWords.length) words[words.length - 1].e = +(t + dur).toFixed(3);
     t += dur;
     segEnds[p.si] = t;
   }
