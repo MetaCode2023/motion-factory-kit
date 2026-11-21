@@ -26,3 +26,7 @@ Use one shared world and align each camera beat to a story cue or simulation eve
 
 For a visual based on a specific script line, use the [cutaway workflow](../../../docs/CUTAWAYS.md).
 Read project preferences, render distinct options, and recheck the line before saving the user's choice.
+
+For talking-head reels, consult [reel effects](../../../docs/REEL-EFFECTS.md).
+Choose the primary effect by story purpose and available assets, time it to the spoken cue,
+then inspect the entrance, readable hold, and exit before the final export.

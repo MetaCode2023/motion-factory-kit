@@ -30,7 +30,8 @@ jobs:
           node make.mjs scenes/examples/street-interview.html --fast
           node make.mjs scenes/examples/whiteboard-simulation.html
           node make.mjs scenes/examples/whiteboard-one-take.html
-          if grep -qE "^- FIX" out/whiteboard-{simulation,one-take}.report.md; then exit 1; fi
+          node make.mjs scenes/examples/reel-effects.html
+          if grep -qE "^- FIX" out/whiteboard-{simulation,one-take}.report.md out/reel-effects.report.md; then exit 1; fi
       - name: Footage editor demo (no keys)
         run: npm run demo
       - name: Every template renders

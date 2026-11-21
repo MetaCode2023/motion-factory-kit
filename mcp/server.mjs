@@ -115,6 +115,7 @@ server.registerTool('kit_overview', {
   root: ROOT, version: VERSION,
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
+    reelEffects: { guide: 'docs/REEL-EFFECTS.md', example: 'scenes/examples/reel-effects.html' },
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
     longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_broll (automatic free-license cutaways), longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
     overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
