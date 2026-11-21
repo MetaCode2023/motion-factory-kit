@@ -161,7 +161,7 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
     const dur = auto ? 0 : +(ins.dur ?? 5);
     const layout = ins.layout || 'full';
     if (!LAYOUTS.includes(layout)) errors.push(`${where}: layout must be ${LAYOUTS.join(' or ')}`);
-    const r = { i, where, auto, maxDur: ins.max_dur, id: ins.id || `${ins.kind}-${i + 1}`, kind: ins.kind, at: +Math.max(0, at).toFixed(3), dur, layout, sfx: ins.sfx === undefined ? (layout === 'full' ? 'whoosh' : 'pop') : ins.sfx, note: ins.note || '', src: ins };
+    const r = { i, where, auto, maxDur: ins.max_dur, id: ins.id || `${ins.kind}-${i + 1}`, kind: ins.kind, at: +Math.max(0, at).toFixed(3), dur, layout, behind: ins.behind === true, sfx: ins.sfx === undefined ? (layout === 'full' ? 'whoosh' : 'pop') : ins.sfx, note: ins.note || '', src: ins };
     if (ins.kind === 'animation') {
       if (!ins.scene || !existsSync(rel(ins.scene))) errors.push(`${where}: scene file not found: ${ins.scene}`);
       r.scene = ins.scene && rel(ins.scene); r.data = { ...(plan.theme || {}), ...(ins.data || {}) };
@@ -209,6 +209,8 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
   const voiceOnly = plan.base === 'backdrop' || (plan.a_roll || []).every((r) => lib.clips[r.clip] && !lib.clips[r.clip].height);
   // With no picture of the speaker there is nobody to keep on screen: pip and split become full.
   if (voiceOnly) inserts.forEach((i) => { if (i.layout === 'pip' || i.layout === 'split') i.layout = 'full'; });
+  if (voiceOnly && inserts.some((i) => i.behind)) warnings.push('behind:true has no speaker picture in a voice-only video; the visual renders normally');
+  if (voiceOnly) inserts.forEach((i) => { i.behind = false; });
   // "auto" lengths run to the next visual (or [[face]]), capped so the speaker comes back between ideas.
   inserts.forEach((ins, k) => {
     if (ins.auto) {

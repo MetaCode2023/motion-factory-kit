@@ -317,3 +317,16 @@ test('readability checks flag rushed copy and cut strips sample both sides', asy
   assert.deepEqual(strip.filter((x) => x.cut === 5).map((x) => x.offset), [-0.2, -0.1, 0, 0.1, 0.2]);
   assert.ok(strip.every((x) => x.t >= 0 && x.t < 12));
 });
+
+test('behind-speaker cues are explicit and stay off for voice-only recordings', () => {
+  const cue = parseCue('quote text: Breaking news | behind: true');
+  assert.equal(cue.opts.behind, 'true');
+  const lib = fakeLib();
+  lib.clips.a.height = 1080;
+  const plan = { name: 'behind', fps: 30, a_roll: [{ clip: 'a' }], inserts: [{ kind: 'pull', search: 'news', at: 0.5, dur: 1, behind: true }] };
+  assert.equal(resolvePlan(plan, lib).inserts[0].behind, true);
+  lib.clips.a.height = 0;
+  const voice = resolvePlan(plan, lib);
+  assert.equal(voice.inserts[0].behind, false);
+  assert.ok(voice.warnings.some((x) => /no speaker picture/.test(x)));
+});

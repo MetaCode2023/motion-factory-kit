@@ -98,6 +98,20 @@ async function pipAssets(media, accent, plan) {
   return { d, ring, margin, mask, ringFile };
 }
 
+// Heavy matting stays opt-in. The configured wrapper receives <input.mp4> <output.mov> and must write
+// an alpha-capable video (ProRes 4444, qtrle or VP9-alpha). Its result is cached for this exact cut list.
+function speakerCutout(R, plan, aroll, log) {
+  const command = plan.cutout?.command || process.env.MF_CUTOUT_CMD;
+  if (!command) throw new Error('behind:true needs a matting wrapper: set plan.cutout.command or MF_CUTOUT_CMD (see docs/LONGFORM.md)');
+  const args = [...(plan.cutout?.args || [])];
+  const ext = plan.cutout?.ext || '.mov';
+  return cached(hash('speaker-cutout-v1', R.cuts.map((c) => [c.clip, c.s, c.e, c.out]), command, args), ext, (out) => {
+    log('  matting speaker once for behind:true cues');
+    const r = spawnSync(command, [...args, aroll, out], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    if (r.status !== 0 || !existsSync(out)) throw new Error(`speaker matting failed: ${(r.stderr || r.stdout || '').slice(-800)}`);
+  });
+}
+
 // What an animation scene gets: its data, its length, and every word spoken while it is on screen
 // ({ w, t } with t in seconds from the insert's start), so its beats can land on the words.
 export function animData(ins, R) {
@@ -246,7 +260,7 @@ const XFADE = new Set(['fade', 'dissolve', 'fadeblack', 'smoothleft', 'smoothrig
 // its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
 // uses no more memory than a 1-minute one. Captions are drawn per chunk at the right times; the chunks are
 // joined without re-encoding and the mix is laid under them.
-function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null) {
+function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null, cutout = null) {
   const SIDE = sideBox(plan), fps = plan.fps;
   const N = Math.round(R.total * fps);
   const parts = [];
@@ -301,7 +315,11 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
         const needs = { in: !p.prev && !cut, out: !p.next && !cut, face: ins.layout === 'pip' || ins.layout === 'split' };
         const outs = [needs.in && 'bgA', needs.out && 'bgB', needs.face && 'bgF'].filter(Boolean);
         g.push(outs.length ? `[0:v]setpts=PTS-STARTPTS,${NORM}${outs.length > 1 ? `,split=${outs.length}` : ''}${outs.map((o) => `[${o}]`).join('')}` : '[0:v]nullsink');
-        if (ins.layout === 'pip' && pip) {
+        if (ins.behind && cutout) {
+          inputs.push('-ss', ss, '-i', cutout);
+          g.push(`[1:v]setpts=PTS-STARTPTS,${NORM}[behind];[${nIn}:v]setpts=PTS-STARTPTS,format=rgba[person];[behind][person]overlay=0:0:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          nIn++;
+        } else if (ins.layout === 'pip' && pip) {
           const Dp = pip.d, rx = W - Dp - 2 * pip.ring - pip.margin, ry = H - Dp - 2 * pip.ring - pip.margin;
           inputs.push('-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile);
           g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
@@ -509,7 +527,8 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
   const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
-  composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null);
+  const cutout = R.inserts.some((i) => i.behind) ? speakerCutout(R, plan, aroll.video, log) : null;
+  composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null, cutout);
 
   const files = [relative(ROOT, video)];
   const write = (name, text) => { const f = join(dir, name); writeFileSync(f, text); files.push(relative(ROOT, f)); return f; };

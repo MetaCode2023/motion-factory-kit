@@ -162,6 +162,26 @@ where the speaker sits across the frame if they're off-centre; `"pip": { "size":
 circle. In voice-only videos there is no picture of the speaker, so `pip` and `split` become `full`. The Premiere
 timeline shows them as full-frame clips.
 
+### Text behind the speaker (opt-in)
+
+`[[quote text: BREAKING NEWS | behind: true]]` (or `"behind": true` on an insert) puts that rendered visual
+behind a transparent speaker for a news-desk look. It is **off by default** because high-quality matting is
+large and slow. Configure a wrapper:
+
+```json
+"cutout": {
+  "command": "python3",
+  "args": ["tools/my-rvm-wrapper.py"],
+  "ext": ".mov"
+}
+```
+
+The wrapper is called once with `<input.mp4> <output.mov>` and must write full-frame alpha video (ProRes 4444,
+qtrle, or VP9 alpha). Set `MF_CUTOUT_CMD` for a single executable with no extra arguments. Robust Video
+Matting or BackgroundMattingV2 are suitable local models; install them separately and pin their model/license.
+The cutout is cached and reused by all behind cues. Voice-only plans ignore `behind`. This repository ships
+the compositing scaffold, not a multi-gigabyte model or weights.
+
 ## Transitions and camera
 
 Full-frame visuals arrive and leave with a real transition instead of a fade, cycling through soft wipes,
