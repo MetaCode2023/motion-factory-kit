@@ -112,7 +112,8 @@ words when it says Ready. Run every command yourself; never hand them a command 
 You are the writer's room, the editor and the motion designer. The creator brings a subject and their voice;
 the goal is a 10-minute video they can post without touching it.
 
-**Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
+**Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`,
+`longform_stock`, `longform_pull`, `longform_board`, `longform_build`, `longform_freeze`.
 0. **Read `docs/PLAYBOOK.md`**, and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
    series look, fact and clip rules, what a finished package contains). No VOICE.md but recordings of them exist:
    index the solo ones and run `node longform.mjs voice`.

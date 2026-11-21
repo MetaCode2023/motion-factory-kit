@@ -371,6 +371,24 @@ server.registerTool('longform_feedback', {
   inputSchema: { review: z.string(), plan: z.string().optional() },
 }, async ({ review, plan }) => text(await cli('longform.mjs', ['feedback', inRepo(review), ...(plan ? [inRepo(plan)] : [])])));
 
+server.registerTool('longform_board', {
+  title: 'Render the storyboard approval page',
+  description: 'Before a full build, render one finished-looking still per visual cue into board.html. The creator exports the same review.json format used by longform_feedback; revise until they approve the visual flow, then build.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['board', inRepo(plan)])));
+
+server.registerTool('longform_freeze', {
+  title: 'Freeze approved series defaults',
+  description: 'After approval, save the plan header, layouts, caption style, theme and transitions as a versioned private template and update the approved defaults in scripts/SERIES.md.',
+  inputSchema: { plan: z.string(), name: z.string().optional() },
+}, async ({ plan, name }) => text(await cli('longform.mjs', ['freeze', inRepo(plan), ...(name ? ['--name', name] : [])])));
+
+server.registerTool('longform_cut_preview', {
+  title: 'Preview planned cuts',
+  description: 'Print every source in/out and resulting timeline cut without rendering or changing media.',
+  inputSchema: { plan: z.string() },
+}, async ({ plan }) => text(await cli('longform.mjs', ['cut', inRepo(plan), '--preview'])));
+
 server.registerTool('longform_thumbnail', {
   title: 'Make thumbnails',
   description: 'Three 1280x720 thumbnails for a plan, from its "thumbnail": { text (2-4 words), accent (the word to colour), prop (a name from scenes/longform/props.js), kicker }. Look at them and pick.',

@@ -297,7 +297,8 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs shorts <plan>` | Vertical shorts cut from the finished video, one per chapter, or the ones in `"shorts": [{ "from", "to", "title" }]`. |
 
 The same steps are MCP tools (`longform_index`, `longform_search`, `longform_words`, `longform_write_plan`,
-`longform_stock`, `longform_build`, `longform_doctor`, `longform_feedback`, `longform_thumbnail`, `longform_shorts`). The build tool returns the inserts contact sheet as a picture.
+`longform_stock`, `longform_board`, `longform_cut_preview`, `longform_build`, `longform_freeze`,
+`longform_doctor`, `longform_feedback`, `longform_thumbnail`, `longform_shorts`). The build tool returns the inserts contact sheet as a picture.
 
 ## Plans from existing footage
 
