@@ -3,7 +3,7 @@
 For creators who explain things: a 10-minute video on the physics of poker, how money works, the future of voting.
 The creator brings the subject and reads the script. Claude does the rest: it co-writes the script with the visuals
 built in, then turns the recording into a finished video. That means animations every ~15 seconds, B-roll,
-outside clips that back up the points, music, sound effects and captions. A Premiere timeline is included in
+outside clips that back up the points, music, sound effects and captions. Premiere, Resolve, Final Cut and EDL timelines are included in
 case anything needs a touch.
 
 **Script first (new recordings), the main workflow:**
@@ -279,7 +279,7 @@ transcription. After that, only new files are processed. Already have transcript
 | Command | What it does |
 |---|---|
 | `node longform.mjs script <x.script.md>` | Checks the script (cues, runtime at your pace, a visual every ~15 s, chapters) and writes `<x>.read.txt` for the teleprompter. |
-| `node longform.mjs from-script <script> <recording> [--build]` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. |
+| `node longform.mjs from-script <script> <recording>` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. Run `board` and get approval before `build`. (`--build` remains for compatibility, but skips that approval gate.) |
 | `node longform.mjs pull <plan>` | Downloads outside clips that have a `url` and `from`/`to` (needs yt-dlp). |
 | `node longform.mjs index [dir]` | Transcribes and indexes everything. Writes `footage/library/.index/LIBRARY.md` (one row per clip with its topics), `<clip>.md` (every sentence numbered with times), and `<clip>.sheet.jpg` (12 frames). |
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
