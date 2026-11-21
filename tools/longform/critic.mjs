@@ -33,7 +33,7 @@ export function harshReview(R, plan, shots = []) {
   const ranked = ['P0', 'P1', 'P2'].flatMap((p) => notes.filter((n) => n.includes(`**${p}**`)));
   return [
     `# Harsh review: ${plan.title || plan.name}`, '',
-    '> Reviewer boundary: this pass used only the resolved plan and sampled stills. It did not use the script rationale, prior feedback, or a numeric score.', '',
+    '> Reviewer boundary: this pass used only the resolved plan and sampled stills. It did not use the script rationale, prior feedback, or a numeric rating.', '',
     'Read this file before REPORT.md in the next session. Fix P0 first, then P1. P2 is polish or an explicit decision.', '',
     '## Ranked changes', '', ...ranked, '',
     '## Stranger-eye frame read', '', ...(frames.length ? frames : ['No key frames were supplied. Generate the contact sheet again.']), '',
