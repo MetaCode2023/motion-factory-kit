@@ -42,6 +42,10 @@ def integer_words(value: int) -> list[str]:
 
 def normalize(word: object) -> list[str]:
     text = str(word).lower().replace("’", "'").replace(",", "")
+    # Whisper may emit a compound number as one hyphenated token while captions use digits.
+    # Keep it as the same ordered word expansion used for "21" -> ["twenty", "one"].
+    if re.fullmatch(r"[a-z]+(?:-[a-z]+)+[.!?]?", text):
+        return [part for piece in text.rstrip(".!?").split("-") for part in normalize(piece)]
     numeric = re.sub(r"[$£€¥\s]", "", text)
     if re.fullmatch(r"[+-]?\d+", numeric):
         return integer_words(int(numeric))

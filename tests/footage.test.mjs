@@ -220,6 +220,18 @@ test('verify_words reports tool failures clearly and normalizes numeric words', 
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /0 differences/);
 
+    writeFileSync(caps, JSON.stringify([{ w: '21', s: 0, e: 0.5 }]));
+    const hyphenTranscribe = join(dir, 'hyphen.py');
+    writeFileSync(hyphenTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"twenty-one","s":0,"e":0.5}]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, hyphenTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 differences/);
+    const multiTokenTranscribe = join(dir, 'multi-token.py');
+    writeFileSync(multiTokenTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"twenty","s":0,"e":0.2},{"w":"one","s":0.2,"e":0.5}]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, multiTokenTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 differences/);
+
     writeFileSync(caps, JSON.stringify([{ w: 'Eight,', s: 0, e: 0.5 }]));
     const mismatchTranscribe = join(dir, 'mismatch.py');
     writeFileSync(mismatchTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"nine","s":0,"e":0.5}]}))\n');
