@@ -2,7 +2,7 @@
 // transcript sidecars it relies on.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { checkPlan } from '../tools/plans.mjs';
 import { normalizeWords, parseCues, readSidecar, wordsFromCues } from '../tools/transcripts.mjs';
 
+const root = fileURLToPath(new URL('../', import.meta.url));
 const server = fileURLToPath(new URL('../mcp/server.mjs', import.meta.url));
 
 test('MCP server lists its tools and answers kit_overview, check_plan and render_still', async () => {
@@ -39,6 +40,50 @@ test('MCP server lists its tools and answers kit_overview, check_plan and render
   } finally {
     await client.close();
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a script line can render, select and invalidate a paper-cutout handoff', async () => {
+  const client = new Client({ name: 'cutaway-test', version: '1.0.0' });
+  await client.connect(new StdioClientTransport({ command: process.execPath, args: [server] }));
+  const call = async (name, args) => {
+    const reply = await client.callTool({ name, arguments: args });
+    assert.ok(!reply.isError, JSON.stringify(reply));
+    return JSON.parse(reply.content[0].text);
+  };
+  const line = { projectId: 'test-cutaway-project', lineId: 'line-1', text: 'Small ideas grow into systems.' };
+  const visual = { title: 'Ideas grow', subject: 'growth', palette: 'teal', layout: 'stack' };
+  let id;
+  try {
+    const alternate = { ...visual, subject: 'idea', palette: 'amber', layout: 'center' };
+    const draft = await call('cutaway_preview', { line, options: [visual, alternate] });
+    id = draft.id;
+    assert.equal(draft.previews.length, 2);
+    for (const preview of draft.previews) assert.equal(preview.ok, true, JSON.stringify(preview.checks));
+    assert.ok(existsSync(join(root, draft.previews[0].video)));
+    const stale = await call('cutaway_select', {
+      id, option: 1, currentLine: { ...line, text: 'The script was revised.' },
+    });
+    assert.equal(stale.status, 'stale');
+    const selected = await call('cutaway_select', {
+      id, option: 1, currentLine: line, feedback: 'Keep the teal palette.',
+    });
+    assert.equal(selected.status, 'selected');
+    assert.ok(existsSync(join(root, selected.handoff)));
+    assert.equal(selected.video, draft.previews[0].video);
+    const status = await call('cutaway_status', { draftId: id, selectionId: selected.id, currentLine: line });
+    assert.equal(status.status, 'current');
+    const editedStatus = await call('cutaway_status', {
+      draftId: id, selectionId: selected.id, currentLine: { ...line, text: 'The script was revised after approval.' },
+    });
+    assert.equal(editedStatus.status, 'stale');
+    const recent = await call('cutaway_preferences', { projectId: line.projectId });
+    assert.deepEqual(recent[0].direction, visual);
+    assert.equal(recent[0].feedback, 'Keep the teal palette.');
+    assert.deepEqual(await call('cutaway_preferences', { projectId: 'another-project' }), []);
+  } finally {
+    await client.close();
+    if (id) rmSync(join(root, 'out', 'cutaways', id), { recursive: true, force: true });
   }
 });
 

@@ -23,3 +23,6 @@ Keep motion tied to scene time so previews and exports can seek directly to any 
 For a continuous shot, start with [the one-take tray example](../../../scenes/examples/whiteboard-one-take.html).
 Plan the wide view, push-in, tracked action, and reveal before writing the scene.
 Use one shared world and align each camera beat to a story cue or simulation event.
+
+For a visual based on a specific script line, use the [cutaway workflow](../../../docs/CUTAWAYS.md).
+Read project preferences, render distinct options, and recheck the line before saving the user's choice.

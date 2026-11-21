@@ -28,6 +28,7 @@ other than `footage/`) in the server's environment if you want them.
 | `footage_build` | Build ads from plans: every hook, every size, `DELIVERY.csv`, `review.html`. `only` / `redo` rebuild a subset. |
 | `review_feedback` | Apply a client's `review.json`: `FEEDBACK.md`, `approved/`, the review column. Returns the ads to re-cut. |
 | `review_page` | (Re)write a batch's review page. |
+| `cutaway_preview`, `cutaway_select`, `cutaway_status`, `cutaway_preferences` | [Script-linked paper-cutout previews and production handoffs](CUTAWAYS.md). |
 | `make_video` | Build any scene or template (with `data` for a template row). Returns files and every PASS/FIX check. |
 | `render_still` | One frame of a scene, returned as a picture. |
 | `look_at` | Any PNG/JPG in the kit (cut stills, thumbnails, covers) returned as a picture. |
