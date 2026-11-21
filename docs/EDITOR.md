@@ -110,6 +110,17 @@ ad, file, size, hook, angle, length and check status: hand it to the media buyer
 Check one plan quickly: `node footage.mjs cut edits/glow-07-results.json` (just the A-roll, in seconds).
 Use your own polish layer: `--template scenes/mine/my-edit.html` (read the plan with `M.data`).
 
+To verify a finished cut word-for-word, install the local transcriber with `pip install faster-whisper`,
+then run:
+
+```bash
+python tools/verify_words.py <ffmpeg> <cut.mp4> tools/transcribe.py [model]
+```
+
+The checker reads `<cut>.words.json`, exits nonzero on tool failures or transcript differences, and uses a
+private temporary audio file. It normalizes case, punctuation, and equivalent integers (`eight`/`8`);
+other spelling differences still require review.
+
 ## Street interviews
 
 Mark the host's question and the people answering in the plan; the overlays place themselves.

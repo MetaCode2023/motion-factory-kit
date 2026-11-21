@@ -93,11 +93,14 @@ Transcripts come from, in order: a `<clip>.words.json` / `.srt` / `.vtt` next to
 The cutter places every cut on the audio (`speechCut` in tools/audio.mjs), not on the transcript's word times,
 which run early and chop last syllables. At a phrase ending it keeps everything up to the real pause plus 0.15 s:
 final t/k/x sounds are released after a short silent gap, and trimming close to the word clips them. Only words
-that run straight into the next are cut in the dip between them (give those a ~0.15 s breath when stitching).
-If you stitch footage any other way, do the same. Before handing over, run `tools/verify_words.py` on the cut:
-every captioned word must be heard and nothing extra (a leaked "...cause", an invented word in a silence). If in
-doubt about one edge, transcribe ~1.5 s from that cut on its own. Transition sound effects go in a pause after
-the last word, never on it; leave ~0.5 s of room tone at chapter changes for them.
+that run straight into the next are cut in the energy dip, with only 12/18 ms anti-click fades—no artificial
+0.15 s breath. If you stitch footage any other way, follow the same rule. Before handing over, install the local
+checker with `pip install faster-whisper`, then run
+`python tools/verify_words.py <ffmpeg> <cut.mp4> tools/transcribe.py [model]`; it reads `<cut>.words.json`.
+Every captioned word must be heard and nothing extra (a leaked "...cause", an invented word in a silence).
+Case, punctuation, and integer forms such as `eight`/`8` are normalized; other spelling differences are reported
+and need review. If in doubt about one edge, transcribe ~1.5 s from that cut on its own. Transition sound effects
+go in a pause after the last word, never on it; leave ~0.5 s of room tone at chapter changes for them.
 Never commit client footage or plans (they're git-ignored); never invent quotes the people didn't say.
 
 ## Long-form YouTube (`longform.mjs`, details in `docs/LONGFORM.md`)
