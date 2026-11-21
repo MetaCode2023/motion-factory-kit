@@ -36,3 +36,24 @@ node make.mjs examples/manim/sine-composite.html --fast
 ```
 
 For your own scene, place the clip in your assets, create it with `M.video(relativePath, { at: startTime, audio: false })`, and call its `draw(ctx, t, x, y, width, height)` during that beat.
+
+## One continuous shot
+
+Start with [the tray one-take](../scenes/examples/whiteboard-one-take.html).
+
+```sh
+node make.mjs scenes/examples/whiteboard-one-take.html
+```
+
+Use one coordinate system for the full shot. Create the camera once with
+`FX.cameraPath([{ at, focus, zoom }, ...], { width, height })`. Keyframes use scene
+seconds. Focus is a world-space `{ x, y }` or a function of scene time that returns
+a point. Two consecutive keyframes with the same focus function follow that target.
+The camera blends into and out of tracking and holds the endpoint keyframes outside
+their time range. A dynamic endpoint continues to follow its target.
+
+Inside `draw`, pass the sampled pose to `FX.withCamera(ctx, t, cameraAt(t), drawWorld)`.
+Draw labels that should stay fixed on screen after that call. Reuse the same
+timestamps for camera beats and narration cues. For physics events, derive the
+timestamp during the simulation bake and use it for the camera, captions, and
+sound. The tray example derives its impact cue from Matter.js contact.

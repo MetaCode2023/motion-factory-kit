@@ -20,3 +20,6 @@ When the story depends on motion, use [the simulation guide](../../../docs/SIMUL
 and [the whiteboard example](../../../scenes/examples/whiteboard-simulation.html). Pick a technique
 for each shot, render a short preview, and inspect frames at the key moments before the final build.
 Keep motion tied to scene time so previews and exports can seek directly to any frame.
+For a continuous shot, start with [the one-take tray example](../../../scenes/examples/whiteboard-one-take.html).
+Plan the wide view, push-in, tracked action, and reveal before writing the scene.
+Use one shared world and align each camera beat to a story cue or simulation event.

@@ -47,3 +47,32 @@ test('the whiteboard simulation renders the same frames after seeking in either 
   assert.deepEqual(randomAccess.frame(0.25), early);
   assert.deepEqual(randomAccess.frame(4.125), late);
 });
+
+test('camera paths preserve viewport framing and track a moving focus at any time', () => {
+  vm.runInNewContext(readFileSync(new URL('../kit/fx.js', import.meta.url), 'utf8'), { window });
+  const { FX } = window;
+  const path = FX.cameraPath([
+    { at: 0, focus: { x: 100, y: 50 } },
+    { at: 2, focus: t => ({ x: 80 + 10 * t, y: 40 }), zoom: 2 },
+    { at: 4, focus: t => ({ x: 80 + 10 * t, y: 40 }), zoom: 2 },
+    { at: 6, focus: { x: 100, y: 50 } },
+  ], { width: 200, height: 100 });
+  const values = t => Object.values(path(t));
+  assert.deepEqual(values(3), [2, -20, 20]);
+  assert.deepEqual(values(1), [1.5, 7.5, 7.5]);
+  assert.deepEqual(values(3), [2, -20, 20]);
+  assert.deepEqual(values(-1), [1, 0, 0]);
+  assert.deepEqual(values(7), [1, 0, 0]);
+  assert.throws(() => FX.cameraPath([{ at: 2 }, { at: 2 }], { width: 200, height: 100 }), /increasing/);
+});
+
+test('one-take simulation frames match after jumping from the reveal back to impact', async () => {
+  const { open } = await import('../engines/skia.mjs');
+  const scene = await open('scenes/examples/whiteboard-one-take.html');
+  assert.equal(scene.V.duration, 15);
+  assert.deepEqual(Array.from(scene.V.cuts), []);
+  const collision = scene.V.sfx[1].at;
+  const frame = scene.frame(collision + 0.1);
+  assert.notDeepEqual(scene.frame(14), frame);
+  assert.deepEqual(scene.frame(collision + 0.1), frame);
+});
