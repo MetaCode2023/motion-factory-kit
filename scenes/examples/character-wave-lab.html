@@ -4,13 +4,13 @@
 <script src="../../kit/simulation.js"></script>
 <script src="../../kit/character.js"></script>
 <script src="../../assets/characters/pipette.js"></script>
-<script>
+<body><script>
 const duration=12, mint='#a1f6d9', orange='#ffba87', ink='#eafffb';
 const phaseStart=3.8, phaseEnd=8.2;
 const character=CharacterMotion.poseAt([
-  {at:0,pose:'neutral'}, {at:.6,pose:'neutral'}, {at:1.4,pose:'point'},
-  {at:3.4,pose:'point'}, {at:4.5,pose:'inspect'}, {at:8.3,pose:'inspect'},
-  {at:9.25,pose:'relieved'}, {at:10.3,pose:'neutral'}, {at:10.46,pose:'blink'},
+  {at:0,pose:'neutral',holdUntil:.6}, {at:1.4,pose:'point',holdUntil:3.4},
+  {at:4.5,pose:'inspect',holdUntil:8.3},
+  {at:9.25,pose:'relieved',ease:'outCubic'}, {at:10.3,pose:'neutral'}, {at:10.46,pose:'blink'},
   {at:10.58,pose:'neutral'},
 ],Pipette.poses);
 function type(ctx,text,x,y,font,color=ink){
@@ -48,4 +48,4 @@ M.setup({width:960,height:540,fps:30,duration,background:'#132d37',
     type(ctx,line,49,503,'600 25px sans-serif',ink);
   }
 });
-</script>
+</script></body>

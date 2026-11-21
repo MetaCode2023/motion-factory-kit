@@ -34,3 +34,7 @@ then inspect the entrance, readable hold, and exit before the final export.
 For a recurring character, follow [character animation](../../../docs/CHARACTER-ANIMATION.md).
 Use its approved shared asset, choose named poses based on what the viewer should notice,
 and time each gesture to the relevant story cue. Hold the pose while the viewer reads the result.
+
+For editorial reveals, focus shifts, or decorative compositions, consult
+[editorial effects](../../../docs/EDITORIAL-EFFECTS.md). Use the real screen or media
+when it is evidence, and render a frame at the cue before building the full reel.

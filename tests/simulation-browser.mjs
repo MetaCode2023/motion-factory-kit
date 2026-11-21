@@ -3,7 +3,7 @@ import { chromium } from 'playwright-core';
 
 const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || undefined });
 try {
-  for (const [name, lateTime] of [['whiteboard-simulation', 4.2], ['whiteboard-one-take', 6.2]]) {
+  for (const [name, lateTime] of [['whiteboard-simulation', 4.2], ['whiteboard-one-take', 6.2], ['character-wave-lab', 8.4], ['character-light-lab', 5.2], ['editorial-reel', 10.2]]) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));

@@ -90,3 +90,18 @@ test('both lab scenes can seek without changing the shared character poses', asy
     }
   }
 });
+
+test('character cues preserve holding poses and ease into the next pose', () => {
+  vm.runInNewContext(readFileSync(new URL('../kit/character.js', import.meta.url), 'utf8'), { window });
+  const { poseAt } = window.CharacterMotion;
+  const poses = { idle: { arm: 0 }, point: { arm: 1 } };
+  const cues = [{ at: 0, pose: 'idle', holdUntil: 2 }, { at: 4, pose: 'point', ease: 'outCubic' }];
+  const pose = poseAt(cues, poses);
+  assert.equal(pose(3).arm, 0.875);
+  assert.equal(pose(1.5).arm, 0);
+  assert.equal(pose(2).arm, 0);
+  assert.equal(pose(4).arm, 1);
+  assert.equal(pose(3).arm, 0.875);
+  assert.throws(() => poseAt([{ ...cues[0], holdUntil: 4 }, cues[1]], poses), /Hold ends/);
+  assert.throws(() => poseAt([cues[0], { ...cues[1], ease: 'unexpected' }], poses), /easing/);
+});

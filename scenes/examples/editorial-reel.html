@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8"><title>Editorial motion studies</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/editorial-effects.js"></script>
+<body><script>
+const mint='#b9f3d7',paper='#e9dcc0';
+const cuts=[3,6,9,12];
+function type(c,s,x,y,size=44,color=mint){
+  M.text(c,s,x,y,{font:'bold '+size+'px sans-serif',color});
+}
+function card(c,x,y,label,color='#285353'){
+  c.fillStyle=color;M.roundRect(c,x,y,220,115,15);c.fill();
+  type(c,label,x+18,y+64,24);
+}
+function wash(c,t){
+  const g=c.createLinearGradient(0,0,960,540);
+  g.addColorStop(0,'#10212b');
+  g.addColorStop(.33+.26*Math.sin(t*2.8),'#385b63');
+  g.addColorStop(1,'#0f252b');
+  c.fillStyle=g;c.fillRect(0,0,960,540);
+}
+M.setup({width:960,height:540,fps:30,duration:15,cuts,background:'#0f252b',music:{track:'reflect',volume:.15},
+  draw(c,t){
+    wash(c,t);
+    const shot=cuts.filter(at=>t>=at).length;
+    const beat=t-(cuts[shot-1]||0);
+    type(c,['Follow the action','One step at a time','How much time passed?','Change the focal plane','Turn the page'][shot],47,103);
+    const p=M.prog(beat,0,2.5);
+    if(shot===0){
+      card(c,124,220,'Source');card(c,604,220,'Preview');
+      EditorialFX.cursor(c,beat,{from:{x:150,y:333},to:{x:671,y:280},at:.35,duration:1.6});
+    }else if(shot===1){
+      EditorialFX.stagger(c,beat,['Draft','Review','Deliver'],{at:.1,step:.55},(ctx,label,i,amount)=>{
+        ctx.globalAlpha=amount;card(ctx,100+i*270,247+40*(1-amount),label);
+      });
+    }else if(shot===2){
+      EditorialFX.dial(c,{x:480,y:320,radius:140,progress:p});
+    }else if(shot===3){
+      EditorialFX.focusLayers(c,[
+        {depth:1,draw:ctx=>card(ctx,546,212,'Background')},
+        {depth:0,draw:ctx=>card(ctx,208,325,'Foreground')},
+      ],{focus:1-p,zoom:1+p*.1,spread:p*.24,x:480,y:320});
+    }else{
+      EditorialFX.paperTear(c,p,{x:0,y:0,width:960,height:540},ctx=>{
+        ctx.fillStyle=paper;ctx.fillRect(0,0,960,540);
+        type(ctx,'THE EDITORIAL STUDY',47,103,44,'#283c3a');
+        for(let i=0;i<13;i++){
+          ctx.fillStyle=i%3===0?'#56625a':'#88887a';ctx.fillRect(53,155+i*23,310+(i*39)%420,3);
+        }
+      });
+    }
+  }
+});
+</script></body>

@@ -4,9 +4,9 @@
 <script src="../../kit/simulation.js"></script>
 <script src="../../kit/character.js"></script>
 <script src="../../assets/characters/pipette.js"></script>
-<script>
+<body><script>
 const pose=CharacterMotion.poseAt([
-  {at:0,pose:'neutral'},{at:.45,pose:'point'},{at:2.2,pose:'point'},
+  {at:0,pose:'neutral'},{at:.45,pose:'point',holdUntil:2.2,ease:'outCubic'},
   {at:3.3,pose:'inspect'},{at:4.8,pose:'relieved'},{at:6,pose:'neutral'},
 ],Pipette.poses);
 M.setup({width:960,height:540,duration:7,fps:30,background:'#182032',
@@ -29,4 +29,4 @@ M.setup({width:960,height:540,duration:7,fps:30,background:'#182032',
     M.text(ctx,'Watch the shadow stretch.',49,502,{font:'600 25px sans-serif',color:'#f7f3ef'});
   }
 });
-</script>
+</script></body>

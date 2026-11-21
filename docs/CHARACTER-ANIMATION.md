@@ -25,7 +25,10 @@ Load `motion.js`, `simulation.js`, `character.js`, then the chosen character
 asset. Pass increasing `{ at, pose }` cues to
 `CharacterMotion.poseAt(cues, Pipette.poses)`. The returned function samples a
 pose from scene seconds. Pass that pose to `Pipette.draw(ctx, { x, y, scale, pose, t })`.
-Repeat a pose at the end of a hold before adding the next pose. Use identical
+Set `holdUntil` to a scene timestamp before the next cue to keep a pose steady.
+Set `ease` on the arriving cue to `inOutCubic` for a soft start and stop,
+`outCubic` for a quick reaction with a gentle settle, or `linear` for steady movement.
+Use identical
 cue times for related captions, sound accents, or narration. The character can
 be rendered in any frame order.
 
