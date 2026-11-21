@@ -32,6 +32,7 @@ out/longform/<name>/
   <name>.srt              captions for YouTube
   CHAPTERS.txt            paste into the description
   PULL-LIST.md            outside clips still to grab, with sources and timestamps
+  REVIEW.md               harsh P0/P1/P2 second review; read this before REPORT.md
   REPORT.md               self-check (PASS/FIX) + the timeline
   <name>.inserts.jpg      one frame from every visual
 ```
@@ -202,6 +203,9 @@ only.
 
 ## Review, thumbnail, shorts
 
+- **Self-review.** `REVIEW.md` is regenerated from only the resolved plan and key stills, so prior intent
+  cannot excuse a confusing frame. It uses no numeric scores: every P0/P1/P2 note names the time, location,
+  problem, exact change, and what must stay. The next editing session reads this before REPORT.md.
 - **Review.** Every build writes `out/longform/<name>/review.html`. Send the folder (or open it yourself):
   watch, pause where something is off, type the note, press Add; Save notes downloads `<name>.review.json`.
   `node longform.mjs feedback <name>.review.json` writes `FEEDBACK.md`. Change only what the notes ask for

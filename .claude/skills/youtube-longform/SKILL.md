@@ -34,3 +34,5 @@ Around the video:
   read `FEEDBACK.md`, change only what the notes ask for, rebuild.
 - `node longform.mjs thumbnail <plan>` (plan: `"thumbnail": { text: 2-4 words, accent, prop }`) and
   `node longform.mjs shorts <plan>` (plan: `"shorts": [{ from, to, title }]`, or one per chapter).
+- Every build writes a fresh, score-free `REVIEW.md` from only the plan and key stills. Read it before
+  REPORT.md; apply P0, then P1 notes in the stated `problem -> exact change · what stays` form.

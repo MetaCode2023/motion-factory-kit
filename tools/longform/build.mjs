@@ -9,6 +9,7 @@ import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './co
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
+import { harshReview } from './critic.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -516,6 +517,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   // Critic: stretches where the picture barely changes for 3 s+ (a frozen animation, an empty frame).
   const fr = spawnSync(FF, ['-hide_banner', '-i', video, '-vf', 'scale=480:-2,freezedetect=n=0.002:d=3', '-an', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
   R.frozen = [...(fr.stderr || '').matchAll(/freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+  write('REVIEW.md', harshReview(R, plan, shots));
   files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);

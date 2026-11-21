@@ -145,7 +145,10 @@ the goal is a 10-minute video they can post without touching it.
  Then `build`.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
-5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).
+5. **Check like a viewer**: read `REVIEW.md` **before** REPORT.md. It is a score-free second pass that only
+ sees the plan and stills; its notes are ranked P0/P1/P2 and name `time · where · problem -> exact change ·
+ what stays`, plus a stranger-eye description of key frames. Fix P0 then P1, inspect the inserts sheet and
+ stills at a few gaps, and rebuild (cached).
    Hand over the MP4 to review, the YouTube title + description (hook, CHAPTERS.txt, sources, credits from
    `assets/broll/CREDITS.md`), and anything still to pull. The `.premiere.xml` is there if they want to tweak.
 

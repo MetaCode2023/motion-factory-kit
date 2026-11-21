@@ -248,3 +248,15 @@ test('storyboard model keeps cue order and exports notes through the review form
   assert.match(html, /stage:'board'/);
   assert.match(html, /first/);
 });
+
+test('harsh review ranks exact changes and describes frames without scores', async () => {
+  const { harshReview } = await import('../tools/longform/critic.mjs');
+  const md = harshReview({
+    total: 70, warnings: ['chapter is short'], frozen: [[12, 4]], words: [],
+    inserts: [{ id: 'news', at: 4.2, dur: 2, kind: 'pull', layout: 'full', title: 'News clip', src: {} }],
+  }, { name: 'critic' }, [{ t: 4.2, label: 'news' }]);
+  assert.match(md, /P0.*t=4\.2s.*placeholder.*->.*keep:/);
+  assert.match(md, /P1.*frame barely changes/);
+  assert.match(md, /Stranger-eye frame read/);
+  assert.doesNotMatch(md, /\/10|score/i);
+});
