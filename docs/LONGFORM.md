@@ -106,6 +106,11 @@ JSON in the script header). Captions use 3–5 word groups and break on pauses o
 `avoid_face: true` with `face_area: "bottom"` moves captions to the top. Approved caption settings saved in
 `scripts/SERIES.md` apply when a plan does not override them.
 
+Transcription rejects words Whisper invents wholly inside detected silence (`-35 dB`, 0.6 s), and repeated
+words are verified by position rather than matched to whichever duplicate is convenient. The build also
+samples pulled clips for likely burned-in lower-third subtitles and flags them in REPORT.md. This check is
+conservative; a flag means review/crop/replace the clip, not that OCR proved the words.
+
 **Sound design comes with the animations.** Every template declares its own effects in `M.setup({ sfx })`,
 timed to its own beats: a pop as a number lands, ticks while it counts, a pop per list item, a riser into a
 reveal, a hit on the collapse. The build mixes them under the voice (and onto A3 in Premiere), plus a whoosh

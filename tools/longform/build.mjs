@@ -5,7 +5,7 @@ import { cpus } from 'node:os';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
+import { FF, H, PY, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
@@ -416,7 +416,7 @@ export function assCaptions(R, accent, file) {
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
   }
-  const top = R.captions.position === 'top' || (R.captions.avoid_face && R.captions.face_area === 'bottom');
+  const top = R.captions.position === 'top' || (R.captions.avoid_face !== false && (R.captions.face_area === 'bottom' || R.inserts.some((i) => i.layout === 'pip')));
   const align = center ? 5 : top ? 8 : 2, margin = center ? 0 : 70;
   const box = R.captions.box === false ? 1 : 3;
   const style = `Style: C,Plus Jakarta Sans,${center ? 92 : 58},&H00FFFFFF,&H00FFFFFF,&H00101010,&H${R.captions.box === false ? '00000000' : '90000000'},-1,0,0,0,100,100,0,0,${box},${center ? 4 : 3},0,${align},160,160,${margin},1`;
@@ -471,6 +471,8 @@ function report(R, plan, files) {
   pass(!pulls, pulls ? `${pulls} clip(s) still to pull: see PULL-LIST.md` : 'no placeholders left');
   const longPull = R.inserts.filter((i) => (i.kind === 'pull' || i.pulled) && !i.stock && i.dur > 10);   // stock is licensed; outside clips stay short
   if (longPull.length) pass(false, `borrowed clips over 10 s (${longPull.map((i) => i.id).join(', ')}): trim them and talk over them`);
+  if (R.burnedSubtitles?.length) pass(false, `pulled clips may already contain subtitles (${R.burnedSubtitles.map((x) => `${x.id}: ${x.reason}`).join('; ')}): replace, crop, or keep longform captions off that area`);
+  else if (R.inserts.some((i) => i.pulled)) pass(true, 'no likely burned-in subtitles detected in pulled clips');
   if (R.frozen) R.frozen = R.frozen.filter(([a, d]) => !R.inserts.some((i) => i.kind === 'pull' && a >= i.at - 0.5 && a + d <= i.at + i.dur + 0.5));   // placeholders are still on purpose
   if (R.frozen) pass(!R.frozen.length, R.frozen.length ? `picture frozen for 3 s+ at ${R.frozen.map(([a, d]) => `${fmt(a)} (${d.toFixed(1)} s)`).join(', ')}: add motion or a visual there` : 'nothing on screen sits frozen for 3 s+');
   pass(R.chapters.length >= 3, R.chapters.length >= 3 ? `${R.chapters.length} chapters` : 'add 3+ chapters for YouTube');
@@ -494,6 +496,11 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   await prerender(R, plan, log);
   const aroll = buildARoll(R, plan, dir, log);
   for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log, R);
+  R.burnedSubtitles = R.inserts.filter((i) => i.pulled && i.file).flatMap((i) => {
+    if (!PY) return [];
+    const r = spawnSync(PY, [join(ROOT, 'tools', 'detect_burned_subtitles.py'), i.file], { encoding: 'utf8' });
+    try { const x = JSON.parse((r.stdout || '').trim()); return x.detected ? [{ id: i.id, reason: x.reason }] : []; } catch { return []; }
+  });
   const mix = join(dir, 'stems', 'mix.wav');
   mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);

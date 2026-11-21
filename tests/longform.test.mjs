@@ -288,3 +288,22 @@ test('longform captions group at short pauses and preserve script emphasis', asy
   assert.deepEqual(groups.map((g) => g.map((w) => w.w)), [['one', 'two', 'three'], ['four', 'five', 'six']]);
   assert.ok(groups.every((g) => g.length >= 3 && g.length <= 5));
 });
+
+test('transcript hardening drops words wholly in silence and aligns repeated words positionally', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const py = spawnSync('python3', ['-c', [
+    'import json',
+    'from tools.transcribe import drop_silent_words',
+    'from tools.verify_words import positional_tokens',
+    'from tools.detect_burned_subtitles import likely_subtitles',
+    'words=[{"w":"real","s":0.1,"e":0.3},{"w":"ghost","s":1.0,"e":1.2},{"w":"edge","s":1.55,"e":1.75}]',
+    'clean=drop_silent_words(words,[(0.8,1.7)])',
+    'subs=likely_subtitles([[(10,700,20,30)]*7,[(10,710,20,30)]*7,[]],1080)',
+    'print(json.dumps({"clean":[w["w"] for w in clean],"pos":positional_tokens(["the","word","the"]),"subs":subs[0]}))',
+  ].join(';')], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
+  assert.equal(py.status, 0, py.stderr);
+  const result = JSON.parse(py.stdout);
+  assert.deepEqual(result.clean, ['real', 'edge']);
+  assert.notEqual(result.pos[0], result.pos[2]);
+  assert.equal(result.subs, true);
+});
