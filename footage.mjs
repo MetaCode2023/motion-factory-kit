@@ -325,7 +325,8 @@ async function cut(planFile, { quiet = false } = {}) {
     }
     // Transcript word ends are commonly early. Hold the piece's final caption through the real
     // audio-aware cut so it does not disappear while the last consonant/release is still audible.
-    if (pieceWords.length) words[words.length - 1].e = +(t + dur).toFixed(3);
+    const tightened = p.seg.tight ?? plan.tight ?? true;
+    if (tightened && p.clip.hasAudio && pieceWords.length) words[words.length - 1].e = +(t + dur).toFixed(3);
     t += dur;
     segEnds[p.si] = t;
   }

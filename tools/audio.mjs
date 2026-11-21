@@ -132,11 +132,14 @@ function pauseFrom({ env }, t, lo, dir, minQ = 0.2, look = 1.0) {
 // so trimming close to the word clips them. Only words that run straight on are cut in the dip between them.
 export function speechCut(E, first, last, prev, next, { room = 0.15, lead = 0.08 } = {}) {
   if (!E || !E.env.length) return [Math.max(0, first.s - lead), last.e + 0.3];
+  const duration = E.env.length * HOP;
   let b;
-  { const wall = next ? (next.s + next.e) / 2 : last.e + 1, p = pauseFrom(E, last.e, quietLevel(E, last), 1);
-    b = p != null && p <= wall ? p + room : valley(E, last.e - 0.03, Math.max(Math.min((next ? next.s : last.e) + 0.25, wall), last.e + 0.05)) + 0.01; }
+  { const wall = next ? (next.s + next.e) / 2 : duration, p = pauseFrom(E, last.e, quietLevel(E, last), 1);
+    b = p != null && p <= wall ? p + room
+      : !next ? duration
+        : valley(E, last.e - 0.03, Math.max(Math.min(next.s + 0.25, wall), last.e + 0.05)) + 0.01; }
   let a;
   { const wall = prev ? (prev.s + prev.e) / 2 : first.s - 1, p = pauseFrom(E, first.s, quietLevel(E, first), -1, 0.2, 0.6);
     a = p != null && p >= wall ? Math.max(p - lead, wall) : valley(E, Math.min(Math.max((prev ? prev.e : first.s) - 0.25, wall), first.s - 0.05), first.s + 0.03); }
-  return [Math.max(0, a), b];
+  return [Math.max(0, a), Math.min(duration, b)];
 }

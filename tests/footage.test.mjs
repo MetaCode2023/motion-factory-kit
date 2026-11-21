@@ -114,6 +114,7 @@ test('audio: first and final word cuts stay inside the decoded clip', () => {
     const only = { w: 'edge', s: 0.02, e: 0.95 };
     const [a, b] = speechCut(speechEnvelope(file), only, only, null, null);
     assert.ok(a >= 0, `start is non-negative: ${a}`);
+    assert.ok(b >= 0.99, `continuous speech is preserved through the decoded end: ${b}`);
     assert.ok(b <= 1, `end is clamped to decoded duration: ${b}`);
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
@@ -165,6 +166,15 @@ test('footage captions hold the final word until the audio-aware cut ends', () =
     const data = JSON.parse(readFileSync(join(out, 'data.json'), 'utf8'));
     assert.ok(captions.length);
     assert.equal(captions.at(-1).e, data.segments[0].end, 'last caption reaches the piece/cut boundary');
+
+    writeFileSync(plan, JSON.stringify({ name, audio: false, segments: [{ clip: 'C01', from: 0, to: 6, tight: false }] }));
+    const loose = spawnSync(process.execPath, [fileURLToPath(new URL('../footage.mjs', import.meta.url)), 'cut', plan], {
+      cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...process.env, FOOTAGE_DIR: dir }, encoding: 'utf8',
+    });
+    assert.equal(loose.status, 0, loose.stderr || loose.stdout);
+    const looseCaptions = JSON.parse(readFileSync(join(out, 'aroll.words.json'), 'utf8'));
+    const looseData = JSON.parse(readFileSync(join(out, 'data.json'), 'utf8'));
+    assert.ok(looseCaptions.at(-1).e < looseData.segments[0].end - 0.2, 'untightened trailing silence does not hold the caption');
   } finally {
     rmSync(dir, { recursive: true, force: true });
     rmSync(out, { recursive: true, force: true });
@@ -188,6 +198,14 @@ test('verify_words reports tool failures clearly and normalizes numeric words', 
     assert.match(r.stdout, /0 differences/);
     assert.notEqual(readFileSync(record, 'utf8'), join(tmpdir(), 'verify_cut.wav'), 'uses an isolated temporary file');
 
+    writeFileSync(caps, JSON.stringify([{ w: '105', s: 0, e: 0.5 }, { w: "don't", s: 0.5, e: 1 }]));
+    const expandedTranscribe = join(dir, 'expanded.py');
+    writeFileSync(expandedTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"one","s":0,"e":0.1},{"w":"hundred","s":0.1,"e":0.2},{"w":"five","s":0.2,"e":0.5},{"w":"dont","s":0.5,"e":1}]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, expandedTranscribe], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /0 differences/);
+
+    writeFileSync(caps, JSON.stringify([{ w: 'Eight,', s: 0, e: 0.5 }]));
     const mismatchTranscribe = join(dir, 'mismatch.py');
     writeFileSync(mismatchTranscribe, 'import json\nprint(json.dumps({"words":[{"w":"nine","s":0,"e":0.5}]}))\n');
     r = spawnSync('python3', [verify, fakeFfmpeg, mp4, mismatchTranscribe], { encoding: 'utf8' });
@@ -205,6 +223,12 @@ test('verify_words reports tool failures clearly and normalizes numeric words', 
     r = spawnSync('python3', [verify, fakeFfmpeg, mp4, failedTranscribe], { encoding: 'utf8' });
     assert.notEqual(r.status, 0);
     assert.match(r.stderr, /transcription failed.*model failed/i);
+
+    const malformedTranscribe = join(dir, 'malformed.py');
+    writeFileSync(malformedTranscribe, 'import json\nprint(json.dumps({"words":[7]}))\n');
+    r = spawnSync('python3', [verify, fakeFfmpeg, mp4, malformedTranscribe], { encoding: 'utf8' });
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /transcribed word 0.*containing 'w'/i);
 
     const failedFfmpeg = join(dir, 'bad-ffmpeg');
     writeFileSync(failedFfmpeg, '#!/bin/sh\necho decode-broke >&2\nexit 7\n');
