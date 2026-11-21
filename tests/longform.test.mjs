@@ -343,3 +343,13 @@ test('editor exports include modern FCPXML and CMX3600 events', async () => {
   assert.match(xml, /<fcpxml version="1\.10">/);
   assert.match(xml, /<spine><asset-clip/);
 });
+
+test('PiP shrink motion animates in and back out while remaining opt-in', async () => {
+  const { pipMotion } = await import('../tools/longform/build.mjs');
+  const m = pipMotion(6, 312, 1550, 712);
+  assert.equal(m.td, 0.5);
+  assert.match(m.progress, /lt\(t.*gt\(t/);
+  assert.match(m.size, /1080\+\(312-1080\)/);
+  assert.match(m.x, /1550/);
+  assert.equal(({ pip: {} }).pip.animate, undefined, 'static PiP remains the default');
+});

@@ -98,6 +98,16 @@ async function pipAssets(media, accent, plan) {
   return { d, ring, margin, mask, ringFile };
 }
 
+export function pipMotion(duration, bubbleSize, targetX, targetY) {
+  const td = Math.min(0.5, duration / 4);
+  const p = `if(lt(t\\,${td})\\,t/${td}\\,if(gt(t\\,${(duration - td).toFixed(3)})\\,(${duration.toFixed(3)}-t)/${td}\\,1))`;
+  return {
+    td, progress: p, size: `${H}+(${bubbleSize}-${H})*(${p})`,
+    x: `(W-w)/2+(${targetX}-(W-${bubbleSize})/2)*(${p})`,
+    y: `(H-h)/2+(${targetY}-(H-${bubbleSize})/2)*(${p})`,
+  };
+}
+
 // Heavy matting stays opt-in. The configured wrapper receives <input.mp4> <output.mov> and must write
 // an alpha-capable video (ProRes 4444, qtrle or VP9-alpha). Its result is cached for this exact cut list.
 function speakerCutout(R, plan, aroll, log) {
@@ -322,8 +332,18 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
         } else if (ins.layout === 'pip' && pip) {
           const Dp = pip.d, rx = W - Dp - 2 * pip.ring - pip.margin, ry = H - Dp - 2 * pip.ring - pip.margin;
           inputs.push('-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile);
-          g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
-            `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          if (plan.pip?.animate === true) {
+            const bd = Dp + 2 * pip.ring, motion = pipMotion(D, bd, rx, ry), td = motion.td;
+            g.push(`[bgF]split[full][faceSrc]`,
+              `[faceSrc]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
+              `[${nIn + 1}:v][face]overlay=${pip.ring}:${pip.ring},format=rgba[b0];[b0]scale=w='${motion.size}':h=-1:eval=frame[bubble]`,
+              `[1:v]setpts=PTS-STARTPTS[an];[an][bubble]overlay=x='${motion.x}':y='${motion.y}':eval=frame[withBubble]`,
+              `[full]format=rgba,fade=t=out:st=0:d=${td}:alpha=1,fade=t=in:st=${(D - td).toFixed(3)}:d=${td}:alpha=1[fullfade]`,
+              `[withBubble][fullfade]overlay=0:0:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          } else {
+            g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
+              `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          }
           nIn += 2;
         } else if (ins.layout === 'split') {
           const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;

@@ -165,6 +165,10 @@ where the speaker sits across the frame if they're off-centre; `"pip": { "size":
 circle. In voice-only videos there is no picture of the speaker, so `pip` and `split` become `full`. The Premiere
 timeline shows them as full-frame clips.
 
+Set `"pip": { "animate": true }` to start on the full-frame speaker, shrink them into the bottom-corner
+circle as the visual arrives, then expand them back at the end. Static PiP remains the default for existing
+plans; `size` and `margin` still control the settled circle.
+
 ### Text behind the speaker (opt-in)
 
 `[[quote text: BREAKING NEWS | behind: true]]` (or `"behind": true` on an insert) puts that rendered visual
