@@ -38,13 +38,22 @@ const colors = ['#ffad72', '#8ee9d5', '#b1baff'];
 
 M.setup({
   width: 576, height: 1024, duration, fps: 30, cuts: [release], background: '#101820',
+  music: { track: 'reflect', volume: 0.16 },
+  sfx: [{ at: release, name: 'tap', volume: 0.3 }],
   draw(ctx, t) {
+    const sweep = ctx.createLinearGradient(0, 0, 576, 1024);
+    const center = 0.15 + 0.6 * M.prog(t, 0, 1.1) - 0.24 * (1 - Math.cos(Math.max(0, t - 1.1) * 1.55));
+    sweep.addColorStop(0, '#101820');
+    sweep.addColorStop(center, '#2b414b');
+    sweep.addColorStop(1, '#101820');
+    ctx.fillStyle = sweep;
+    ctx.fillRect(0, 0, 576, 1024);
     dust(ctx, t, '#243441');
     titles.seek(Math.min(t * 1000, titles.duration));
-    M.text(ctx, 'SIMULATION STUDY', 56, 132, { font: '600 18px sans-serif', color: '#8ee9d5', alpha: labels[0].opacity });
-    M.text(ctx, 'How pieces settle', 56, 193, { font: 'bold 45px sans-serif', color: '#f1f5f4', alpha: labels[1].opacity });
+    M.text(ctx, 'SIMULATION STUDY', 56, 154, { font: '600 18px sans-serif', color: '#8ee9d5', alpha: labels[0].opacity });
+    M.text(ctx, 'How pieces settle', 56, 213, { font: 'bold 45px sans-serif', color: '#f1f5f4', alpha: 0.8 + 0.2 * labels[1].opacity });
 
-    const progress = M.prog(t, 0.55, 1.15, M.ease.outCubic);
+    const progress = M.prog(t, 0, 1.35, M.ease.outCubic);
     const points = morphPoints(looseTray, cleanTray, progress);
     ctx.beginPath();
     points.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
@@ -80,7 +89,7 @@ M.setup({
     });
 
     const section = t < release ? '01  DRAW THE TRAY' : t < 5 ? '02  RELEASE THE PIECES' : '03  WATCH THEM SETTLE';
-    M.text(ctx, section, 56, 788, { font: '600 22px sans-serif', color: '#c5d3df' });
+    M.text(ctx, section, 56, 735, { font: '600 22px sans-serif', color: '#c5d3df' });
   },
 });
 </script>
