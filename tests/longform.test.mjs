@@ -260,3 +260,19 @@ test('harsh review ranks exact changes and describes frames without scores', asy
   assert.match(md, /Stranger-eye frame read/);
   assert.doesNotMatch(md, /\/10|score/i);
 });
+
+test('series feedback memory grows without overwriting hand-written rules', async () => {
+  const { mkdtempSync, readFileSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { updateSeriesDefaults } = await import('../tools/longform/extras.mjs');
+  const file = join(mkdtempSync(join(tmpdir(), 'series-')), 'SERIES.md');
+  writeFileSync(file, '# My series\n\nNever use clickbait.\n');
+  updateSeriesDefaults({ theme: { style: 'paper' }, captions: { burn: true }, transitions: 'fade', inserts: [{ layout: 'pip' }] }, [{ t: 4.2, text: 'Move captions off my face' }], { approved: true, file });
+  updateSeriesDefaults({}, [{ t: 9, text: 'Hold the chart longer' }], { file });
+  const text = readFileSync(file, 'utf8');
+  assert.match(text, /Never use clickbait/);
+  assert.match(text, /Move captions off my face/);
+  assert.match(text, /Hold the chart longer/);
+  assert.match(text, /Theme: paper/);
+});

@@ -247,6 +247,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs voice [clip ids]` | Measures how the creator talks from their indexed recordings (pace, sentence length, real phrases) into `scripts/VOICE.md`. Scripts are then timed at that pace. See `docs/PLAYBOOK.md`. |
 | `node longform.mjs doctor` | Checks this machine: Node, packages, Python, transcription, Chrome for 3D, keys. Says what's missing and the one-line fix. |
 | `node longform.mjs feedback <name>.review.json` | Turns the reviewer's notes into `FEEDBACK.md`: each note with what was on screen, what was being said, and which insert in the plan to change. |
+| `node longform.mjs freeze <plan> --name <name>` | Saves an approved video's header, layouts, caption style, theme and transitions as the next version in `scripts/templates/`; also refreshes Allen's defaults in `scripts/SERIES.md`. |
 | `node longform.mjs thumbnail <plan>` | Three 1280x720 thumbnails (`thumbnail-1..3.jpg`) from `"thumbnail": { "text", "accent", "prop", "kicker" }` in the plan. |
 | `node longform.mjs shorts <plan>` | Vertical shorts cut from the finished video, one per chapter, or the ones in `"shorts": [{ "from", "to", "title" }]`. |
 

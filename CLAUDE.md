@@ -154,7 +154,9 @@ the goal is a 10-minute video they can post without touching it.
 
 6. **Around the video.** New machine: `node longform.mjs doctor`. The build writes `review.html`; when the
    creator sends back `<name>.review.json`, run `node longform.mjs feedback <file>`, read `FEEDBACK.md`, change
-   only what the notes ask for, rebuild. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
+ only what the notes ask for, rebuild. Feedback grows the private **Never again / Allen's defaults** block in
+ `scripts/SERIES.md`. After approval, `node longform.mjs freeze <plan> --name <series>` saves a versioned
+ reusable template. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
    and `shorts <plan>` (set `"shorts": [{ from, to, title }]` to the stretches that stand alone) finish the package.
 
 **From existing footage** (podcast archives). MCP: `longform_index`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.

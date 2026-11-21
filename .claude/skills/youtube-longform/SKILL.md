@@ -31,7 +31,8 @@ Around the video:
 - New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).
 - Give each video a look in the script header: `theme: blueprint | noir | sunset | paper | terminal` (default aurora).
 - Every build writes `review.html`. Notes come back as `<name>.review.json` → `node longform.mjs feedback <file>` →
-  read `FEEDBACK.md`, change only what the notes ask for, rebuild.
+  read `FEEDBACK.md`, change only what the notes ask for, rebuild. This also grows the private Never again
+  list in `scripts/SERIES.md`; after approval run `freeze <plan> --name <series>` to version the proven defaults.
 - `node longform.mjs thumbnail <plan>` (plan: `"thumbnail": { text: 2-4 words, accent, prop }`) and
   `node longform.mjs shorts <plan>` (plan: `"shorts": [{ from, to, title }]`, or one per chapter).
 - Every build writes a fresh, score-free `REVIEW.md` from only the plan and key stills. Read it before

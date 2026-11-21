@@ -1,7 +1,7 @@
 // tools/longform/extras.mjs: what goes around a finished long video: the setup check, the review page and
 // its feedback, thumbnails, and vertical shorts cut from the long video.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { FF, PY, ROOT, ff, fmt, fmtChapter, probe, seconds } from './common.mjs';
@@ -138,8 +138,56 @@ export function feedback(reviewFile, planFile) {
   if (!notes.length) lines.push('No notes.', '');
   const out = join(dirname(resolve(reviewFile)), 'FEEDBACK.md');
   writeFileSync(out, lines.join('\n'));
-  return { ok: true, file: out, approved: !!rv.approved, notes, plan: pf };
+  const series = updateSeriesDefaults(plan, notes, { approved: !!rv.approved });
+  return { ok: true, file: out, approved: !!rv.approved, notes, plan: pf, series };
 }
+
+const SERIES_START = '<!-- feedback-defaults:start -->';
+const SERIES_END = '<!-- feedback-defaults:end -->';
+
+// Grow the private series bible from concrete review corrections. The marked block is deterministic, while
+// everything Allen writes by hand stays untouched.
+export function updateSeriesDefaults(plan, notes, { approved = false, file = join(ROOT, 'scripts', 'SERIES.md') } = {}) {
+  mkdirSync(dirname(file), { recursive: true });
+  let text = existsSync(file) ? readFileSync(file, 'utf8') : '# Series\n\n';
+  const old = text.includes(SERIES_START) && text.includes(SERIES_END)
+    ? text.slice(text.indexOf(SERIES_START) + SERIES_START.length, text.indexOf(SERIES_END))
+    : '';
+  const previous = [...old.matchAll(/^- (.+)$/gm)].map((m) => m[1]);
+  const lessons = [...new Set([...previous, ...notes.map((n) => `${fmtChapter(n.t)}: ${n.text.replace(/\s+/g, ' ').trim()}`)])].slice(-100);
+  const defaults = approved ? [
+    `Theme: ${typeof plan.theme === 'string' ? plan.theme : plan.theme?.style || 'aurora'}`,
+    `Captions: ${JSON.stringify(plan.captions || { burn: false })}`,
+    `Transitions: ${JSON.stringify(plan.transitions || 'default')}`,
+    `Layouts: ${[...new Set((plan.inserts || []).map((i) => i.layout || 'full'))].join(', ') || 'full'}`,
+  ] : [...old.matchAll(/^Default: (.+)$/gm)].map((m) => m[1]);
+  const block = `${SERIES_START}\n## Never again (learned from feedback)\n${lessons.length ? lessons.map((x) => `- ${x}`).join('\n') : '- None recorded yet.'}\n\n## Allen's approved defaults\n${defaults.map((x) => `Default: ${x}`).join('\n') || 'No approved build frozen yet.'}\n${SERIES_END}`;
+  if (text.includes(SERIES_START) && text.includes(SERIES_END)) text = text.slice(0, text.indexOf(SERIES_START)) + block + text.slice(text.indexOf(SERIES_END) + SERIES_END.length);
+  else text = text.trimEnd() + `\n\n${block}\n`;
+  writeFileSync(file, text);
+  return file;
+}
+
+export function freeze(planFile, { name } = {}) {
+  const plan = loadPlan(planFile), R = resolvePlan(plan);
+  if (R.errors.length) return { ok: false, errors: R.errors };
+  const dir = join(ROOT, 'scripts', 'templates');
+  mkdirSync(dir, { recursive: true });
+  const base = String(name || plan.name).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+  const versions = readdirSync(dir).map((f) => f.match(new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.v(\\d+)\\.json$`))?.[1]).filter(Boolean).map(Number);
+  const version = Math.max(0, ...versions) + 1;
+  const out = join(dir, `${base}.v${version}.json`);
+  const snapshot = {
+    template_version: version, name: base, source: relative(ROOT, plan._file), created: new Date().toISOString(),
+    header: pick(plan, ['fps', 'base', 'theme', 'accent', 'transitions', 'captions', 'pip', 'side', 'punch_in', 'auto_max']),
+    layouts: (plan.inserts || []).map((i) => ({ kind: i.kind, scene: i.scene || null, layout: i.layout || 'full', transition: i.transition || null })),
+  };
+  writeFileSync(out, JSON.stringify(snapshot, null, 2) + '\n');
+  updateSeriesDefaults(plan, [], { approved: true });
+  return { ok: true, file: out, version, template: snapshot };
+}
+
+const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
 
 // ---- thumbnails ------------------------------------------------------------------------------------------
 // plan.thumbnail = { text: "Poker is physics", accent: "physics", prop: "card", kicker }; three layouts each.

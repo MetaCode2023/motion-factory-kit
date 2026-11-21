@@ -32,7 +32,7 @@ import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
 import { autoBroll } from './tools/broll/index.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
-import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
+import { doctor, feedback, freeze, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
 import { board } from './tools/longform/board.mjs';
 
@@ -141,6 +141,11 @@ try {
     else if (!json) console.log(`storyboard -> ${relative(ROOT, r.file)} (${r.cues} cues); approve it before build`);
     emit(r);
     if (!r.ok) process.exitCode = 1;
+  } else if (cmd === 'freeze') {
+    const r = freeze(args[0], { name: opt('name') });
+    if (!json) console.log(r.ok ? `frozen v${r.version} -> ${relative(ROOT, r.file)}` : `ERROR  ${r.errors.join('\nERROR  ')}`);
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
   } else if (cmd === 'voice') {
     // node longform.mjs voice [clip ids…]: how the creator actually talks, measured from their own recordings
     const r = voiceProfile(args.filter((a) => a !== opt('out')), { out: opt('out') });
@@ -227,6 +232,7 @@ function readmeUsage() {
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence
   node longform.mjs check <plan.json>  validate a plan and show its timeline
   node longform.mjs board <plan.json>  render one approval still per visual cue
+  node longform.mjs freeze <plan.json> --name <name>  save approved series defaults
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
