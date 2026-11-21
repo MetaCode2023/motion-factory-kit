@@ -11,6 +11,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { Canvas } from 'skia-canvas';
 import { pickTrack, placement, followExpr, cropFilter } from '../tools/reframe.mjs';
 import { audioOptions, cleanChain, levelGain, speakerGains, loudness, speechCut, speechEnvelope } from '../tools/audio.mjs';
+import { wordsForPiece } from '../tools/caption-timing.mjs';
 
 const ff = (args) => { const r = spawnSync(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); };
 const wide = { id: 'C01', width: 1920, height: 1080 };
@@ -179,6 +180,20 @@ test('footage captions hold the final word until the audio-aware cut ends', () =
     rmSync(dir, { recursive: true, force: true });
     rmSync(out, { recursive: true, force: true });
   }
+});
+
+test('mid-piece captions reach the next onset but do not hang over long pauses', () => {
+  const timed = wordsForPiece([
+    { w: 'first', s: 1, e: 1.1 },
+    { w: 'second', s: 1.24, e: 1.35 },
+    { w: 'pause', s: 2.2, e: 2.35 },
+  ], { sourceIn: 1, sourceOut: 2.8, timelineIn: 10, tightened: true, hasAudio: true });
+  assert.equal(timed[0].e, 10.24, 'early mid-word end reaches the next real onset');
+  assert.equal(timed[1].e, 10.7, 'long silence is capped at a short caption hold');
+  assert.equal(timed[2].e, 11.8, 'tightened final word reaches the actual piece boundary');
+
+  const loose = wordsForPiece([{ w: 'last', s: 1, e: 1.2 }], { sourceIn: 1, sourceOut: 3, timelineIn: 0, tightened: false, hasAudio: true });
+  assert.equal(loose[0].e, 0.2, 'untightened trailing room tone does not hold the final caption');
 });
 
 test('verify_words reports tool failures clearly and normalizes numeric words', () => {
