@@ -3,6 +3,7 @@
 // sounds/ is original and ships under the repo's MIT license. Nothing is sampled or downloaded.
 //
 //   node tools/make-sounds.mjs            # writes sounds/sfx/*.mp3 and sounds/music/*.mp3
+//   node tools/make-sounds.mjs --only reflect   # just one sound
 //
 // You never need to run this to use the kit; the MP3s are committed. It's here so the sounds can
 // be tweaked and regenerated. To use your own sounds, drop MP3/WAV files into sounds/sfx or
@@ -234,7 +235,7 @@ const SFX = {
 // ---- music beds ---------------------------------------------------------------------------------
 // Each bed is a seamless loop (the reverb tail is wrapped back to the start). Keep them quiet and
 // simple: they sit under a voice.
-function bed({ bpm, bars, chords, drums, pluck, bass, padLevel = 0.5, cutoff = 1400 }) {
+function bed({ bpm, bars, chords, drums, pluck, bass, keys, padLevel = 0.5, cutoff = 1400, verb = 0.35 }) {
   const beat = 60 / bpm, barS = beat * 4, L = bars * barS, tail = 3;
   const N = Math.ceil((L + tail) * SR);
   const pad = [new Float32Array(N), new Float32Array(N)], dry = [new Float32Array(N), new Float32Array(N)];
@@ -289,6 +290,27 @@ function bed({ bpm, bars, chords, drums, pluck, bass, padLevel = 0.5, cutoff = 1
     });
   });
 
+  // Keys: a soft felt-piano voice (sine + quiet bell partials, long decay) playing a slow melody of
+  // chord tones. keys.bars is a list of per-bar patterns [[beat, toneIndex, lengthInBeats], ...],
+  // cycled through the piece so the tune changes bar to bar instead of looping one figure.
+  if (keys) chords.forEach((chord, ci) => {
+    const barsPer = bars / chords.length;
+    const tones = [...chord.map((m) => m + 12), ...chord.map((m) => m + 24)];
+    for (let b = 0; b < barsPer; b++) {
+      const bar = ci * barsPer + b, pat = keys.bars[bar % keys.bars.length];
+      for (const [at, ti, len = 1] of pat) {
+        const s0 = Math.round((bar * barS + at * beat) * SR), fr = midi(tones[ti % tones.length]);
+        const dur = Math.max(1.2, len * beat * 1.6), n = Math.round((dur + 1.5) * SR), pan = (ti % 3 - 1) * 0.25;
+        const vel = (keys.level ?? 1) * (0.85 + 0.15 * Math.sin(bar * 1.7 + at));
+        for (let i = 0; i < n; i++) {
+          const t = i / SR, d = env(t, 0.012, dur * 0.55);
+          const v = (Math.sin(TAU * fr * t) + 0.22 * Math.sin(TAU * fr * 2 * t) * Math.exp(-t / 0.4) + 0.06 * Math.sin(TAU * fr * 3.01 * t) * Math.exp(-t / 0.2)) * d * 0.09 * vel;
+          add(pl[0], s0 + i, v * (1 - pan)); add(pl[1], s0 + i, v * (1 + pan));
+        }
+      }
+    }
+  });
+
   // Drums: soft kick, closed hat, optional clap.
   if (drums) for (let b = 0; b < bars; b++) {
     for (const at of drums.kick || []) {
@@ -318,7 +340,7 @@ function bed({ bpm, bars, chords, drums, pluck, bass, padLevel = 0.5, cutoff = 1
   // Mix: reverb on pad and pluck, echo on pluck, then wrap the tail into the start for a clean loop.
   const out = [0, 1].map((c) => {
     const plE = echo(pl[c], beat * 0.75, 0.3, 0.35);
-    const wet = reverb(pad[c].map((v, n) => v + plE[n]), { mix: 0.35, size: 1.25, damp: 0.5 });
+    const wet = reverb(pad[c].map((v, n) => v + plE[n]), { mix: verb, size: 1.25, damp: 0.5 });
     const L2 = Math.round(L * SR), o = new Float32Array(L2);
     for (let n = 0; n < N; n++) o[n % L2] += wet[n] + dry[c][n];
     return o;
@@ -330,6 +352,9 @@ function bed({ bpm, bars, chords, drums, pluck, bass, padLevel = 0.5, cutoff = 1
   const gg = pk > 0.9 ? g * 0.9 / pk : g;
   return out.map((ch) => ch.map((v) => v * gg));
 }
+
+// Tempo of each bed, written next to it as <name>.json for beat-synced cuts.
+const BPM = { pulse: 100, calm: 78, reflect: 66, drive: 120 };
 
 // Progressions in MIDI notes (C4 = 60).
 const MUSIC = {
@@ -347,6 +372,25 @@ const MUSIC = {
     chords: [[48, 52, 55, 59], [45, 48, 52, 55], [41, 45, 48, 52], [43, 47, 50, 57]],   // Cmaj7 Am7 Fmaj7 G6
     pluck: { pattern: [0, 1, 2, 3], level: 0.7 }, padLevel: 0.65, cutoff: 1100,
   }),
+  // Slow, reflective, 66 bpm: soft felt-piano melody over a warm pad and a low pulse, eight chords
+  // across ~2 minutes so long pieces (lectures, 3-5 min explainers) don't hear the loop.
+  reflect: () => bed({
+    bpm: 66, bars: 32,
+    chords: [[47, 50, 54, 57], [43, 47, 50, 54], [38, 42, 45, 49], [45, 49, 52, 56],     // Bm7 Gmaj7 Dmaj7 A(maj7)
+             [40, 43, 47, 50], [43, 47, 50, 54], [47, 50, 54, 57], [45, 49, 52, 54]],    // Em7 Gmaj7 Bm7 A6
+    bass: { pattern: [0], len: 3.5, decay: 1.4, down: 1 },
+    keys: { level: 0.9, bars: [
+      [[0, 4, 2], [2, 6, 1], [3, 5, 1]],
+      [[0, 7, 1.5], [1.5, 6, 0.5], [2, 5, 2]],
+      [[0, 4, 1], [1, 5, 1], [2, 6, 2]],
+      [[0.5, 7, 1.5], [2, 5, 1], [3, 4, 1]],
+      [[0, 6, 3], [3, 5, 1]],
+      [[0, 4, 1], [1.5, 7, 1.5], [3, 6, 1]],
+      [[0, 5, 2], [2, 4, 2]],
+      [[0, 6, 1], [1, 7, 1], [2, 8, 2]],
+    ] },
+    padLevel: 0.5, cutoff: 900, verb: 0.45,
+  }),
   // Four-on-the-floor, 120 bpm: energetic product demos.
   drive: () => bed({
     bpm: 120, bars: 16,
@@ -357,7 +401,13 @@ const MUSIC = {
   }),
 };
 
+// `--only name[,name]` regenerates just those sounds (e.g. a new music bed) and leaves the rest alone.
+const ONLY = (process.argv[process.argv.indexOf('--only') + 1] || '').split(',').filter((x) => process.argv.includes('--only') && x);
+const want = (n) => !ONLY.length || ONLY.includes(n);
 console.log('sound effects:');
-for (const [name, make] of Object.entries(SFX)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), make());
+for (const [name, make] of Object.entries(SFX)) if (want(name)) save(join(ROOT, 'sounds', 'sfx', name + '.mp3'), make());
 console.log('music beds:');
-for (const [name, make] of Object.entries(MUSIC)) save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());
+for (const [name, make] of Object.entries(MUSIC)) if (want(name)) {
+  save(join(ROOT, 'sounds', 'music', name + '.mp3'), make());
+  writeFileSync(join(ROOT, 'sounds', 'music', name + '.json'), JSON.stringify({ bpm: make.bpm ?? BPM[name], offset: 0 }));
+}
