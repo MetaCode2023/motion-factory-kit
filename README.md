@@ -62,6 +62,7 @@ street-audio cleanup, face-following reframe, overlays, client review loop) lift
 - **Other languages**: translated rows, multilingual narration, dubbed creator clips. [docs/LANGUAGES.md](docs/LANGUAGES.md)
 
 **Make them look expensive**
+- **Simulation shots**: collisions, staggered timing, shape morphs, jointed motion, seeded particles, and an optional Manim workflow for math visuals. [docs/SIMULATION.md](docs/SIMULATION.md)
 - **Visual toolkit** (`kit/fx.js`): animated aurora backgrounds, glass cards, glow, gradient and kinetic type,
   camera punches, zoom/whip/circle/wipe/glitch/flash transitions, colour grades, film grain, motion blur.
 - **Cuts on the beat**: the music's beats are detected and handed to the scene (`M.snap`, `M.onBeat`), and

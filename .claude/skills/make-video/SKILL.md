@@ -13,3 +13,10 @@ Follow `CLAUDE.md` in the repo root. In short:
 4. Clips: use files in `assets/higgsfield/` if the user has them. If the Higgsfield tools are connected and the user wants new footage, draft the prompts from `docs/HIGGSFIELD.md`, show them, and generate only after a yes.
 5. Build: `node make.mjs scenes/mine/<slug>.html --variants` (add `--formats 4:5,1:1,16:9` if they want other sizes). Read `out/<name>.report.md` and look at `out/<name>.cuts.png`; fix every FIX you can and rebuild until clean.
 6. Hand over the MP4s with one line each, plus anything the user still needs to supply.
+
+## Simulation shots
+
+When the story depends on motion, use [the simulation guide](../../../docs/SIMULATION.md)
+and [the whiteboard example](../../../scenes/examples/whiteboard-simulation.html). Pick a technique
+for each shot, render a short preview, and inspect frames at the key moments before the final build.
+Keep motion tied to scene time so previews and exports can seek directly to any frame.

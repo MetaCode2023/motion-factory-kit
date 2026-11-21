@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "animejs": "4.2.2",
     "ffmpeg-static": "^5.2.0",
+    "matter-js": "0.20.0",
     "skia-canvas": "^4.0.0",
     "zod": "^4.6.7"
   },

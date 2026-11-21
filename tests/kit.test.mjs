@@ -34,3 +34,16 @@ test('a push draws exactly one opaque beat at every transition frame',()=>{
     assert.equal(calls[0][1],1);
   }
 });
+
+test('the whiteboard simulation renders the same frames after seeking in either direction', async () => {
+  const { open } = await import('../engines/skia.mjs');
+  const scene = 'scenes/examples/whiteboard-simulation.html';
+  const sequential = await open(scene);
+  const randomAccess = await open(scene);
+  const early = sequential.frame(0.25);
+  const late = sequential.frame(4.125);
+  assert.notDeepEqual(early, late);
+  assert.deepEqual(randomAccess.frame(4.125), late);
+  assert.deepEqual(randomAccess.frame(0.25), early);
+  assert.deepEqual(randomAccess.frame(4.125), late);
+});
