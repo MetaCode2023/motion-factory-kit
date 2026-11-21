@@ -8,6 +8,7 @@ for tool failures or word differences. Case, punctuation, and equivalent integer
 "eight"/"8" are normalized. Other spelling differences are reported for a human to review.
 """
 import difflib
+from collections import Counter, defaultdict
 import json
 import re
 import subprocess
@@ -41,6 +42,10 @@ def integer_words(value: int) -> list[str]:
 
 def normalize(word: object) -> list[str]:
     text = str(word).lower().replace("’", "'").replace(",", "")
+    # Whisper may emit a compound number as one hyphenated token while captions use digits.
+    # Keep it as the same ordered word expansion used for "21" -> ["twenty", "one"].
+    if re.fullmatch(r"[a-z]+(?:-[a-z]+)+[.!?]?", text):
+        return [part for piece in text.rstrip(".!?").split("-") for part in normalize(piece)]
     numeric = re.sub(r"[$£€¥\s]", "", text)
     if re.fullmatch(r"[+-]?\d+", numeric):
         return integer_words(int(numeric))
@@ -65,6 +70,17 @@ def raw_span(words: list[object], owners: list[int], start: int, end: int) -> tu
         return owners[start], owners[end - 1] + 1
     index = owners[start] if start < len(owners) else len(words)
     return index, index
+
+
+def positional_tokens(tokens: list[str]) -> list[str]:
+    """Make repeated words distinct so alignment cannot jump to a later identical word."""
+    totals = Counter(tokens)
+    seen: dict[str, int] = defaultdict(int)
+    out = []
+    for token in tokens:
+        seen[token] += 1
+        out.append(f"{token}\x00{seen[token]}" if totals[token] > 1 else token)
+    return out
 
 
 def run() -> int:
@@ -121,7 +137,7 @@ def run() -> int:
     left, left_owners = normalized_words(captions, "caption")
     right, right_owners = normalized_words(heard, "transcribed")
     bad = 0
-    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, left, right, autojunk=False).get_opcodes():
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, positional_tokens(left), positional_tokens(right), autojunk=False).get_opcodes():
         if op == "equal":
             continue
         ci1, ci2 = raw_span(captions, left_owners, i1, i2)

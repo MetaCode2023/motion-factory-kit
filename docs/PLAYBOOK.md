@@ -39,6 +39,11 @@ Never: topics, words, kinds of clip this channel doesn't use
 
 Put the look in each script's header (`theme: paper`) so the build follows it.
 
+`longform.mjs feedback` also grows a marked **Never again / Allen's approved defaults** block from review
+notes without touching hand-written rules. After an approved video, run
+`node longform.mjs freeze <plan> --name <series-name>`; it writes a versioned private template under
+`scripts/templates/` containing the proven header, layouts, caption style, theme and transitions.
+
 ## 3. Facts
 
 - Every figure, date and quote in a script comes from research done for that script, with a `source:` on the

@@ -3,7 +3,7 @@
 For creators who explain things: a 10-minute video on the physics of poker, how money works, the future of voting.
 The creator brings the subject and reads the script. Claude does the rest: it co-writes the script with the visuals
 built in, then turns the recording into a finished video. That means animations every ~15 seconds, B-roll,
-outside clips that back up the points, music, sound effects and captions. A Premiere timeline is included in
+outside clips that back up the points, music, sound effects and captions. Premiere, Resolve, Final Cut and EDL timelines are included in
 case anything needs a touch.
 
 **Script first (new recordings), the main workflow:**
@@ -16,8 +16,10 @@ case anything needs a touch.
                                     node longform.mjs script x.script.md   -> runtime, visual cadence, teleprompter copy
 3. You record it                  camera + mic, or just the mic. Read the reading copy. Flubbed a line? Just
                                     re-read it: the last take wins.
-4. Finished video                 node longform.mjs from-script x.script.md recording.mp4 --build
-                                    -> aligned word by word, retakes cut, every cue on its word, built
+4. Approve the storyboard         node longform.mjs board edits/longform/x.json
+                                    -> board.html, one finished-looking frame per cue; revise until "go"
+5. Finished video                 node longform.mjs build edits/longform/x.json
+                                    -> every approved cue on its word, fully rendered
 ```
 
 **From footage you already have** (podcast archives): index the library, search everything you've said, and
@@ -27,11 +29,16 @@ write a plan from the best takes. See "Plans from existing footage" below.
 out/longform/<name>/
   <name>.mp4              the video: picture, voice, music ducked under it, effects, YouTube loudness
   <name>.premiere.xml     the same edit as a timeline (Premiere, Resolve, FCP), pointing at your original files
+  <name>.resolve.xml      Resolve-labelled FCP 7 XML
+  <name>.fcpxml           modern Final Cut Pro timeline
+  <name>.edl              portable CMX3600 cut list
   <name>.srt              captions for YouTube
   CHAPTERS.txt            paste into the description
   PULL-LIST.md            outside clips still to grab, with sources and timestamps
+  REVIEW.md               harsh P0/P1/P2 second review; read this before REPORT.md
   REPORT.md               self-check (PASS/FIX) + the timeline
   <name>.inserts.jpg      one frame from every visual
+  <name>.cuts-phone.jpg   360 px-wide strips from -0.2 s to +0.2 s around every cut
 ```
 
 Try it with no recording and no keys: `node longform.mjs demo`. A synthetic voice reads
@@ -46,6 +53,7 @@ aren't read aloud. `[[cues]]` are visuals, and each one lands on the word right 
 ---
 title: The Physics of Poker
 theme: {"color": "#3CE0FF", "tint": "#0C1B2A"}     // every animation in this colour
+captions: {"burn": true, "pop": 1.15, "highlight": true, "avoid_face": true}
 cadence: 15                                         // target seconds between visuals (the check warns past ~27)
 wpm: 150                                            // your reading pace, for the runtime estimate
 base: backdrop                                      // optional: never show the camera (voice-only look)
@@ -94,6 +102,18 @@ with their times. Each step, item, bar, slice, node, event, note or object appea
 label or `say:` words), the number finishes counting as it is said, and anything not said spreads evenly between.
 Every template also drifts slowly, so nothing sits frozen after its last beat. Write cue labels with the words
 the script actually uses and the sync takes care of itself.
+
+**Captions can stay on throughout.** Set `"captions": { "burn": true }` in a plan (or the same `captions:`
+JSON in the script header). Captions use 3–5 word groups and break on pauses of 150 ms or more. Mark a phrase
+`*like this*` in the script to pop those spoken words in the accent colour; `underline`, `highlight`, `pop`,
+`position: "top"` and `box: false` are optional style controls. The default dim box protects bright footage.
+`avoid_face: true` with `face_area: "bottom"` moves captions to the top. Approved caption settings saved in
+`scripts/SERIES.md` apply when a plan does not override them.
+
+Transcription rejects words Whisper invents wholly inside detected silence (`-35 dB`, 0.6 s), and repeated
+words are verified by position rather than matched to whichever duplicate is convenient. The build also
+samples pulled clips for likely burned-in lower-third subtitles and flags them in REPORT.md. This check is
+conservative; a flag means review/crop/replace the clip, not that OCR proved the words.
 
 **Sound design comes with the animations.** Every template declares its own effects in `M.setup({ sfx })`,
 timed to its own beats: a pop as a number lands, ticks while it counts, a pop per list item, a riser into a
@@ -144,6 +164,30 @@ the end. They are heuristics: fix each one or decide it's fine. Figure visuals w
 where the speaker sits across the frame if they're off-centre; `"pip": { "size": 300, "margin": 56 }` resizes the
 circle. In voice-only videos there is no picture of the speaker, so `pip` and `split` become `full`. The Premiere
 timeline shows them as full-frame clips.
+
+Set `"pip": { "animate": true }` to start on the full-frame speaker, shrink them into the bottom-corner
+circle as the visual arrives, then expand them back at the end. Static PiP remains the default for existing
+plans; `size` and `margin` still control the settled circle.
+
+### Text behind the speaker (opt-in)
+
+`[[quote text: BREAKING NEWS | behind: true]]` (or `"behind": true` on an insert) puts that rendered visual
+behind a transparent speaker for a news-desk look. It is **off by default** because high-quality matting is
+large and slow. Configure a wrapper:
+
+```json
+"cutout": {
+  "command": "python3",
+  "args": ["tools/my-rvm-wrapper.py"],
+  "ext": ".mov"
+}
+```
+
+The wrapper is called once with `<input.mp4> <output.mov>` and must write full-frame alpha video (ProRes 4444,
+qtrle, or VP9 alpha). Set `MF_CUTOUT_CMD` for a single executable with no extra arguments. Robust Video
+Matting or BackgroundMattingV2 are suitable local models; install them separately and pin their model/license.
+The cutout is cached and reused by all behind cues. Voice-only plans ignore `behind`. This repository ships
+the compositing scaffold, not a multi-gigabyte model or weights.
 
 ## Transitions and camera
 
@@ -200,6 +244,12 @@ only.
 
 ## Review, thumbnail, shorts
 
+- **Self-review.** `REVIEW.md` is regenerated from only the resolved plan and key stills, so prior intent
+  cannot excuse a confusing frame. It uses no numeric scores: every P0/P1/P2 note names the time, location,
+  problem, exact change, and what must stay. The next editing session reads this before REPORT.md.
+- **Readability.** REPORT.md flags copy that cannot be read in its screen time, declared text below 2.6%
+  of the frame's short side, a blank/black first frame, and picture that does not change for 3 seconds.
+  The phone-width cut sheet exposes flashes, duplicate frames, and awkward joins around every cut.
 - **Review.** Every build writes `out/longform/<name>/review.html`. Send the folder (or open it yourself):
   watch, pause where something is off, type the note, press Add; Save notes downloads `<name>.review.json`.
   `node longform.mjs feedback <name>.review.json` writes `FEEDBACK.md`. Change only what the notes ask for
@@ -229,22 +279,26 @@ transcription. After that, only new files are processed. Already have transcript
 | Command | What it does |
 |---|---|
 | `node longform.mjs script <x.script.md>` | Checks the script (cues, runtime at your pace, a visual every ~15 s, chapters) and writes `<x>.read.txt` for the teleprompter. |
-| `node longform.mjs from-script <script> <recording> [--build]` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. |
+| `node longform.mjs from-script <script> <recording>` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. Run `board` and get approval before `build`. (`--build` remains for compatibility, but skips that approval gate.) |
 | `node longform.mjs pull <plan>` | Downloads outside clips that have a `url` and `from`/`to` (needs yt-dlp). |
 | `node longform.mjs index [dir]` | Transcribes and indexes everything. Writes `footage/library/.index/LIBRARY.md` (one row per clip with its topics), `<clip>.md` (every sentence numbered with times), and `<clip>.sheet.jpg` (12 frames). |
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
 | `node longform.mjs check <plan>` | Resolves the plan and lists every problem at once, then shows the timeline. |
+| `node longform.mjs cut <plan> --preview` | Prints every source in/out and resulting timeline cut without rendering or changing files. |
+| `node longform.mjs board <plan>` | Renders one representative still per cue into `board.html`. Save cue notes as review JSON, run `feedback`, revise, and get approval before a full build. |
 | `node longform.mjs stock <plan>` | Downloads Pexels B-roll for `"stock"` inserts into `assets/broll/` and adds credits to `assets/broll/CREDITS.md`. |
 | `node longform.mjs build <plan>` | Builds everything above. Rendered animations and cut pieces are cached, so rebuilds are quick. Animations render several at a time (`LONGFORM_JOBS=3` to set how many). Also writes `review.html`. |
 | `node longform.mjs voice [clip ids]` | Measures how the creator talks from their indexed recordings (pace, sentence length, real phrases) into `scripts/VOICE.md`. Scripts are then timed at that pace. See `docs/PLAYBOOK.md`. |
 | `node longform.mjs doctor` | Checks this machine: Node, packages, Python, transcription, Chrome for 3D, keys. Says what's missing and the one-line fix. |
 | `node longform.mjs feedback <name>.review.json` | Turns the reviewer's notes into `FEEDBACK.md`: each note with what was on screen, what was being said, and which insert in the plan to change. |
+| `node longform.mjs freeze <plan> --name <name>` | Saves an approved video's header, layouts, caption style, theme and transitions as the next version in `scripts/templates/`; also refreshes Allen's defaults in `scripts/SERIES.md`. |
 | `node longform.mjs thumbnail <plan>` | Three 1280x720 thumbnails (`thumbnail-1..3.jpg`) from `"thumbnail": { "text", "accent", "prop", "kicker" }` in the plan. |
 | `node longform.mjs shorts <plan>` | Vertical shorts cut from the finished video, one per chapter, or the ones in `"shorts": [{ "from", "to", "title" }]`. |
 
 The same steps are MCP tools (`longform_index`, `longform_search`, `longform_words`, `longform_write_plan`,
-`longform_stock`, `longform_build`, `longform_doctor`, `longform_feedback`, `longform_thumbnail`, `longform_shorts`). The build tool returns the inserts contact sheet as a picture.
+`longform_stock`, `longform_board`, `longform_cut_preview`, `longform_build`, `longform_freeze`,
+`longform_doctor`, `longform_feedback`, `longform_thumbnail`, `longform_shorts`). The build tool returns the inserts contact sheet as a picture.
 
 ## Plans from existing footage
 
@@ -352,6 +406,12 @@ node longform.mjs build edits/longform/x.json         # the cutaways are in the 
 - **Settings** in the plan: `"auto_broll": { "every": 15, "min": 1.5, "max": 3, "skip": ["Vegas"], "layout": "full",
   "force": [{ "at": "rec#41", "word": "Macau", "query": "Macau casino night" }] }`; `"auto_broll": false` turns it off.
 - Searches are cached for 30 days in `assets/broll/.cache/`, media is saved once in `assets/broll/stock/`.
+- Search moments and report rows stay in narration order. Candidate clips are ranked against the complete
+  script line, and BROLL.md records a relevance score plus a plain-English reason. The dependency-free
+  fallback compares narration to titles/tags. For real local image-text scoring, set `BROLL_RELEVANCE_CMD`
+  to an executable that reads JSON lines (`text`, `image`, `media`) and returns
+  `{"score": 0..1, "reason": "..."}`; an OpenCLIP/SigLIP wrapper can plug in without becoming a required
+  heavyweight dependency.
 - Wikimedia rate-limits busy servers (cloud sessions especially): the tool waits and retries, and falls back to the next
   source. Openverse often answers slowly; it retries those too. Paste CREDITS.md into the video description.
 
@@ -373,5 +433,5 @@ marker, so you can review them before you post.
 - Automatic B-roll is photos only so far (with a slow push-in). Video from NASA, CERN, the Internet Archive and Commons is next.
 - Animations render on your computer: a 10-minute video with ~40 visuals takes a few minutes the first time,
   and rebuilds reuse everything that didn't change.
-- No burned-in captions. Upload the `.srt` to YouTube instead.
+- Burned-in captions are opt-in (`captions.burn: true`); an `.srt` is still always written.
 - One shot of the speaker. Multi-camera switching isn't automatic. Put the second angle in the library and use it as `broll`.

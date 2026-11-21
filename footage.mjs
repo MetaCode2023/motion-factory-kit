@@ -22,6 +22,7 @@ import { cropFilter, pickTrack } from './tools/reframe.mjs';
 import { readSidecar } from './tools/transcripts.mjs';
 import { checkPlan } from './tools/plans.mjs';
 import { audioOptions, cleanChain, loudness, speakerGains, speechEnvelope, speechCut } from './tools/audio.mjs';
+import { wordsForPiece } from './tools/caption-timing.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const [cmd, ...rest] = process.argv.slice(2);
@@ -319,14 +320,12 @@ async function cut(planFile, { quiet = false } = {}) {
     files.push(file);
     if (p.si !== prevSeg) { segStarts[p.si] = t; prevSeg = p.si; }
     const pieceWords = p.clip.words.filter((w) => w.s >= p.a - 0.01 && w.e <= p.b + 0.05 && !(w.filler && !(p.seg.keepFillers ?? plan.keepFillers)));
-    for (const w of pieceWords) {
-      words.push({ w: w.w, s: +(t + w.s - p.a).toFixed(3), e: +(t + Math.min(w.e, p.b) - p.a).toFixed(3) });
+    const tightened = p.seg.tight ?? plan.tight ?? true;
+    const timedWords = wordsForPiece(pieceWords, { sourceIn: p.a, sourceOut: p.b, timelineIn: t, tightened, hasAudio: p.clip.hasAudio });
+    for (const w of timedWords) {
+      words.push(w);
       (segWords[p.si] ||= []).push(w.w);
     }
-    // Transcript word ends are commonly early. Hold the piece's final caption through the real
-    // audio-aware cut so it does not disappear while the last consonant/release is still audible.
-    const tightened = p.seg.tight ?? plan.tight ?? true;
-    if (tightened && p.clip.hasAudio && pieceWords.length) words[words.length - 1].e = +(t + dur).toFixed(3);
     t += dur;
     segEnds[p.si] = t;
   }

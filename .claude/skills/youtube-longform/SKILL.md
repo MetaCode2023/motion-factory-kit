@@ -17,7 +17,9 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
    can) and check a still of each.
 5. `node longform.mjs from-script scripts/<name>.script.md <recording> ` → read the alignment report →
    `broll` (automatic free-license cutaways; read BROLL.md, drop or re-search bad picks in the lockfile) →
-   `stock` / `pull` → `build`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
+   `stock` / `pull` → **`board`**. Open `board.html`; revise its cue notes through `feedback` until the
+   visual flow is approved ("go"). Only then run `build`. Read `REVIEW.md` first, then REPORT.md and
+   `<name>.inserts.jpg`; fix the ranked notes before handing over.
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).
@@ -28,7 +30,12 @@ prints a retention score with notes: fix them. On-camera layouts: `full`, `side`
 Around the video:
 - New machine: `node longform.mjs doctor` (what's installed, what's missing, the fix).
 - Give each video a look in the script header: `theme: blueprint | noir | sunset | paper | terminal` (default aurora).
+- For captions throughout use `captions: {"burn":true}`; mark key spoken phrases `*like this*` so they
+  pop in the accent colour. Keep the dim box over bright footage and move captions away from the face.
 - Every build writes `review.html`. Notes come back as `<name>.review.json` → `node longform.mjs feedback <file>` →
-  read `FEEDBACK.md`, change only what the notes ask for, rebuild.
+  read `FEEDBACK.md`, change only what the notes ask for, rebuild. This also grows the private Never again
+  list in `scripts/SERIES.md`; after approval run `freeze <plan> --name <series>` to version the proven defaults.
 - `node longform.mjs thumbnail <plan>` (plan: `"thumbnail": { text: 2-4 words, accent, prop }`) and
   `node longform.mjs shorts <plan>` (plan: `"shorts": [{ from, to, title }]`, or one per chapter).
+- Every build writes a fresh, score-free `REVIEW.md` from only the plan and key stills. Read it before
+  REPORT.md; apply P0, then P1 notes in the stated `problem -> exact change · what stays` form.

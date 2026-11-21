@@ -25,7 +25,7 @@ import { basename, join } from 'node:path';
 import { ROOT, bare, fmt, seconds } from './common.mjs';
 
 const VISUAL = new Set(['anim', 'stock', 'clip', 'broll', 'image']);
-const OPTION_KEYS = new Set(['dur', 'layout', 'offset', 'id', 'note', 'sfx', 'max_dur', 'transition']);
+const OPTION_KEYS = new Set(['dur', 'layout', 'offset', 'id', 'note', 'sfx', 'max_dur', 'transition', 'behind']);
 // A cue name is a scene file: scenes/longform/<name>.html (2D) or scenes/longform/3d/<name>.html (3D, three.js).
 export const sceneFor = (kind) => ['', '3d/'].map((d) => `scenes/longform/${d}${kind}.html`).find((f) => existsSync(join(ROOT, f))) || null;
 
@@ -86,7 +86,13 @@ export function parseScript(text) {
     if (/^##+\s/.test(l)) { chapters.push({ title: l.replace(/^#+\s+/, '').trim(), word: words.length }); continue; }
     const re = /\[\[([\s\S]*?)\]\](?!\])/g;
     let last = 0, m;
-    const pushText = (s) => { for (const w of s.replace(/[*_`]/g, '').split(/\s+/).filter(Boolean)) if (bare(w)) words.push({ w, b: bare(w) }); };
+    const pushText = (s) => {
+      // Single asterisks are spoken emphasis, not literal teleprompter text: "*never again*".
+      for (const part of s.split(/(\*[^*]+\*)/g).filter(Boolean)) {
+        const emphasis = /^\*[^*]+\*$/.test(part);
+        for (const w of part.replace(/[*_`]/g, '').split(/\s+/).filter(Boolean)) if (bare(w)) words.push({ w, b: bare(w), ...(emphasis ? { emphasis: true } : {}) });
+      }
+    };
     while ((m = re.exec(l))) { pushText(l.slice(last, m.index)); cues.push({ ...parseCue(m[1]), word: words.length }); last = re.lastIndex; }
     pushText(l.slice(last));
   }
@@ -276,18 +282,20 @@ export function planFromScript(text, clip, { name } = {}) {
     ...(theme ? { theme } : {}),
     ...(transitions ? { transitions } : {}),
     ...(S.meta.base ? { base: S.meta.base } : {}),
+    ...(S.meta.captions !== undefined ? { captions: typeof S.meta.captions === 'object' ? S.meta.captions : { burn: S.meta.captions } } : {}),
     a_roll: [{ clip: clip.id, from: +Math.max(0, first.s - 0.3).toFixed(3), to: +Math.min(clip.duration, last.e + 0.4).toFixed(3) }],
     tighten: { fillers: true, max_pause: S.meta.max_pause ?? 0.45, cut },
     ...(S.meta.punch_in ? { punch_in: S.meta.punch_in } : {}),
     chapters: [], inserts: [], music: [], sfx: [],
   };
+  plan.caption_emphasis = S.words.flatMap((w, i) => w.emphasis && map[i] >= 0 ? [{ clip: clip.id, t: clip.words[map[i]].s }] : []);
   S.chapters.forEach((ch) => { const at = anchor(ch.word, `chapter "${ch.title}"`); if (at) plan.chapters.push({ at, title: ch.title }); });
   let n = 0;
   for (const c of S.cues) {
     const what = `[[${c.raw.trim().slice(0, 40)}]]`;
     const at = anchor(c.word, what);
     if (!at) continue;
-    const common = { at, offset: c.opts.offset ?? -0.12, ...(c.opts.layout ? { layout: c.opts.layout } : {}), ...(c.opts.note ? { note: c.opts.note } : {}), ...(c.opts.transition ? { transition: c.opts.transition } : {}), ...(c.opts.sfx !== undefined ? { sfx: c.opts.sfx } : {}) };
+    const common = { at, offset: c.opts.offset ?? -0.12, ...(c.opts.layout ? { layout: c.opts.layout } : {}), ...(c.opts.note ? { note: c.opts.note } : {}), ...(c.opts.transition ? { transition: c.opts.transition } : {}), ...(c.opts.behind === true || c.opts.behind === 'true' ? { behind: true } : {}), ...(c.opts.sfx !== undefined ? { sfx: c.opts.sfx } : {}) };
     const dur = c.opts.dur ?? 'auto';
     const id = c.opts.id || `${String(++n).padStart(2, '0')}-${c.kind === 'anim' ? basename(c.scene || 'anim', '.html') : c.kind}`;
     // mark.<key>: <word> -> that spoken word (the first after the cue) sets data.<key> in seconds into the animation.

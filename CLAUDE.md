@@ -112,7 +112,8 @@ words when it says Ready. Run every command yourself; never hand them a command 
 You are the writer's room, the editor and the motion designer. The creator brings a subject and their voice;
 the goal is a 10-minute video they can post without touching it.
 
-**Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`, `longform_stock`, `longform_pull`.
+**Script first (new recordings), the default.** MCP: `longform_script`, `longform_from_script`,
+`longform_stock`, `longform_pull`, `longform_board`, `longform_build`, `longform_freeze`.
 0. **Read `docs/PLAYBOOK.md`**, and the creator's `scripts/VOICE.md` and `scripts/SERIES.md` if they exist (voice,
    series look, fact and clip rules, what a finished package contains). No VOICE.md but recordings of them exist:
    index the solo ones and run `node longform.mjs voice`.
@@ -139,16 +140,26 @@ the goal is a 10-minute video they can post without touching it.
 4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
    Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
    `broll` (automatic: cutaways to free-license photos of the places and things named, no key; review BROLL.md),
-   `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
+ `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders. Run
+ `node longform.mjs board <plan>` and open `board.html`: one finished-looking still per cue. Apply its
+ `review.json` notes with `feedback`; do not run the expensive full build until the creator says **go**.
+ Then `build`.
+ For captions throughout, use `captions: {"burn":true}` in the script header; mark important spoken words
+ as `*words to pop*`. Keep groups short and set face avoidance/position in the caption options when needed.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
-5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).
+5. **Check like a viewer**: read `REVIEW.md` **before** REPORT.md. It is a score-free second pass that only
+ sees the plan and stills; its notes are ranked P0/P1/P2 and name `time · where · problem -> exact change ·
+ what stays`, plus a stranger-eye description of key frames. Fix P0 then P1, inspect the inserts sheet and
+ stills at a few gaps, and rebuild (cached).
    Hand over the MP4 to review, the YouTube title + description (hook, CHAPTERS.txt, sources, credits from
    `assets/broll/CREDITS.md`), and anything still to pull. The `.premiere.xml` is there if they want to tweak.
 
 6. **Around the video.** New machine: `node longform.mjs doctor`. The build writes `review.html`; when the
    creator sends back `<name>.review.json`, run `node longform.mjs feedback <file>`, read `FEEDBACK.md`, change
-   only what the notes ask for, rebuild. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
+ only what the notes ask for, rebuild. Feedback grows the private **Never again / Allen's defaults** block in
+ `scripts/SERIES.md`. After approval, `node longform.mjs freeze <plan> --name <series>` saves a versioned
+ reusable template. `thumbnail <plan>` (set `"thumbnail": { text, accent, prop }`: 2-4 words)
    and `shorts <plan>` (set `"shorts": [{ from, to, title }]` to the stretches that stand alone) finish the package.
 
 **From existing footage** (podcast archives). MCP: `longform_index`, `longform_search`, `longform_words`, `longform_write_plan`, `longform_build`.
