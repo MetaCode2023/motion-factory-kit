@@ -307,3 +307,13 @@ test('transcript hardening drops words wholly in silence and aligns repeated wor
   assert.notEqual(result.pos[0], result.pos[2]);
   assert.equal(result.subs, true);
 });
+
+test('readability checks flag rushed copy and cut strips sample both sides', async () => {
+  const { readabilityChecks } = await import('../tools/longform/critic.mjs');
+  const { aroundCuts } = await import('../tools/stills.mjs');
+  const warnings = readabilityChecks({ inserts: [{ id: 'rushed', kind: 'image', dur: 1, note: 'This sentence cannot possibly be read in one second', data: {} }] });
+  assert.ok(warnings.some((x) => /need about/.test(x)));
+  const strip = aroundCuts([0, 5, 10], 12);
+  assert.deepEqual(strip.filter((x) => x.cut === 5).map((x) => x.offset), [-0.2, -0.1, 0, 0.1, 0.2]);
+  assert.ok(strip.every((x) => x.t >= 0 && x.t < 12));
+});

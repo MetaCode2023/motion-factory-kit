@@ -35,6 +35,7 @@ out/longform/<name>/
   REVIEW.md               harsh P0/P1/P2 second review; read this before REPORT.md
   REPORT.md               self-check (PASS/FIX) + the timeline
   <name>.inserts.jpg      one frame from every visual
+  <name>.cuts-phone.jpg   360 px-wide strips from -0.2 s to +0.2 s around every cut
 ```
 
 Try it with no recording and no keys: `node longform.mjs demo`. A synthetic voice reads
@@ -219,6 +220,9 @@ only.
 - **Self-review.** `REVIEW.md` is regenerated from only the resolved plan and key stills, so prior intent
   cannot excuse a confusing frame. It uses no numeric scores: every P0/P1/P2 note names the time, location,
   problem, exact change, and what must stay. The next editing session reads this before REPORT.md.
+- **Readability.** REPORT.md flags copy that cannot be read in its screen time, declared text below 2.6%
+  of the frame's short side, a blank/black first frame, and picture that does not change for 3 seconds.
+  The phone-width cut sheet exposes flashes, duplicate frames, and awkward joins around every cut.
 - **Review.** Every build writes `out/longform/<name>/review.html`. Send the folder (or open it yourself):
   watch, pause where something is off, type the note, press Add; Save notes downloads `<name>.review.json`.
   `node longform.mjs feedback <name>.review.json` writes `FEEDBACK.md`. Change only what the notes ask for

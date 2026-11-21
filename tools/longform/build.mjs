@@ -9,7 +9,8 @@ import { FF, H, PY, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from '
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
 import { premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
-import { harshReview } from './critic.mjs';
+import { harshReview, readabilityChecks } from './critic.mjs';
+import { aroundCuts } from '../stills.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -475,6 +476,8 @@ function report(R, plan, files) {
   else if (R.inserts.some((i) => i.pulled)) pass(true, 'no likely burned-in subtitles detected in pulled clips');
   if (R.frozen) R.frozen = R.frozen.filter(([a, d]) => !R.inserts.some((i) => i.kind === 'pull' && a >= i.at - 0.5 && a + d <= i.at + i.dur + 0.5));   // placeholders are still on purpose
   if (R.frozen) pass(!R.frozen.length, R.frozen.length ? `picture frozen for 3 s+ at ${R.frozen.map(([a, d]) => `${fmt(a)} (${d.toFixed(1)} s)`).join(', ')}: add motion or a visual there` : 'nothing on screen sits frozen for 3 s+');
+  pass(!R.emptyFirstFrame, R.emptyFirstFrame ? 'first frame is effectively empty/black: put the hook on frame zero' : 'first frame contains visible picture');
+  pass(!R.readability?.length, R.readability?.length ? `readability warnings:\n${R.readability.map((w) => `  - ${w}`).join('\n')}` : 'on-screen text has enough time and is at least 2.6% of frame height');
   pass(R.chapters.length >= 3, R.chapters.length >= 3 ? `${R.chapters.length} chapters` : 'add 3+ chapters for YouTube');
   lines.push('## Checks', '', ...checks, '', '## Timeline', '', '| Time | Insert | Kind | Layout | Length | Note |', '|---|---|---|---|---|---|');
   for (const i of R.inserts) lines.push(`| ${fmt(i.at)} | ${i.id} | ${i.kind} | ${i.layout} | ${i.dur.toFixed(1)} s | ${(i.note || i.title || '').replace(/\|/g, '/')} |`);
@@ -532,6 +535,24 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   // Critic: stretches where the picture barely changes for 3 s+ (a frozen animation, an empty frame).
   const fr = spawnSync(FF, ['-hide_banner', '-i', video, '-vf', 'scale=480:-2,freezedetect=n=0.002:d=3', '-an', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
   R.frozen = [...(fr.stderr || '').matchAll(/freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+  const first = spawnSync(FF, ['-hide_banner', '-ss', '0', '-i', video, '-frames:v', '1', '-vf', 'blackframe=amount=98:threshold=24', '-an', '-f', 'null', '-'], { encoding: 'utf8' });
+  R.emptyFirstFrame = /pblack:(?:9[89]|100)\b/.test(first.stderr || '');
+  R.readability = readabilityChecks(R);
+  const cutTimes = aroundCuts([
+    ...R.cuts.slice(1).map((c) => c.out),
+    ...R.inserts.flatMap((i) => [i.at, i.at + i.dur]),
+  ], R.total);
+  const cutDir = join(dir, '.cut-frames');
+  mkdirSync(cutDir, { recursive: true });
+  const cutItems = cutTimes.map((x, k) => ({
+    file: frameAt(video, x.t, join(cutDir, `${String(k).padStart(5, '0')}.jpg`), 132, 74),
+    label: `${fmt(x.cut)} ${x.offset >= 0 ? '+' : ''}${x.offset.toFixed(1)}`,
+  }));
+  if (cutItems.length) {
+    const cutSheet = await sheet(cutItems, join(dir, `${plan.name}.cuts-phone.jpg`), { cols: 5, w: 66, h: 37, pad: 5, title: 'cuts: -0.2s to +0.2s' });
+    files.push(relative(ROOT, cutSheet));
+  }
+  rmSync(cutDir, { recursive: true, force: true });
   write('REVIEW.md', harshReview(R, plan, shots));
   files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);

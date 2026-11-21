@@ -1,6 +1,7 @@
 // Deliberately harsh, score-free review. It receives only the resolved plan and the sampled still list:
 // no script rationale, previous feedback, or implementation notes that could bias a second reviewer.
 import { fmt } from './common.mjs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const note = (level, t, where, problem, change, keep) =>
   `- **${level}** t=${(+t).toFixed(1)}s · ${where} · ${problem} -> ${change} · keep: ${keep}`;
@@ -38,4 +39,20 @@ export function harshReview(R, plan, shots = []) {
     '## Ranked changes', '', ...ranked, '',
     '## Stranger-eye frame read', '', ...(frames.length ? frames : ['No key frames were supplied. Generate the contact sheet again.']), '',
   ].join('\n');
+}
+
+export function readabilityChecks(R) {
+  const warnings = [];
+  for (const i of R.inserts || []) {
+    const text = [i.note, i.title, ...Object.values(i.data || {}).filter((x) => typeof x === 'string')].filter(Boolean).join(' ');
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const need = words ? 0.45 + words / 3 : 0;
+    if (need > i.dur) warnings.push(`${i.id}: ${words} on-screen words need about ${need.toFixed(1)}s, but the cue lasts ${i.dur.toFixed(1)}s`);
+    if (i.kind === 'animation' && i.scene && existsSync(i.scene)) {
+      const sizes = [...readFileSync(i.scene, 'utf8').matchAll(/(?:font\s*=\s*['"`][^'"`]*?|font:\s*['"`][^'"`]*?)(\d+(?:\.\d+)?)px/g)].map((m) => +m[1]);
+      const tiny = sizes.filter((x) => x > 0 && x < 28.1);
+      if (tiny.length) warnings.push(`${i.id}: scene declares ${Math.min(...tiny)}px text, under 2.6% of the 1080px short side (28px)`);
+    }
+  }
+  return warnings;
 }
