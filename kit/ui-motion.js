@@ -66,23 +66,24 @@
       if(p.theme==='glass')window.FX.glass(c,label.x-5,label.y-5,label.w+10,label.h+10,{radius:15,blur:14,tint:'rgba(230,244,250,.07)',shadow:false});
       box(c,label,colors.light?'#17191c':'#eeebe2',8);
       c.fillStyle=p.accent;c.fillRect(label.x+16,label.y+20,4,label.h-40);
-      type(c,s.copy.callout,label.x+34,label.y+label.h*.66,portrait?34:30,colors.light?'#f2efe5':'#181a1c',p.font,label.w-50);
+      type(c,s.copy.callout,label.x+34,label.y+label.h*.66,portrait?34:46,colors.light?'#f2efe5':'#181a1c',p.font,label.w-50);
       c.restore();
     }
-    if(s.caption){box(c,s.caption,colors.light?'#17191c':'#eeebe2',8);type(c,s.copy.caption,s.caption.x+20,s.caption.y+43,28,colors.light?'#f2efe5':'#181a1c',p.font,s.caption.w-40);}
+    if(s.caption){box(c,s.caption,colors.light?'#17191c':'#eeebe2',8);type(c,s.copy.caption,s.caption.x+20,s.caption.y+43,portrait?28:44,colors.light?'#f2efe5':'#181a1c',p.font,s.caption.w-40);}
     // Quiet chapter spine carries the accent through each composition.
     const py=portrait?1170:680;c.fillStyle=colors.line;c.fillRect(60,py,p.width-120,2);
     c.fillStyle=p.accent;c.fillRect(60,py,(p.width-120)*Math.min(1,t/p.duration),2);
   }
   window.UIMotion={
-    state(s,t){const local=t-s.start,visible=local>=s.cue&&t<s.end;const q=M.clamp((local-s.cue)/s.move);return {visible,progress:s.accessibility.reducedMotion?(visible?1:0):M.ease.outCubic(q)};},
+    activeShot(shots,t){let index=0;for(let i=1;i<shots.length;i++)if(t>=shots[i].start)index=i;return index;},
+    state(s,t){const cue=s.start+s.cue,visible=t>=cue-1e-9&&t<s.end-1e-9;const q=M.clamp((t-cue)/s.move);return {visible,progress:s.accessibility.reducedMotion?(visible?1:0):M.ease.outCubic(q)};},
     mount(plan){
       M.fonts([`400 40px "${plan.font}"`]);
       const images=plan.shots.map(s=>M.image(s.source.path));
       M.setup({width:plan.width,height:plan.height,fps:plan.fps,duration:plan.duration,cuts:plan.shots.slice(1).map(s=>s.start),background:'#111214',
         draw(c,t){
-          let index=plan.shots.findIndex(s=>t<s.end);if(index<0)index=plan.shots.length-1;
-          const s=plan.shots[index],transitionAt=s.end-s.transition.duration;
+          const index=window.UIMotion.activeShot(plan.shots,t);
+          const s=plan.shots[index],transitionAt=(plan.shots[index+1]?.start??s.end)-s.transition.duration;
           if(t>=transitionAt&&index<plan.shots.length-1&&s.transition.kind==='chapter'&&!s.accessibility.reducedMotion){
             const progress=M.clamp((t-transitionAt)/s.transition.duration);
             shot(c,Math.min(t,transitionAt),plan,s,images);

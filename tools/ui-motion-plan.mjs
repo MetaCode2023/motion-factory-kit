@@ -49,8 +49,8 @@ export function placeCallout(target,size,safe,obstacles=[],preferred) {
   return null;
 }
 export function shotState(s,t) {
-  const local=t-s.start,visible=local>=s.cue&&local<s.end-s.start;
-  const linear=Math.max(0,Math.min(1,(local-s.cue)/s.move));
+  const cue=s.start+s.cue,visible=t>=cue-1e-9&&t<s.end-1e-9;
+  const linear=Math.max(0,Math.min(1,(t-cue)/s.move));
   return {visible,progress:s.accessibility.reducedMotion?(visible?1:0):1-(1-linear)**3};
 }
 export function compileManifest(manifest) {
@@ -74,7 +74,7 @@ export function compileManifest(manifest) {
     const header=portrait?{x:60,y:145,w:600,h:200}:{x:64,y:100,w:420,h:240};
     const caption=s.copy.caption?(portrait?{x:60,y:1040,w:600,h:65}:{x:530,y:600,w:670,h:50}):null;
     if(mapped&&protectedRegions.some(r=>intersects(mapped.target,r)))warnings.push('Target intersects a protected region; recompose source framing.');
-    const size=portrait?{w:Math.min(560,Math.max(240,s.copy.callout.length*20+54)),h:76}:{w:Math.min(400,Math.max(220,s.copy.callout.length*16+48)),h:84};
+    const size=portrait?{w:Math.min(560,Math.max(240,s.copy.callout.length*20+54)),h:76}:{w:420,h:92};
     const callout=mapped?placeCallout(mapped.target,size,safe,[header,...protectedRegions,...(caption?[caption]:[])],portrait?{x:60,y:940}:{x:64,y:390}):null;
     if(!callout&&mapped)warnings.push('No callout position clear of target and protected regions.');
     return {...s,index,start,end:shotEnd,viewport,header,caption,protectedRegions,mapped,callout,status:warnings.length?'review':'ready',warnings};

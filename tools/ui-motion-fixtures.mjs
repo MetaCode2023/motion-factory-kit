@@ -63,7 +63,7 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
   const write=async(name,data)=>writeFile(join(directory,name+'.json'),JSON.stringify(data,null,2)+'\n');
   await write('editorial',m);await write('glass',{...m,id:'glass',theme:'glass'});
   const table=shot('table',1100,700,{x:814/1100,y:388/700,w:225/1100,h:40/700},['FIND','THE NEXT STEP.'],'REVIEW NOW');
-  table.framing={x:.42,y:.40,w:.58,h:.42};
+  table.framing={x:.68,y:.47,w:.32,h:.20};
   const held={...m,id:'held-out-table',shots:[{...table,hold:8.4}]};await write(held.id,held);
   const edge={...structuredClone(table),id:'edge-target',start:0,hold:2.4};edge.target.name='edge control';edge.copy.caption='Keep the selected row in view.';
   const near={...structuredClone(mobile),id:'caption-target',start:4};near.copy.caption='Open the preview to continue.';
@@ -74,4 +74,4 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
   await write('revision-before',before);await write('revision-after',{...before,shots:[{...dashboard,hold:9.4}]});
   return m;
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){await generateFixtures(resolve(process.argv[2]??join(root,'examples/ui-motion')),{font:process.argv.includes('--barlow')?'Barlow':'Bahnschrift'});console.log('Synthetic UI fixtures and manifests ready.');}
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){await generateFixtures(resolve(process.argv.slice(2).find(a=>!a.startsWith('--'))??join(root,'examples/ui-motion')),{font:process.argv.includes('--barlow')?'Barlow':'Bahnschrift'});console.log('Synthetic UI fixtures and manifests ready.');}

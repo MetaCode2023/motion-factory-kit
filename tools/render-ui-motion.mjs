@@ -27,6 +27,13 @@ export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,aud
     if(plan.font==='Barlow')FontLibrary.use('Barlow',join(kitRoot,'fonts/barlow-latin-500-normal.woff2'));
     else throw new Error('Bahnschrift unavailable. Explicitly choose licensed Barlow fallback in manifest.');
   }
+  const measure=new Canvas(1,1).getContext('2d');
+  for(const s of plan.shots){
+    const check=(copy,size,width)=>{measure.font=`${size}px "${plan.font}"`;if(measure.measureText(copy).width>width)throw new Error(`${s.id}: exact copy cannot remain legible in this layout; shorten only with user direction or recompose.`);};
+    check(s.copy.callout,plan.aspect==='9:16'?28:36,s.callout.w-50);
+    for(const line of s.copy.headline)check(line,36,s.header.w);
+    if(s.copy.caption)check(s.copy.caption,24,s.caption.w-40);
+  }
   for(const s of plan.shots){
     const source=resolve(root,s.source.path);
     let image;try{image=await loadImage(source);}catch{throw new Error(`Missing or unreadable source: ${s.source.path}`);}

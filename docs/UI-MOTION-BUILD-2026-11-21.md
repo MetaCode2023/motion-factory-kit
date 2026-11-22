@@ -48,3 +48,39 @@ context during the hold; overview restores context before the move. Label
 legibility improves. Glass keeps the same red accent rather than reproducing
 the older glass reel's mint, to isolate the material comparison. Sound review
 and moving playback remain pending at this checkpoint.
+
+## Milestone 2 — five rounds and frame verification
+
+2026-11-21 20:15 Phoenix: rendered the editorial/glass pair, held-out table,
+portrait/landscape recompose with caption reservations and edge target, and
+10s/11s hold revision. Tightened only the table's focus framing after its
+original control text proved small; retained that meaningful before/after.
+The geometry stays in source space; no table-specific renderer code added.
+
+Actual MP4 verification: 128 decoded samples across eight study exports.
+Each checks setup, frame before cue, cue, during move, first readable frame,
+hold midpoint/end and transition midpoint. All samples pass pixel comparison
+against the deterministic scene; all during-move best offsets are zero
+within a ±2 frame search. This is a pipeline timing check, not an independent
+creative judgment. Metadata/decode checks also pass. Long labels now fail
+with a legibility review error instead of shrinking without limit.
+
+Self-review added failing tests for floating cue subtraction at 4.8s and
+explicit gaps selecting a future shot too early. Fixed both. Added encoder
+failure and source-dimension regressions. Fallback CLI flag order exposed a
+path parsing bug; fixed after a failing test. All 20 unique recipe tests pass.
+Tests use explicit licensed Barlow; review renders use installed Bahnschrift.
+
+Normal-speed browser playback exercised with sampled visual observations.
+Do not equate discrete screenshot observations with continuous motion or
+audio listening. Audible review remains unverified. Real calibration clips
+rendered with the installed Python 3.13/Pillow environment (`python3`);
+Python 3.12 (`python`) lacked Pillow and was not modified. Ten existing Clef
+request payloads validate against real MP4s in both orders. No verified
+no-spend hosted caller/account binding; live scoring pending, no responses
+invented. No new resources or model spend.
+
+Code checkpoint includes focused CI with explicit Barlow generation, real
+portrait/landscape renders and decoded-frame verification. Next: finish
+playback checks, independent media metadata/audio checks, package and draft
+PR. Glass and all example acceptance remain pending human approval.
