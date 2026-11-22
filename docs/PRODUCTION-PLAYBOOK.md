@@ -40,6 +40,13 @@ Record the source clip or exact spoken phrase, the intended focal point, which e
 3. Reserve the corner before placing graphics or captions. Hold the speaker there through the explanation, with clear space for the face, labels, and subtitles. For a longer video, use the custom scene as the timed insert. Use the built-in `pip` layout for adjacent beats that only need the steady corner position.
 4. Render the frame before the move, the point where the face crosses the aperture, and the settled frame. Watch the transition with the spoken line before approving it. If the host is voice-only, show the full graphic and retain the original audio. A contact sheet alone cannot show whether the face blinks out or the move lands on the right word.
 
+## Calibrate what “good” looks like
+
+Use the [video quality comparisons](MOTION-QUALITY-CALIBRATION.md) to agree on
+speaker continuity, spoken-cue timing, caption clearance, evidence legibility,
+and result holds. Preview at delivery size with audio. Check precise timing on
+the timeline and use a blind comparison for subjective judgments.
+
 ## Review before delivery
 
 - Inspect the stills and play the short preview at normal speed with audio. Check entrance, hold, and exit at each requested aspect ratio.
