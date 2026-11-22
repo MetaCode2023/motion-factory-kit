@@ -32,6 +32,7 @@ export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,aud
     const check=(copy,size,width)=>{measure.font=`${size}px "${plan.font}"`;if(measure.measureText(copy).width>width)throw new Error(`${s.id}: exact copy cannot remain legible in this layout; shorten only with user direction or recompose.`);};
     check(s.copy.callout,plan.aspect==='9:16'?28:36,s.callout.w-50);
     for(const line of s.copy.headline)check(line,36,s.header.w);
+    if(s.copy.chapter)check(s.copy.chapter,12,s.header.w);
     if(s.copy.caption)check(s.copy.caption,24,s.caption.w-40);
   }
   for(const s of plan.shots){

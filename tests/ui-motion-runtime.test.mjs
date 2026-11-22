@@ -22,13 +22,14 @@ test('runtime cue state matches deterministic frame and reduced motion behavior'
   assert.equal(sandbox.window.UIMotion.state(shot,4.8).visible,true);
   shot.accessibility.reducedMotion=true;assert.equal(sandbox.window.UIMotion.state(shot,4.8).progress,1);
 });
-test('a last-shot hold revision leaves earlier source frames identical, including the chapter spine',async()=>{
-  const dir=await mkdtemp(join(tmpdir(),'ui-preserve-beats-'));let a,b;
+test('scoped holds and internal target metadata leave unrelated source frames identical',async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'ui-preserve-beats-'));let a,b,c;
   try{await generateFixtures(dir,{font:'Barlow'});
-    async function scene(stem){const p=compileManifest(JSON.parse(await readFile(join(dir,stem+'.json'),'utf8')));
+    async function scene(stem,internalNames=false){const input=JSON.parse(await readFile(join(dir,stem+'.json'),'utf8'));if(internalNames)for(const s of input.shots)s.target.name='INTERNAL CAPTURE NOTE';const p=compileManifest(input);
       for(const s of p.shots){s.source.path=join(dir,s.source.path).replaceAll('\\','/');s.overview=mapTarget(s.source,s.target.bounds,s.viewport,'contain');}
-      const path=join(dir,stem+'.html');await writeFile(path,sceneDocument(p));return open(path);}
+      const path=join(dir,stem+(internalNames?'-internal':'')+'.html');await writeFile(path,sceneDocument(p));return open(path);}
     a=await scene('revision-before');b=await scene('revision-after');
     for(const t of [1.2,5.2])assert.ok(a.frame(t).equals(b.frame(t)),`unrelated beat changes at ${t}s`);
-  }finally{await a?.close();await b?.close();await rm(dir,{recursive:true,force:true});}
+    c=await scene('revision-before',true);assert.ok(a.frame(1.2).equals(c.frame(1.2)),'internal target metadata must not leak into rendered text');
+  }finally{await a?.close();await b?.close();await c?.close();await rm(dir,{recursive:true,force:true});}
 });

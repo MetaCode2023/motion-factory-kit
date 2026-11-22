@@ -18,12 +18,14 @@ the examples using the bundled licensed Barlow font. The renderer checks the
 requested font and records it in the receipt; it never silently substitutes.
 Do not commit or redistribute the Windows Bahnschrift font binary.
 
-Each shot supplies exact headline/callout/caption copy, source dimensions,
+Each shot supplies exact chapter/headline/callout/caption copy, source dimensions,
 a stable target name, normalized source bounds (or a unique captured locator
 with normalized resolved bounds), cue, move, hold, transition, theme and
 accessibility settings. Times must be exact 30fps frame multiples.
 Source paths resolve relative to the manifest. Real image dimensions must
 match the declared dimensions before rendering begins.
+`target.name` is an internal stable identifier and is never rendered. Put
+visible chapter wording in `copy.chapter`; omit it to leave that line empty.
 
 `framing` is a normalized source crop used for the focused view. The scene
 starts with a contain-fit overview and moves to that crop on the cue.

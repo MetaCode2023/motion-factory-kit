@@ -29,7 +29,7 @@
     if(p.theme==='glass')window.FX.glass(c,headerX-18,headerY-59,headerW+36,portrait?202:210,{radius:20,blur:16,tint:'rgba(233,243,250,.055)',border:'rgba(234,244,251,.18)',shadow:false});
     type(c,'FIELD NOTES / INTERFACES',60,portrait?88:65,14,colors.muted,p.font,360);
     c.fillStyle=colors.line;c.fillRect(60,portrait?116:85,p.width-120,1);
-    type(c,`${String(s.index+1).padStart(2,'0')} / ${s.target.name.toUpperCase()}`,headerX,headerY-20,16,colors.muted,p.font,headerW);
+    if(s.copy.chapter)type(c,s.copy.chapter,headerX,headerY-20,16,colors.muted,p.font,headerW);
     // Opening copy is already present; subsequent second lines arrive as one clean mask.
     type(c,s.copy.headline[0],headerX,headerY+61,portrait?88:76,p.accent,p.font,headerW);
     const rise=s.accessibility.reducedMotion?1:M.prog(time,0,.4);

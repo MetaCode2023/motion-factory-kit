@@ -24,6 +24,7 @@
         }
       },
       "copy": {
+        "chapter": "01 / EDGE CONTROL",
         "headline": [
           "FIND",
           "THE NEXT STEP."
@@ -71,6 +72,7 @@
         }
       },
       "copy": {
+        "chapter": "02 / MOBILE",
         "headline": [
           "FOCUS",
           "THE ACTION."
@@ -118,6 +120,7 @@
         }
       },
       "copy": {
+        "chapter": "03 / EDITOR",
         "headline": [
           "FOLLOW",
           "THE CUT."

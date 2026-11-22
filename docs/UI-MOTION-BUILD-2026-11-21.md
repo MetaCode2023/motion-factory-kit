@@ -155,3 +155,11 @@ pass, with the same unchanged POSIX-stub failure. Latest code revision is
 `4201e82`; 21 hosted UI tests and both hosted aspect renders/frame checks
 pass. Broader legacy examples are checked separately. Final package includes
 the raw failure evidence, per-render creative rubric and append-ready memory.
+
+Final manifest audit: the previous painter derived a chapter label from
+`target.name`. That is unsuitable for reusable captures with internal names.
+Observed a failing raw-frame test when only the target name changed, then
+moved all chapter wording to explicit `copy.chapter`. Target identifiers
+and capture notes no longer render. The examples retain their exact visible
+wording. Re-run the 21 recipe/31 relevant tests and all eight render/frame
+checks against this final contract. No human acceptance is inferred.

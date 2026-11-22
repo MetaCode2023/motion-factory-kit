@@ -54,7 +54,7 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
     }await save(canvas,'table');
   }
   const accessibility={reducedMotion:false,minTargetPixels:18};
-  const shot=(id,width,height,bounds,headline,callout)=>({id,source:{path:`fixtures/${id}.png`,width,height},target:{name:id,bounds},copy:{headline,callout},cue:.8,move:.4,hold:2.4,transition:{kind:'chapter',duration:.4},treatment:'spotlight',fit:'contain',fallback:'review',accessibility,protected:[]});
+  const shot=(id,width,height,bounds,headline,callout)=>({id,source:{path:`fixtures/${id}.png`,width,height},target:{name:id,bounds},copy:{chapter:`${id==='mobile'?'02':id==='editor'?'03':'01'} / ${id.toUpperCase()}`,headline,callout},cue:.8,move:.4,hold:2.4,transition:{kind:'chapter',duration:.4},treatment:'spotlight',fit:'contain',fallback:'review',accessibility,protected:[]});
   const dashboard=shot('dashboard',1000,650,{x:.07,y:280/650,w:.86,h:260/650},['FIND','THE SIGNAL.'],'TREND');
   const mobile=shot('mobile',480,900,{x:58/480,y:684/900,w:364/480,h:82/900},['FOCUS','THE ACTION.'],'PRIMARY ACTION');
   mobile.framing={x:.04,y:.63,w:.92,h:.30};
@@ -67,6 +67,7 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
   table.framing={x:.68,y:.47,w:.32,h:.20};
   const held={...m,id:'held-out-table',shots:[{...table,hold:8.4}]};await write(held.id,held);
   const edge={...structuredClone(table),id:'edge-target',start:0,hold:2.4};edge.target.name='edge control';edge.copy.caption='Keep the selected row in view.';
+  edge.copy.chapter='01 / EDGE CONTROL';
   const near={...structuredClone(mobile),id:'caption-target',start:4};near.copy.caption='Open the preview to continue.';
   const close={...structuredClone(editor),id:'timeline',start:8};
   const recompose={...m,id:'recompose-portrait',shots:[edge,near,close]};await write(recompose.id,recompose);
