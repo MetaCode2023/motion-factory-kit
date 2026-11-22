@@ -74,8 +74,8 @@ Tests use explicit licensed Barlow; review renders use installed Bahnschrift.
 Normal-speed browser playback exercised with sampled visual observations.
 Do not equate discrete screenshot observations with continuous motion or
 audio listening. Audible review remains unverified. Real calibration clips
-rendered with the installed Python 3.13/Pillow environment (`python3`);
-Python 3.12 (`python`) lacked Pillow and was not modified. Ten existing Clef
+rendered with the installed Microsoft Store Python/Pillow environment (`python3`);
+the standalone Python (`python`) lacked Pillow and was not modified. Ten existing Clef
 request payloads validate against real MP4s in both orders. No verified
 no-spend hosted caller/account binding; live scoring pending, no responses
 invented. No new resources or model spend.
@@ -143,3 +143,15 @@ Review assets are uploaded privately through authorized Drive access; no
 sharing permissions expanded. Design Memory is still inaccessible, so the
 review package includes an append-ready entry and separate results JSON.
 All creative examples, especially glass, remain pending human approval.
+
+Final environment readback identifies `python3` as Microsoft Store Python
+3.12.10. The launcher inventory lists other interpreters; do not infer the
+active interpreter version from that list. No Python environment was changed.
+
+Real failure-path check: rendering with an intentionally missing audio file
+exited 1 with a useful FFmpeg missing-input error. The prior editorial MP4
+and receipt retained their SHA-256 hashes. Full local Windows suite: 86/87
+pass, with the same unchanged POSIX-stub failure. Latest code revision is
+`4201e82`; 21 hosted UI tests and both hosted aspect renders/frame checks
+pass. Broader legacy examples are checked separately. Final package includes
+the raw failure evidence, per-render creative rubric and append-ready memory.
