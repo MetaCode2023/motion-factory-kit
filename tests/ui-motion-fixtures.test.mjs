@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadImage, Canvas } from 'skia-canvas';
 import { generateFixtures } from '../tools/ui-motion-fixtures.mjs';
-import { compileManifest } from '../tools/ui-motion-plan.mjs';
+import { compileManifest, planDiff } from '../tools/ui-motion-plan.mjs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 test('synthetic fixture generator writes matching source dimensions and renderable three-shot plan',async()=>{
@@ -14,12 +14,19 @@ test('synthetic fixture generator writes matching source dimensions and renderab
     const plan=compileManifest(m);assert.equal(plan.duration,12);assert.equal(plan.shots.length,3);
     for(const s of plan.shots){assert.equal(s.status,'ready');const img=await loadImage(join(dir,s.source.path));assert.equal(img.width,s.source.width);assert.equal(img.height,s.source.height);}
     assert.ok(plan.shots[1].mapped.target.w>450,'primary action must fill enough width for its original label to read on a phone');
+    assert.ok(plan.shots[2].mapped.target.w>350,'timeline evidence must read without relying on the callout');
     const held=compileManifest(JSON.parse(await readFile(join(dir,'held-out-table.json'),'utf8')));
     assert.ok(held.shots[0].mapped.target.w>350,'held-out control must read without relying on the callout');
     const editor=await loadImage(join(dir,'fixtures/editor.png')),c=new Canvas(1100,650).getContext('2d');c.drawImage(editor,0,0);
     const labelPixels=c.getImageData(540,430,35,34).data;let readableInk=0;
     for(let i=0;i<labelPixels.length;i+=4)if(labelPixels[i]>230&&labelPixels[i+1]>210&&labelPixels[i+2]>200)readableInk++;
     assert.ok(readableInk>30,'editor label must sit to the left of the playhead instead of being crossed by it');
+    const landscape=compileManifest(JSON.parse(await readFile(join(dir,'recompose-landscape.json'),'utf8'))),phone=landscape.shots[1];
+    const sourceTop=(phone.viewport.y-phone.mapped.image.y)/phone.mapped.scale;
+    assert.ok(sourceTop>=560&&sourceTop<684,'landscape phone crop must start in whitespace below the context labels');
+    const before=JSON.parse(await readFile(join(dir,'revision-before.json'),'utf8')),after=JSON.parse(await readFile(join(dir,'revision-after.json'),'utf8'));
+    assert.equal(before.shots.length,3,'director revision must preserve two unrelated beats');
+    assert.deepEqual(planDiff(before,after),[{path:'shots.2.hold',before:2.4,after:3.4}]);
   }finally{await rm(dir,{recursive:true,force:true});}
 });
 test('fixture CLI accepts explicit fallback flag before output directory',async()=>{

@@ -2,6 +2,7 @@ import { Canvas, FontLibrary } from 'skia-canvas';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { reviseHold } from './ui-motion-plan.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const ink='#1a1b1d',paper='#e9e6dc',muted='#66665e',accent='#ee302b';
 export async function generateFixtures(directory,{font='Bahnschrift'}={}){
@@ -56,9 +57,9 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
   const shot=(id,width,height,bounds,headline,callout)=>({id,source:{path:`fixtures/${id}.png`,width,height},target:{name:id,bounds},copy:{headline,callout},cue:.8,move:.4,hold:2.4,transition:{kind:'chapter',duration:.4},treatment:'spotlight',fit:'contain',fallback:'review',accessibility,protected:[]});
   const dashboard=shot('dashboard',1000,650,{x:.07,y:280/650,w:.86,h:260/650},['FIND','THE SIGNAL.'],'TREND');
   const mobile=shot('mobile',480,900,{x:58/480,y:684/900,w:364/480,h:82/900},['FOCUS','THE ACTION.'],'PRIMARY ACTION');
-  mobile.framing={x:.04,y:.56,w:.92,h:.34};
+  mobile.framing={x:.04,y:.63,w:.92,h:.30};
   const editor=shot('editor',1100,650,{x:528/1100,y:426/650,w:198/1100,h:42/650},['FOLLOW','THE CUT.'],'ACTIVE CLIP');
-  editor.framing={x:.24,y:.42,w:.72,h:.50};
+  editor.framing={x:.43,y:.56,w:.30,h:.24};
   const m={version:1,id:'editorial',aspect:'9:16',fps:30,theme:'editorial',accent,font,shots:[dashboard,mobile,editor]};
   const write=async(name,data)=>writeFile(join(directory,name+'.json'),JSON.stringify(data,null,2)+'\n');
   await write('editorial',m);await write('glass',{...m,id:'glass',theme:'glass'});
@@ -70,8 +71,8 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
   const close={...structuredClone(editor),id:'timeline',start:8};
   const recompose={...m,id:'recompose-portrait',shots:[edge,near,close]};await write(recompose.id,recompose);
   await write('recompose-landscape',{...recompose,id:'recompose-landscape',aspect:'16:9'});
-  const before={...m,id:'hold-study',shots:[{...dashboard,hold:8.4}]};
-  await write('revision-before',before);await write('revision-after',{...before,shots:[{...dashboard,hold:9.4}]});
+  const before={...m,id:'hold-study'};
+  await write('revision-before',before);await write('revision-after',reviseHold(before,'editor',1));
   return m;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){await generateFixtures(resolve(process.argv.slice(2).find(a=>!a.startsWith('--'))??join(root,'examples/ui-motion')),{font:process.argv.includes('--barlow')?'Barlow':'Bahnschrift'});console.log('Synthetic UI fixtures and manifests ready.');}

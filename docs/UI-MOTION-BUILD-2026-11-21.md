@@ -98,3 +98,17 @@ word ACTIVE. A failing raster regression now requires readable source label
 ink left of the playhead; move the unchanged text left, retain target bounds.
 Rerender all affected reels and verify their decoded samples again. This
 fixture correction does not affect the table before/after or hold pair.
+
+2026-11-21 20:25 Phoenix: continued phone-size inspection found two remaining
+source issues: timeline text was still small, and the landscape phone crop
+cut through a context label. Added failing source-framing regressions, then
+tightened the timeline focus window and moved the phone window into whitespace.
+Targets, exact copy and cues remain fixed. Final 320px evidence strips will
+show the original UI words, not just readable overlay labels.
+
+Strengthened the director-revision evidence: final pair is now the full
+three-shot reel at 12s/13s. Only `shots.2.hold` changes 2.4 -> 3.4 seconds;
+the two earlier beats stay unchanged. The earlier single-shot diagnostic
+was superseded and is not catalogued. Focused Linux CI now passes after
+the explicit ffprobe dependency fix; final source-framing revision will
+be pushed and checked again.
