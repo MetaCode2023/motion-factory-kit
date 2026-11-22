@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "id": "editorial",
+  "aspect": "9:16",
+  "fps": 30,
+  "theme": "editorial",
+  "accent": "#ee302b",
+  "font": "Bahnschrift",
+  "shots": [
+    {
+      "id": "dashboard",
+      "source": {
+        "path": "fixtures/dashboard.png",
+        "width": 1000,
+        "height": 650
+      },
+      "target": {
+        "name": "dashboard",
+        "bounds": {
+          "x": 0.07,
+          "y": 0.4307692307692308,
+          "w": 0.86,
+          "h": 0.4
+        }
+      },
+      "copy": {
+        "headline": [
+          "FIND",
+          "THE SIGNAL."
+        ],
+        "callout": "TREND"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": []
+    },
+    {
+      "id": "mobile",
+      "source": {
+        "path": "fixtures/mobile.png",
+        "width": 480,
+        "height": 900
+      },
+      "target": {
+        "name": "mobile",
+        "bounds": {
+          "x": 0.12083333333333333,
+          "y": 0.76,
+          "w": 0.7583333333333333,
+          "h": 0.09111111111111111
+        }
+      },
+      "copy": {
+        "headline": [
+          "FOCUS",
+          "THE ACTION."
+        ],
+        "callout": "PRIMARY ACTION"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.04,
+        "y": 0.56,
+        "w": 0.92,
+        "h": 0.34
+      }
+    },
+    {
+      "id": "editor",
+      "source": {
+        "path": "fixtures/editor.png",
+        "width": 1100,
+        "height": 650
+      },
+      "target": {
+        "name": "editor",
+        "bounds": {
+          "x": 0.48,
+          "y": 0.6553846153846153,
+          "w": 0.18,
+          "h": 0.06461538461538462
+        }
+      },
+      "copy": {
+        "headline": [
+          "FOLLOW",
+          "THE CUT."
+        ],
+        "callout": "ACTIVE CLIP"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.24,
+        "y": 0.42,
+        "w": 0.72,
+        "h": 0.5
+      }
+    }
+  ]
+}
