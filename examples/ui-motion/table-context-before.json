@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "held-out-table",
+  "aspect": "9:16",
+  "fps": 30,
+  "theme": "editorial",
+  "accent": "#ee302b",
+  "font": "Bahnschrift",
+  "shots": [
+    {
+      "id": "table",
+      "source": {
+        "path": "fixtures/table.png",
+        "width": 1100,
+        "height": 700
+      },
+      "target": {
+        "name": "table",
+        "bounds": {
+          "x": 0.74,
+          "y": 0.5542857142857143,
+          "w": 0.20454545454545456,
+          "h": 0.05714285714285714
+        }
+      },
+      "copy": {
+        "headline": [
+          "FIND",
+          "THE NEXT STEP."
+        ],
+        "callout": "REVIEW NOW",
+        "chapter": "01 / TABLE"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 8.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.42,
+        "y": 0.4,
+        "w": 0.58,
+        "h": 0.42
+      }
+    }
+  ]
+}

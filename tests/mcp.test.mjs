@@ -29,6 +29,16 @@ test('MCP server lists its tools and answers kit_overview, check_plan and render
     const ov = JSON.parse((await client.callTool({ name: 'kit_overview', arguments: {} })).content[0].text);
     assert.ok(ov.templates.some((t) => t.name === 'rapid-list' && /Data keys/.test(t.about)));
     assert.ok(ov.blocks.street.includes('questionCard'));
+    assert.ok(existsSync(join(root, ov.production.playbook)));
+    assert.deepEqual(ov.production.routes.map(({ id }) => id), [
+      'raw-footage', 'recorded-script', 'longform-footage', 'locked-edit', 'script-line', 'custom-scene',
+    ]);
+    for (const { guide, steps } of ov.production.routes) {
+      assert.ok(existsSync(join(root, guide)), guide);
+      for (const step of steps) assert.ok(names.includes(step), step);
+    }
+    assert.deepEqual(ov.production.routes.find(({ id }) => id === 'locked-edit').steps,
+      ['overlay_transcribe', 'overlay_write_cues', 'overlay_render']);
     const chk = JSON.parse((await client.callTool({ name: 'footage_check_plan', arguments: { plan: { name: 'x', segments: [] } } })).content[0].text);
     assert.equal(chk.ok, false);
     assert.match(chk.errors[0], /footage_index/);
