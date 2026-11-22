@@ -109,10 +109,27 @@ const server = new McpServer({ name: 'motion-factory', version: VERSION });
 
 server.registerTool('kit_overview', {
   title: 'What the kit can do',
-  description: 'Start here. Lists the templates (with their data keys), blocks, caption styles, the footage-editor workflow and the docs to read. Read CLAUDE.md in the repo for the full rules.',
+  description: 'Start here to choose a production route for your source media and goal. Returns tool sequences, the visual playbook, templates, blocks, and caption styles.',
   inputSchema: {},
 }, async () => text({
   root: ROOT, version: VERSION,
+  production: {
+    playbook: 'docs/PRODUCTION-PLAYBOOK.md',
+    routes: [
+      { id: 'raw-footage', useWhen: 'Choose and reorder moments from raw clips into shorts or ads',
+        steps: ['footage_index', 'footage_check_plan', 'footage_write_plan', 'footage_build'], guide: 'docs/EDITOR.md' },
+      { id: 'recorded-script', useWhen: 'Align a recorded script and put visuals on exact words',
+        steps: ['longform_script', 'longform_from_script', 'longform_build'], guide: 'docs/LONGFORM.md' },
+      { id: 'longform-footage', useWhen: 'Find and assemble moments from existing long-form footage',
+        steps: ['longform_index', 'longform_search', 'longform_write_plan', 'longform_build'], guide: 'docs/LONGFORM.md' },
+      { id: 'locked-edit', useWhen: 'Add graphics to a cut whose timing is locked',
+        steps: ['overlay_transcribe', 'overlay_write_cues', 'overlay_render'], guide: 'docs/OVERLAYS.md' },
+      { id: 'script-line', useWhen: 'Design and approve an insert for a specific Writer line',
+        steps: ['cutaway_preferences', 'cutaway_preview', 'cutaway_select', 'cutaway_status'], guide: 'docs/CUTAWAYS.md' },
+      { id: 'custom-scene', useWhen: 'Make a bespoke visual, simulation, character performance, or editorial transition',
+        steps: ['render_still', 'make_video', 'look_at'], guide: 'docs/PRODUCTION-PLAYBOOK.md' },
+    ],
+  },
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
     characterAnimation: { guide: 'docs/CHARACTER-ANIMATION.md', example: 'scenes/examples/character-wave-lab.html' },

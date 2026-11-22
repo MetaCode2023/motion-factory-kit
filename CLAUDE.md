@@ -7,6 +7,8 @@ adds narration, captions, music and sound effects, and writes a postable MP4. It
 
 ## When the user asks for a video
 
+Start with [the production playbook](docs/PRODUCTION-PLAYBOOK.md) to choose an edit workflow and a visual treatment for each beat. It covers combining footage, simulations, characters and editorial effects, and checking the result before delivery.
+
 1. **Figure out the type.**
    - *UGC ad / creator video / Higgsfield clips* → start from `scenes/examples/ugc-ad.html` and read `docs/HIGGSFIELD.md`.
    - *Explainer / motion graphics / no footage* → start from `scenes/examples/showreel.html` (high-end look) or `showcase.html` (simpler).

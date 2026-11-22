@@ -21,7 +21,7 @@ other than `footage/`) in the server's environment if you want them.
 
 | Tool | What it does |
 |---|---|
-| `kit_overview` | Start here: templates with their data keys, blocks, caption styles, the workflow, the rules. |
+| `kit_overview` | Start here for workflow routes in `production.routes`, the [production playbook](PRODUCTION-PLAYBOOK.md), templates, blocks, and caption styles. |
 | `footage_index` | Transcribe and thumbnail a folder of clips. Returns sentences with timings and speakers, face coverage, thumbnail paths. |
 | `footage_check_plan` | Validate an edit plan against the index without cutting: unknown clips, missing sentences, bad tallies, length. |
 | `footage_write_plan` | Check, then save a plan to `edits/<name>.json`. |
