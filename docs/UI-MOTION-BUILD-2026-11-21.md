@@ -163,3 +163,12 @@ moved all chapter wording to explicit `copy.chapter`. Target identifiers
 and capture notes no longer render. The examples retain their exact visible
 wording. Re-run the 21 recipe/31 relevant tests and all eight render/frame
 checks against this final contract. No human acceptance is inferred.
+
+## Treatment decision — Austin, 2026-11-21 20:54 Phoenix
+
+> Go with editorial as the default and keep glass as an optional treatment.
+
+Recorded in durable Kit design memory and recipe guidance. The default
+example already uses editorial, so no code or render changes are needed.
+This confirms treatment direction only; other review limitations and
+per-example approval states remain separate.

@@ -44,10 +44,11 @@ version does not guess a target. `reducedMotion` removes the camera move and
 uses a cut in place of the chapter wipe while preserving cue and hold.
 
 Choose spotlight when a crowded interface competes with a control; choose
-callout when the surrounding context should stay undimmed. Choose editorial
-for the clearest value hierarchy; glass is a candidate material treatment
-with opaque label substrates and unblurred target pixels, pending Austin's
-creative decision. The primary control remains the evidence in either style.
+callout when the surrounding context should stay undimmed. Editorial is the
+default; glass is an optional treatment, as Austin directed on 2026-11-21.
+Glass uses opaque label substrates and unblurred target pixels. The primary
+control remains the evidence in either style. See the recorded
+[design direction](../../design/UI-MOTION-MEMORY.md).
 
 For revisions, use `reviseHold(manifest, shotId, 1)` and `planDiff(before, after)`
 from `tools/ui-motion-plan.mjs`. Give unrelated beats explicit `start` times
