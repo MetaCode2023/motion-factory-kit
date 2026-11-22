@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "id": "ontrel-editor-real-ui",
+  "aspect": "9:16",
+  "fps": 30,
+  "theme": "editorial",
+  "accent": "#ee302b",
+  "font": "Bahnschrift",
+  "shots": [
+    {
+      "id": "format",
+      "source": {
+        "path": "sources/ontrel-aspect.jpg",
+        "width": 837,
+        "height": 633
+      },
+      "target": {
+        "name": "ontrel-format",
+        "bounds": {
+          "x": 0.3536439665471924,
+          "y": 0.4423380726698262,
+          "w": 0.2819593787335723,
+          "h": 0.0679304897314376
+        }
+      },
+      "copy": {
+        "chapter": "01 / ONTREL",
+        "headline": [
+          "SET",
+          "THE FORMAT."
+        ],
+        "callout": "ASPECT RATIO"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "framing": {
+        "x": 0.3225806451612903,
+        "y": 0.32385466034755134,
+        "w": 0.35842293906810035,
+        "h": 0.33175355450236965
+      },
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 24
+      },
+      "protected": []
+    },
+    {
+      "id": "preview",
+      "source": {
+        "path": "sources/ontrel-preview-action.jpg",
+        "width": 837,
+        "height": 633
+      },
+      "target": {
+        "name": "ontrel-preview",
+        "bounds": {
+          "x": 0.05854241338112306,
+          "y": 0.6477093206951027,
+          "w": 0.15053763440860216,
+          "h": 0.06635071090047394
+        }
+      },
+      "copy": {
+        "chapter": "02 / ONTREL",
+        "headline": [
+          "OPEN",
+          "THE PREVIEW."
+        ],
+        "callout": "PREVIEW THE CUT"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "framing": {
+        "x": 0.035842293906810034,
+        "y": 0.4186413902053712,
+        "w": 0.3823178016726404,
+        "h": 0.3791469194312796
+      },
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 24
+      },
+      "protected": []
+    },
+    {
+      "id": "result",
+      "source": {
+        "path": "sources/ontrel-preview-result.jpg",
+        "width": 837,
+        "height": 633
+      },
+      "target": {
+        "name": "ontrel-result",
+        "bounds": {
+          "x": 0.28793309438470727,
+          "y": 0.04897314375987362,
+          "w": 0.4133811230585424,
+          "h": 0.33649289099526064
+        }
+      },
+      "copy": {
+        "chapter": "03 / ONTREL",
+        "headline": [
+          "SEE",
+          "THE RESULT."
+        ],
+        "callout": "WAVE PREVIEW"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 3.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "framing": {
+        "x": 0.25089605734767023,
+        "y": 0,
+        "w": 0.48984468339307047,
+        "h": 0.47393364928909953
+      },
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 24
+      },
+      "protected": []
+    }
+  ]
+}

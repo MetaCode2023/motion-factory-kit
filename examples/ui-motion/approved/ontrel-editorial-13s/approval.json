@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "ontrel-editorial-13s",
+  "title": "Editorial UI focus \u2014 Ontrel editor",
+  "status": "human-approved",
+  "approvedBy": "Austin Kost",
+  "date": "2026-11-21",
+  "feedback": "Go with the 13-second portrait version. Save it as the approved editorial example and make the recipe usable from Ontrel\u2019s editor.",
+  "scope": "Exact 13-second portrait artifact and its saved editorial recipe; edited projects require their own review.",
+  "recipe": "ui-motion-v1",
+  "manifestSha256": "958557fd6a6c8c05da896490a7179a065018c6422e5883d59af8b00aaf1d2058",
+  "artifact": {
+    "sha256": "0a951981c49b801fa321550b2fd4438ded1ce975118c7cfab584a191ad7a3808",
+    "bytes": 598474,
+    "width": 720,
+    "height": 1280,
+    "fps": 30,
+    "duration": 13,
+    "font": "Bahnschrift"
+  },
+  "artifactFile": "ontrel-editor-longer-hold.mp4",
+  "sources": [
+    {
+      "path": "sources/ontrel-aspect.jpg",
+      "sha256": "15663c1cd8395e350159226abe0a135367595d9875d0e686d73ace2286bb1f01"
+    },
+    {
+      "path": "sources/ontrel-preview-action.jpg",
+      "sha256": "1ee3a7a09376a682f22a56fa28f8880d54d51b3463d6199c82cf5d8c9b3a56e4"
+    },
+    {
+      "path": "sources/ontrel-preview-result.jpg",
+      "sha256": "1f27fe8dce1af7880e64f114cccafd9f90f23cf0d68959f69f11d26aa9a10885"
+    }
+  ],
+  "uiSourceCommit": "1efd0bdab5a70da50d2ec85ba54203dc31f58d27"
+}

@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "id": "recompose-landscape",
+  "aspect": "16:9",
+  "fps": 30,
+  "theme": "editorial",
+  "accent": "#ee302b",
+  "font": "Bahnschrift",
+  "shots": [
+    {
+      "id": "edge-target",
+      "source": {
+        "path": "fixtures/table.png",
+        "width": 1100,
+        "height": 700
+      },
+      "target": {
+        "name": "edge control",
+        "bounds": {
+          "x": 0.74,
+          "y": 0.5542857142857143,
+          "w": 0.20454545454545456,
+          "h": 0.05714285714285714
+        }
+      },
+      "copy": {
+        "chapter": "01 / EDGE CONTROL",
+        "headline": [
+          "FIND",
+          "THE NEXT STEP."
+        ],
+        "callout": "REVIEW NOW",
+        "caption": "Keep the selected row in view."
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.68,
+        "y": 0.47,
+        "w": 0.32,
+        "h": 0.2
+      },
+      "start": 0
+    },
+    {
+      "id": "caption-target",
+      "source": {
+        "path": "fixtures/mobile.png",
+        "width": 480,
+        "height": 900
+      },
+      "target": {
+        "name": "mobile",
+        "bounds": {
+          "x": 0.12083333333333333,
+          "y": 0.76,
+          "w": 0.7583333333333333,
+          "h": 0.09111111111111111
+        }
+      },
+      "copy": {
+        "chapter": "02 / MOBILE",
+        "headline": [
+          "FOCUS",
+          "THE ACTION."
+        ],
+        "callout": "PRIMARY ACTION",
+        "caption": "Open the preview to continue."
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.04,
+        "y": 0.63,
+        "w": 0.92,
+        "h": 0.3
+      },
+      "start": 4
+    },
+    {
+      "id": "timeline",
+      "source": {
+        "path": "fixtures/editor.png",
+        "width": 1100,
+        "height": 650
+      },
+      "target": {
+        "name": "editor",
+        "bounds": {
+          "x": 0.48,
+          "y": 0.6553846153846153,
+          "w": 0.18,
+          "h": 0.06461538461538462
+        }
+      },
+      "copy": {
+        "chapter": "03 / EDITOR",
+        "headline": [
+          "FOLLOW",
+          "THE CUT."
+        ],
+        "callout": "ACTIVE CLIP"
+      },
+      "cue": 0.8,
+      "move": 0.4,
+      "hold": 2.4,
+      "transition": {
+        "kind": "chapter",
+        "duration": 0.4
+      },
+      "treatment": "spotlight",
+      "fit": "contain",
+      "fallback": "review",
+      "accessibility": {
+        "reducedMotion": false,
+        "minTargetPixels": 18
+      },
+      "protected": [],
+      "framing": {
+        "x": 0.43,
+        "y": 0.56,
+        "w": 0.3,
+        "h": 0.24
+      },
+      "start": 8
+    }
+  ]
+}
