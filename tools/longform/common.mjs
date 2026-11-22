@@ -109,11 +109,11 @@ export function sentencesOf(words) {
 }
 
 // ---- contact sheets (frames + labels), drawn with skia-canvas so the bundled fonts work everywhere
-export async function sheet(items, out, { cols = 4, w = 480, h = 270, title = '' } = {}) {
+export async function sheet(items, out, { cols = 4, w = 480, h = 270, title = '', pad = 6 } = {}) {
   const { Canvas, loadImage, FontLibrary } = await import('skia-canvas');
   const mono = join(ROOT, 'fonts', 'jetbrains-mono-latin-600-normal.woff2');
   if (existsSync(mono) && !FontLibrary.has('JB Mono')) FontLibrary.use('JB Mono', [mono]);
-  const pad = 6, top = title ? 44 : 0, rows = Math.ceil(items.length / cols);
+  const top = title ? 44 : 0, rows = Math.ceil(items.length / cols);
   const cv = new Canvas(cols * (w + pad) + pad, top + rows * (h + pad) + pad);
   const c = cv.getContext('2d');
   c.fillStyle = '#0b0c10'; c.fillRect(0, 0, cv.width, cv.height);

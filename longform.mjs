@@ -28,12 +28,13 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ROOT, fmt } from './tools/longform/common.mjs';
 import { IDX, index, libDir, loadLibrary, search } from './tools/longform/library.mjs';
-import { build, check, remix } from './tools/longform/build.mjs';
+import { build, check, previewCuts, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
 import { autoBroll } from './tools/broll/index.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
-import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
+import { doctor, feedback, freeze, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
+import { board } from './tools/longform/board.mjs';
 
 const [cmd, ...rest] = process.argv.slice(2);
 const json = rest.includes('--json');
@@ -72,6 +73,15 @@ try {
       r.errors.forEach((e) => console.log('ERROR  ' + e));
       r.warnings.forEach((w) => console.log('warn   ' + w));
       if (r.ok) { console.log(`OK: ${fmt(r.duration)} (from ${fmt(r.source)} of talking, ${r.pieces} pieces)`); r.timeline.forEach((l) => console.log('  ' + l)); r.chapters.forEach((l) => console.log('  ' + l)); }
+    }
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
+  } else if (cmd === 'cut') {
+    if (!rest.includes('--preview')) throw new Error('cut is non-destructive: use node longform.mjs cut <plan> --preview');
+    const r = previewCuts(args[0]);
+    if (!json) {
+      if (!r.ok) r.errors.forEach((e) => console.log('ERROR  ' + e));
+      else r.cuts.forEach((c) => console.log(`${String(c.n).padStart(3)}  ${c.clip} ${fmt(c.source_in)}–${fmt(c.source_out)}  ->  ${fmt(c.timeline_in)}–${fmt(c.timeline_out)}  ${c.reason}`));
     }
     emit(r);
     if (!r.ok) process.exitCode = 1;
@@ -134,6 +144,17 @@ try {
     const r = feedback(args[0], args[1]);
     if (!json) { console.log(`${r.notes.length} note(s), ${r.approved ? 'approved once done' : 'not approved yet'} -> ${relative(ROOT, r.file)}`); r.notes.forEach((n) => console.log(`  ${fmt(n.t)}  ${n.insert ? n.insert.id : '(speaker)'}  ${n.text.split('\n')[0].slice(0, 80)}`)); }
     emit(r);
+  } else if (cmd === 'board') {
+    const r = await board(args[0], { log });
+    if (!r.ok && !json) r.errors.forEach((e) => console.log('ERROR  ' + e));
+    else if (!json) console.log(`storyboard -> ${relative(ROOT, r.file)} (${r.cues} cues); approve it before build`);
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
+  } else if (cmd === 'freeze') {
+    const r = freeze(args[0], { name: opt('name') });
+    if (!json) console.log(r.ok ? `frozen v${r.version} -> ${relative(ROOT, r.file)}` : `ERROR  ${r.errors.join('\nERROR  ')}`);
+    emit(r);
+    if (!r.ok) process.exitCode = 1;
   } else if (cmd === 'voice') {
     // node longform.mjs voice [clip ids…]: how the creator actually talks, measured from their own recordings
     const r = voiceProfile(args.filter((a) => a !== opt('out')), { out: opt('out') });
@@ -219,6 +240,9 @@ function readmeUsage() {
   node longform.mjs clip <id>          one clip's numbered sentences
   node longform.mjs words <id> [#n]    word timings of a clip or one sentence
   node longform.mjs check <plan.json>  validate a plan and show its timeline
+  node longform.mjs cut <plan.json> --preview  print every planned cut without rendering
+  node longform.mjs board <plan.json>  render one approval still per visual cue
+  node longform.mjs freeze <plan.json> --name <name>  save approved series defaults
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)

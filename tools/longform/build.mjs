@@ -5,10 +5,12 @@ import { cpus } from 'node:os';
 import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
-import { FF, H, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
+import { FF, H, PY, ROOT, W, ff, fmt, fmtChapter, frameAt, probe, sheet } from './common.mjs';
 import { loadPlan, resolvePlan, sideBox } from './plan.mjs';
-import { premiereXML } from './premiere.mjs';
+import { edl, fcpxml, premiereXML } from './premiere.mjs';
 import { writeReview } from './extras.mjs';
+import { harshReview, readabilityChecks } from './critic.mjs';
+import { aroundCuts } from '../stills.mjs';
 
 const CACHE = join(ROOT, 'out', '.cache', 'longform');
 const hash = (...xs) => createHash('sha1').update(JSON.stringify(xs)).digest('hex').slice(0, 16);
@@ -94,6 +96,30 @@ async function pipAssets(media, accent, plan) {
   c.fillStyle = accent; c.beginPath(); c.arc(D / 2, D / 2, D / 2 - 1, 0, Math.PI * 2); c.fill();
   await cv.toFile(ringFile);
   return { d, ring, margin, mask, ringFile };
+}
+
+export function pipMotion(duration, bubbleSize, targetX, targetY) {
+  const td = Math.min(0.5, duration / 4);
+  const p = `if(lt(t\\,${td})\\,t/${td}\\,if(gt(t\\,${(duration - td).toFixed(3)})\\,(${duration.toFixed(3)}-t)/${td}\\,1))`;
+  return {
+    td, progress: p, size: `${H}+(${bubbleSize}-${H})*(${p})`,
+    x: `(W-w)/2+(${targetX}-(W-${bubbleSize})/2)*(${p})`,
+    y: `(H-h)/2+(${targetY}-(H-${bubbleSize})/2)*(${p})`,
+  };
+}
+
+// Heavy matting stays opt-in. The configured wrapper receives <input.mp4> <output.mov> and must write
+// an alpha-capable video (ProRes 4444, qtrle or VP9-alpha). Its result is cached for this exact cut list.
+function speakerCutout(R, plan, aroll, log) {
+  const command = plan.cutout?.command || process.env.MF_CUTOUT_CMD;
+  if (!command) throw new Error('behind:true needs a matting wrapper: set plan.cutout.command or MF_CUTOUT_CMD (see docs/LONGFORM.md)');
+  const args = [...(plan.cutout?.args || [])];
+  const ext = plan.cutout?.ext || '.mov';
+  return cached(hash('speaker-cutout-v2', R.cuts.map((c) => [c.clip, R.lib.clips[c.clip]?.key, c.s, c.e, c.out, c.zoom, c.focus]), plan.base, command, args), ext, (out) => {
+    log('  matting speaker once for behind:true cues');
+    const r = spawnSync(command, [...args, aroll, out], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    if (r.status !== 0 || !existsSync(out)) throw new Error(`speaker matting failed: ${(r.stderr || r.stdout || '').slice(-800)}`);
+  });
 }
 
 // What an animation scene gets: its data, its length, and every word spoken while it is on screen
@@ -244,7 +270,7 @@ const XFADE = new Set(['fade', 'dissolve', 'fadeblack', 'smoothleft', 'smoothrig
 // its slice of the A-roll). Each ffmpeg run holds two streams at most, so a 20-minute video with 60 inserts
 // uses no more memory than a 1-minute one. Captions are drawn per chunk at the right times; the chunks are
 // joined without re-encoding and the mix is laid under them.
-function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null) {
+function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () => {}, pip = null, cutout = null) {
   const SIDE = sideBox(plan), fps = plan.fps;
   const N = Math.round(R.total * fps);
   const parts = [];
@@ -299,11 +325,25 @@ function composite(R, plan, aroll, mix, out, accent, assFile = null, log = () =>
         const needs = { in: !p.prev && !cut, out: !p.next && !cut, face: ins.layout === 'pip' || ins.layout === 'split' };
         const outs = [needs.in && 'bgA', needs.out && 'bgB', needs.face && 'bgF'].filter(Boolean);
         g.push(outs.length ? `[0:v]setpts=PTS-STARTPTS,${NORM}${outs.length > 1 ? `,split=${outs.length}` : ''}${outs.map((o) => `[${o}]`).join('')}` : '[0:v]nullsink');
-        if (ins.layout === 'pip' && pip) {
+        if (ins.behind && cutout) {
+          inputs.push('-ss', ss, '-i', cutout);
+          g.push(`[1:v]setpts=PTS-STARTPTS,${NORM}[behind];[${nIn}:v]setpts=PTS-STARTPTS,format=rgba[person];[behind][person]overlay=0:0:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          nIn++;
+        } else if (ins.layout === 'pip' && pip) {
           const Dp = pip.d, rx = W - Dp - 2 * pip.ring - pip.margin, ry = H - Dp - 2 * pip.ring - pip.margin;
           inputs.push('-loop', '1', '-i', pip.mask, '-loop', '1', '-i', pip.ringFile);
-          g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
-            `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          if (plan.pip?.animate === true) {
+            const bd = Dp + 2 * pip.ring, motion = pipMotion(D, bd, rx, ry), td = motion.td;
+            g.push(`[bgF]split[full][faceSrc]`,
+              `[faceSrc]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
+              `[${nIn + 1}:v][face]overlay=${pip.ring}:${pip.ring},format=rgba[b0];[b0]scale=w='${motion.size}':h=-1:eval=frame[bubble]`,
+              `[1:v]setpts=PTS-STARTPTS[an];[an][bubble]overlay=x='${motion.x}':y='${motion.y}':eval=frame[withBubble]`,
+              `[full]format=rgba,fade=t=out:st=0:d=${td}:alpha=1,fade=t=in:st=${(D - td).toFixed(3)}:d=${td}:alpha=1[fullfade]`,
+              `[withBubble][fullfade]overlay=0:0:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          } else {
+            g.push(`[bgF]crop=${H}:${H}:(iw-${H})*${fx}:0,scale=${Dp}:${Dp},format=rgba[f1];[${nIn}:v]format=gray[m];[f1][m]alphamerge[face]`,
+              `[1:v]setpts=PTS-STARTPTS[an];[an][${nIn + 1}:v]overlay=${rx}:${ry}[a1];[a1][face]overlay=${rx + pip.ring}:${ry + pip.ring}:shortest=1,${NORM},tpad=stop_mode=clone:stop_duration=1[vis]`);
+          }
           nIn += 2;
         } else if (ins.layout === 'split') {
           const hw = W / 2, vh = Math.round(hw * 9 / 32) * 2;
@@ -382,7 +422,20 @@ function mixAudio(R, plan, voice, out, stemsDir) {
 }
 
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
-function assCaptions(R, accent, file) {
+export function captionGroups(words, { min = 3, max = 5, pause = 0.15, maxChars = 42 } = {}) {
+  const lines = []; let cur = [];
+  words.forEach((w, i) => {
+    cur.push(w);
+    const next = words[i + 1];
+    const width = cur.reduce((n, x) => n + String(x.w).length * (x.emphasis ? 1.15 : 1) + 1, 0);
+    const natural = /[.?!,;:]$/.test(w.w) || (next && next.s - w.e >= pause);
+    const pauseBreak = next && next.s - w.e >= pause;
+    if (!next || pauseBreak || cur.length >= max || (cur.length >= min && (width >= maxChars || natural))) { lines.push(cur); cur = []; }
+  });
+  return lines;
+}
+
+export function assCaptions(R, accent, file) {
   const gapsOnly = R.captions.burn === 'gaps';
   const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
@@ -390,27 +443,23 @@ function assCaptions(R, accent, file) {
   const bgr = (hex) => { const h = hex.replace('#', ''); return `&H${h.slice(4, 6)}${h.slice(2, 4)}${h.slice(0, 2)}&`.toUpperCase(); };
   const ts = (s) => { const cs = Math.round(Math.max(0, s) * 100); return `${Math.floor(cs / 360000)}:${String(Math.floor(cs / 6000) % 60).padStart(2, '0')}:${String(Math.floor(cs / 100) % 60).padStart(2, '0')}.${String(cs % 100).padStart(2, '0')}`; };
   const esc = (t) => t.replace(/[{}\\]/g, '');
-  const lines = [];
-  let cur = [];
-  R.words.forEach((w, i) => {
-    cur.push(w);
-    const next = R.words[i + 1], text = cur.map((x) => x.w).join(' ');
-    if (/[.?!,;:]$/.test(w.w) && text.length > 14 || /[.?!]$/.test(w.w) || text.length > (center ? 26 : 34) || (next && next.s - w.e > 0.5)) { lines.push(cur); cur = []; }
-  });
-  if (cur.length) lines.push(cur);
+  const lines = captionGroups(R.words, { maxChars: center ? 26 : 38 });
   const ev = [];
   for (const ln of lines) {
     const end = ln[ln.length - 1].e + 0.15;
     ln.forEach((w, k) => {
       const a = w.s, b = k + 1 < ln.length ? ln[k + 1].s : end;
       if (gapsOnly && covered(a, b)) return;
-      const text = ln.map((x, j) => (j === k ? `{\\c${bgr(accent)}}${esc(x.w)}{\\c&HFFFFFF&}` : esc(x.w))).join(' ');
+      const pop = Math.round(100 * (R.captions.pop ?? 1.12));
+      const active = (x) => `{\\c${bgr(accent)}${x.emphasis ? `\\fscx${pop}\\fscy${pop}` : ''}${R.captions.underline && x.emphasis ? '\\u1' : ''}${R.captions.highlight && x.emphasis ? `\\bord8\\3c${bgr(accent)}` : ''}}${esc(x.w)}{\\rC}`;
+      const text = ln.map((x, j) => (j === k ? active(x) : esc(x.w))).join(' ');
       ev.push(`Dialogue: 0,${ts(a)},${ts(b)},C,,0,0,0,,${text}`);
     });
   }
-  const style = center
-    ? 'Style: C,Plus Jakarta Sans,92,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,5,160,160,0,1'
-    : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
+  const top = R.captions.position === 'top' || (R.captions.avoid_face !== false && (R.captions.face_area === 'bottom' || R.inserts.some((i) => i.layout === 'pip')));
+  const align = center ? 5 : top ? 8 : 2, margin = center ? 0 : 70;
+  const box = R.captions.box === false ? 1 : 3;
+  const style = `Style: C,Plus Jakarta Sans,${center ? 92 : 58},&H00FFFFFF,&H00FFFFFF,&H00101010,&H${R.captions.box === false ? '00000000' : '90000000'},-1,0,0,0,100,100,0,0,${box},${center ? 4 : 3},0,${align},160,160,${margin},1`;
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
     style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
@@ -462,8 +511,12 @@ function report(R, plan, files) {
   pass(!pulls, pulls ? `${pulls} clip(s) still to pull: see PULL-LIST.md` : 'no placeholders left');
   const longPull = R.inserts.filter((i) => (i.kind === 'pull' || i.pulled) && !i.stock && i.dur > 10);   // stock is licensed; outside clips stay short
   if (longPull.length) pass(false, `borrowed clips over 10 s (${longPull.map((i) => i.id).join(', ')}): trim them and talk over them`);
+  if (R.burnedSubtitles?.length) pass(false, `pulled clips may already contain subtitles (${R.burnedSubtitles.map((x) => `${x.id}: ${x.reason}`).join('; ')}): replace, crop, or keep longform captions off that area`);
+  else if (R.inserts.some((i) => i.pulled)) pass(true, 'no likely burned-in subtitles detected in pulled clips');
   if (R.frozen) R.frozen = R.frozen.filter(([a, d]) => !R.inserts.some((i) => i.kind === 'pull' && a >= i.at - 0.5 && a + d <= i.at + i.dur + 0.5));   // placeholders are still on purpose
   if (R.frozen) pass(!R.frozen.length, R.frozen.length ? `picture frozen for 3 s+ at ${R.frozen.map(([a, d]) => `${fmt(a)} (${d.toFixed(1)} s)`).join(', ')}: add motion or a visual there` : 'nothing on screen sits frozen for 3 s+');
+  pass(!R.emptyFirstFrame, R.emptyFirstFrame ? 'first frame is effectively empty/black: put the hook on frame zero' : 'first frame contains visible picture');
+  pass(!R.readability?.length, R.readability?.length ? `readability warnings:\n${R.readability.map((w) => `  - ${w}`).join('\n')}` : 'on-screen text has enough time and is at least 2.6% of frame height');
   pass(R.chapters.length >= 3, R.chapters.length >= 3 ? `${R.chapters.length} chapters` : 'add 3+ chapters for YouTube');
   lines.push('## Checks', '', ...checks, '', '## Timeline', '', '| Time | Insert | Kind | Layout | Length | Note |', '|---|---|---|---|---|---|');
   for (const i of R.inserts) lines.push(`| ${fmt(i.at)} | ${i.id} | ${i.kind} | ${i.layout} | ${i.dur.toFixed(1)} s | ${(i.note || i.title || '').replace(/\|/g, '/')} |`);
@@ -485,12 +538,18 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   await prerender(R, plan, log);
   const aroll = buildARoll(R, plan, dir, log);
   for (const ins of R.inserts) await buildInsert(ins, plan, dir, accent, log, R);
+  R.burnedSubtitles = R.inserts.filter((i) => i.pulled && i.file).flatMap((i) => {
+    if (!PY) return [];
+    const r = spawnSync(PY, [join(ROOT, 'tools', 'detect_burned_subtitles.py'), i.file], { encoding: 'utf8' });
+    try { const x = JSON.parse((r.stdout || '').trim()); return x.detected ? [{ id: i.id, reason: x.reason }] : []; } catch { return []; }
+  });
   const mix = join(dir, 'stems', 'mix.wav');
   mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
   const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
-  composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null);
+  const cutout = R.inserts.some((i) => i.behind) ? speakerCutout(R, plan, aroll.video, log) : null;
+  composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null, cutout);
 
   const files = [relative(ROOT, video)];
   const write = (name, text) => { const f = join(dir, name); writeFileSync(f, text); files.push(relative(ROOT, f)); return f; };
@@ -503,6 +562,9 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   if (!previewOnly) {
     copyFileSync(aroll.video, join(dir, 'media', 'a-roll.mp4'));
     write(`${plan.name}.premiere.xml`, premiereXML(R, plan, { dir, accent }));
+    write(`${plan.name}.resolve.xml`, premiereXML(R, plan, { dir, accent }));
+    write(`${plan.name}.fcpxml`, fcpxml(R, plan));
+    write(`${plan.name}.edl`, edl(R, plan));
   }
   // Self-check: a still in the middle of every insert, plus the A-roll at a few points.
   const tmp = join(dir, '.frames');
@@ -516,6 +578,25 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   // Critic: stretches where the picture barely changes for 3 s+ (a frozen animation, an empty frame).
   const fr = spawnSync(FF, ['-hide_banner', '-i', video, '-vf', 'scale=480:-2,freezedetect=n=0.002:d=3', '-an', '-f', 'null', '-'], { encoding: 'utf8', maxBuffer: 1 << 26 });
   R.frozen = [...(fr.stderr || '').matchAll(/freeze_start: ([\d.]+)[\s\S]*?freeze_duration: ([\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+  const first = spawnSync(FF, ['-hide_banner', '-ss', '0', '-i', video, '-frames:v', '1', '-vf', 'blackframe=amount=98:threshold=24', '-an', '-f', 'null', '-'], { encoding: 'utf8' });
+  R.emptyFirstFrame = /pblack:(?:9[89]|100)\b/.test(first.stderr || '');
+  R.readability = readabilityChecks(R);
+  const cutTimes = aroundCuts([
+    ...R.cuts.slice(1).map((c) => c.out),
+    ...R.inserts.flatMap((i) => [i.at, i.at + i.dur]),
+  ], R.total);
+  const cutDir = join(dir, '.cut-frames');
+  mkdirSync(cutDir, { recursive: true });
+  const cutItems = cutTimes.map((x, k) => ({
+    file: frameAt(video, x.t, join(cutDir, `${String(k).padStart(5, '0')}.jpg`), 132, 74),
+    label: `${fmt(x.cut)} ${x.offset >= 0 ? '+' : ''}${x.offset.toFixed(1)}`,
+  }));
+  if (cutItems.length) {
+    const cutSheet = await sheet(cutItems, join(dir, `${plan.name}.cuts-phone.jpg`), { cols: 5, w: 66, h: 37, pad: 5, title: 'cuts: -0.2s to +0.2s' });
+    files.push(relative(ROOT, cutSheet));
+  }
+  rmSync(cutDir, { recursive: true, force: true });
+  write('REVIEW.md', harshReview(R, plan, shots));
   files.push(relative(ROOT, writeReview(plan, R, dir)));
   const rep = report(R, plan, files);
   writeFileSync(join(dir, 'REPORT.md'), rep.text);
@@ -549,4 +630,17 @@ export function check(planFile) {
   return { ok: !R.errors.length, errors: R.errors, warnings: R.warnings, duration: R.total && +R.total.toFixed(2), source: R.source && +R.source.toFixed(2),
     pieces: R.cuts?.length, timeline: (R.inserts || []).map((i) => `${fmt(i.at)}  ${i.id}  ${i.kind}/${i.layout}  ${i.dur}s`),
     chapters: (R.chapters || []).map((c) => `${fmtChapter(c.at)} ${c.title}`) };
+}
+
+export function previewCuts(planFile) {
+  const plan = loadPlan(planFile), R = resolvePlan(plan);
+  if (R.errors.length) return { ok: false, errors: R.errors, warnings: R.warnings };
+  return {
+    ok: true, duration: +R.total.toFixed(3), source: +R.source.toFixed(3),
+    cuts: R.cuts.map((c, i) => ({
+      n: i + 1, clip: c.clip, source_in: +c.s.toFixed(3), source_out: +c.e.toFixed(3),
+      timeline_in: +c.out.toFixed(3), timeline_out: +(c.out + c.d).toFixed(3), duration: +c.d.toFixed(3),
+      reason: i && R.cuts[i - 1].clip === c.clip ? 'tightened pause/filler boundary' : 'source range',
+    })),
+  };
 }

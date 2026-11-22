@@ -126,3 +126,45 @@ export function premiereXML(R, plan, { accent } = {}) {
     `<audio><numOutputChannels>2</numOutputChannels><format><samplecharacteristics><depth>16</depth><samplerate>48000</samplerate></samplecharacteristics></format>` +
     track(a1) + track(a2) + track(a3) + track(a4) + '</audio></media>' + markers + '</sequence></xmeml>\n';
 }
+
+const tc = (seconds, fps) => {
+  const frames = Math.max(0, Math.round(seconds * fps));
+  const ff = frames % fps, total = Math.floor(frames / fps), ss = total % 60, mm = Math.floor(total / 60) % 60, hh = Math.floor(total / 3600);
+  return [hh, mm, ss, ff].map((x) => String(x).padStart(2, '0')).join(':');
+};
+
+// CMX3600 is intentionally simple and portable: the original A-roll cuts plus insert events.
+export function edl(R, plan) {
+  const fps = Math.round(plan.fps || 30);
+  const lines = [`TITLE: ${plan.title || plan.name}`, 'FCM: NON-DROP FRAME', ''];
+  let n = 1;
+  for (const c of R.cuts) {
+    lines.push(`${String(n++).padStart(3, '0')}  ${c.clip.slice(0, 8).toUpperCase().padEnd(8)} V     C        ${tc(c.s, fps)} ${tc(c.e, fps)} ${tc(c.out, fps)} ${tc(c.out + c.d, fps)}`,
+      `* FROM CLIP NAME: ${basename(R.lib.clips[c.clip].file)}`);
+  }
+  if (R.inserts.length) lines.push('', '* V2 INSERTS (CMX3600 cannot represent overlapping video tracks; use .fcpxml/.resolve.xml):',
+    ...R.inserts.map((i) => `* ${tc(i.at, fps)}-${tc(i.at + i.dur, fps)} ${i.id} (${i.kind}/${i.layout})`));
+  return lines.join('\n') + '\n';
+}
+
+// Modern Final Cut Pro XML. It keeps the editable original A-roll in the primary story and attaches
+// rendered inserts as connected clips. Resolve also imports this format, while .resolve.xml keeps xmeml.
+export function fcpxml(R, plan) {
+  const fps = Math.round(plan.fps || 30), den = fps;
+  const assets = new Map();
+  const add = (file) => {
+    const key = resolve(file);
+    if (!assets.has(key)) assets.set(key, `r${assets.size + 2}`);
+    return assets.get(key);
+  };
+  R.cuts.forEach((c) => add(R.lib.clips[c.clip].file));
+  R.inserts.forEach((i) => add(i.kind === 'broll' ? i.file : i.media));
+  const sec = (s) => `${Math.round(s * den)}/${den}s`;
+  const resources = [...assets].map(([file, id]) => `<asset id="${id}" name="${esc(basename(file))}" src="${esc(url(file))}" start="0s" hasVideo="1" hasAudio="1"/>`).join('');
+  const primary = R.cuts.map((c) => {
+    const children = R.inserts.filter((i) => i.at >= c.out - 1e-3 && i.at < c.out + c.d - 1e-3).map((i) =>
+      `<asset-clip name="${esc(i.id)}" ref="${add(i.kind === 'broll' ? i.file : i.media)}" lane="1" offset="${sec(c.s + i.at - c.out)}" start="${sec(i.kind === 'broll' ? i.from : 0)}" duration="${sec(i.dur)}"/>`).join('');
+    return `<asset-clip name="${esc(c.clip)}" ref="${add(R.lib.clips[c.clip].file)}" offset="${sec(c.out)}" start="${sec(c.s)}" duration="${sec(c.d)}">${children}</asset-clip>`;
+  }).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?><fcpxml version="1.10"><resources><format id="r1" name="FFVideoFormat1080p${fps}" frameDuration="1/${fps}s" width="${W}" height="${H}"/>${resources}</resources><library><event name="${esc(plan.name)}"><project name="${esc(plan.title || plan.name)}"><sequence format="r1" duration="${sec(R.total)}" tcStart="0s" tcFormat="NDF"><spine>${primary}</spine></sequence></project></event></library></fcpxml>\n`;
+}

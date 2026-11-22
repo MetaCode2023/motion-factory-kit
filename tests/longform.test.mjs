@@ -232,3 +232,137 @@ test('a visual right after a stat inherits its figure; one after a gap does not'
   assert.equal(next.carried, true);
   assert.equal(animData(later, R).carry, undefined);
 });
+
+test('storyboard model keeps cue order and exports notes through the review format', async () => {
+  const { boardHTML, boardModel } = await import('../tools/longform/board.mjs');
+  const plan = { name: 'test-board', title: 'Test board', _file: '/x/plan.json' };
+  const R = { total: 12, inserts: [
+    { id: 'first', at: 2, dur: 3, kind: 'animation', layout: 'full', note: 'A number', scene: '/x/stat.html' },
+    { id: 'second', at: 7, dur: 2, kind: 'image', layout: 'pip', note: 'The proof' },
+  ] };
+  const model = boardModel(plan, R);
+  assert.deepEqual(model.cues.map((x) => x.id), ['first', 'second']);
+  model.cues.forEach((x) => { x.frame = `board/${x.id}.jpg`; });
+  const html = boardHTML(model);
+  assert.match(html, /Visual flow approved/);
+  assert.match(html, /stage:'board'/);
+  assert.match(html, /first/);
+});
+
+test('harsh review ranks exact changes and describes frames without scores', async () => {
+  const { harshReview } = await import('../tools/longform/critic.mjs');
+  const md = harshReview({
+    total: 70, warnings: ['chapter is short'], frozen: [[12, 4]], words: [],
+    inserts: [{ id: 'news', at: 4.2, dur: 2, kind: 'pull', layout: 'full', title: 'News clip', src: {} }],
+  }, { name: 'critic' }, [{ t: 4.2, label: 'news' }]);
+  assert.match(md, /P0.*t=4\.2s.*placeholder.*->.*keep:/);
+  assert.match(md, /P1.*frame barely changes/);
+  assert.match(md, /Stranger-eye frame read/);
+  assert.doesNotMatch(md, /\/10|score/i);
+});
+
+test('series feedback memory grows without overwriting hand-written rules', async () => {
+  const { mkdtempSync, readFileSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { updateSeriesDefaults } = await import('../tools/longform/extras.mjs');
+  const file = join(mkdtempSync(join(tmpdir(), 'series-')), 'SERIES.md');
+  writeFileSync(file, '# My series\n\nNever use clickbait.\n');
+  updateSeriesDefaults({ theme: { style: 'paper' }, captions: { burn: true }, transitions: 'fade', inserts: [{ layout: 'pip' }] }, [{ t: 4.2, text: 'Move captions off my face' }], { approved: true, file });
+  updateSeriesDefaults({}, [{ t: 9, text: 'Hold the chart longer' }], { file });
+  const text = readFileSync(file, 'utf8');
+  assert.match(text, /Never use clickbait/);
+  assert.match(text, /Move captions off my face/);
+  assert.match(text, /Hold the chart longer/);
+  assert.match(text, /Theme: paper/);
+});
+
+test('longform captions group at short pauses and preserve script emphasis', async () => {
+  const { captionGroups } = await import('../tools/longform/build.mjs');
+  const parsed = parseScript('This is *the key phrase* right now.');
+  assert.deepEqual(parsed.words.filter((w) => w.emphasis).map((w) => w.b), ['the', 'key', 'phrase']);
+  const groups = captionGroups([
+    { w: 'one', s: 0, e: .2 }, { w: 'two', s: .25, e: .45 }, { w: 'three', s: .5, e: .7 },
+    { w: 'four', s: .9, e: 1.1 }, { w: 'five', s: 1.15, e: 1.35 }, { w: 'six', s: 1.4, e: 1.6 },
+  ]);
+  assert.deepEqual(groups.map((g) => g.map((w) => w.w)), [['one', 'two', 'three'], ['four', 'five', 'six']]);
+  assert.ok(groups.every((g) => g.length >= 3 && g.length <= 5));
+  const pause = captionGroups([{ w: 'two', s: 0, e: .2 }, { w: 'words', s: .25, e: .45 }, { w: 'later', s: 5, e: 5.2 }]);
+  assert.deepEqual(pause.map((g) => g.map((w) => w.w)), [['two', 'words'], ['later']], 'a real pause wins over the 3-word target');
+});
+
+test('transcript hardening drops words wholly in silence and aligns repeated words positionally', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const py = spawnSync('python3', ['-c', [
+    'import json',
+    'from tools.transcribe import drop_silent_words',
+    'from tools.verify_words import positional_tokens',
+    'from tools.detect_burned_subtitles import likely_subtitles',
+    'words=[{"w":"real","s":0.1,"e":0.3},{"w":"ghost","s":1.0,"e":1.2},{"w":"edge","s":1.55,"e":1.75}]',
+    'clean=drop_silent_words(words,[(0.8,1.7)])',
+    'subs=likely_subtitles([[(10,700,20,30)]*7,[(10,710,20,30)]*7,[]],1080)',
+    'print(json.dumps({"clean":[w["w"] for w in clean],"pos":positional_tokens(["the","word","the"]),"subs":subs[0]}))',
+  ].join(';')], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
+  assert.equal(py.status, 0, py.stderr);
+  const result = JSON.parse(py.stdout);
+  assert.deepEqual(result.clean, ['real', 'edge']);
+  assert.notEqual(result.pos[0], result.pos[2]);
+  assert.equal(result.subs, true);
+});
+
+test('readability checks flag rushed copy and cut strips sample both sides', async () => {
+  const { readabilityChecks } = await import('../tools/longform/critic.mjs');
+  const { aroundCuts } = await import('../tools/stills.mjs');
+  const warnings = readabilityChecks({ inserts: [{ id: 'rushed', kind: 'image', dur: 1, note: 'This sentence cannot possibly be read in one second', data: {} }] });
+  assert.ok(warnings.some((x) => /need about/.test(x)));
+  const strip = aroundCuts([0, 5, 10], 12);
+  assert.deepEqual(strip.filter((x) => x.cut === 5).map((x) => x.offset), [-0.2, -0.1, 0, 0.1, 0.2]);
+  assert.ok(strip.every((x) => x.t >= 0 && x.t < 12));
+});
+
+test('behind-speaker cues are explicit and stay off for voice-only recordings', () => {
+  const cue = parseCue('quote text: Breaking news | behind: true');
+  assert.equal(cue.opts.behind, 'true');
+  const lib = fakeLib();
+  lib.clips.a.height = 1080;
+  const plan = { name: 'behind', fps: 30, a_roll: [{ clip: 'a' }], inserts: [{ kind: 'pull', search: 'news', at: 0.5, dur: 1, behind: true }] };
+  assert.equal(resolvePlan(plan, lib).inserts[0].behind, true);
+  lib.clips.a.height = 0;
+  const voice = resolvePlan(plan, lib);
+  assert.equal(voice.inserts[0].behind, false);
+  assert.ok(voice.warnings.some((x) => /no speaker picture/.test(x)));
+});
+
+test('editor exports include modern FCPXML and CMX3600 events', async () => {
+  const { edl, fcpxml } = await import('../tools/longform/premiere.mjs');
+  const R = {
+    total: 4, cuts: [{ clip: 'a', s: .5, e: 2.5, out: 0, d: 2 }, { clip: 'a', s: 3, e: 5, out: 2, d: 2 }],
+    inserts: [{ id: 'proof', kind: 'image', layout: 'full', at: 2.5, dur: 1, media: '/tmp/proof.mp4' }],
+    lib: { clips: { a: { file: '/tmp/a.mp4' } } },
+  };
+  const plan = { name: 'export-test', title: 'Export test', fps: 30 };
+  assert.match(edl(R, plan), /TITLE: Export test[\s\S]*001[\s\S]*00:00:00:15/);
+  const xml = fcpxml(R, plan);
+  assert.match(xml, /<fcpxml version="1\.10">/);
+  assert.match(xml, /start="90\/30s" duration="60\/30s"><asset-clip name="proof"/, 'insert is attached to the spanning second A-roll clip');
+  assert.doesNotMatch(edl(R, plan), /^\d+\s+PROOF/m, 'EDL does not pretend an overlapping V2 event is on V1');
+  assert.match(edl(R, plan), /V2 INSERTS/);
+});
+
+test('storyboard approval does not freeze final series defaults', async () => {
+  const { finalApproval, reviewInsert } = await import('../tools/longform/extras.mjs');
+  assert.equal(finalApproval({ approved: true, stage: 'board' }), false);
+  assert.equal(finalApproval({ approved: true }), true);
+  const inserts = [{ id: 'stable', at: 20, dur: 3 }, { id: 'old-time', at: 4, dur: 3 }];
+  assert.equal(reviewInsert({ insert: 'stable', t: 4.2 }, inserts).id, 'stable', 'stable cue id wins after plan timing changes');
+});
+
+test('PiP shrink motion animates in and back out while remaining opt-in', async () => {
+  const { pipMotion } = await import('../tools/longform/build.mjs');
+  const m = pipMotion(6, 312, 1550, 712);
+  assert.equal(m.td, 0.5);
+  assert.match(m.progress, /lt\(t.*gt\(t/);
+  assert.match(m.size, /1080\+\(312-1080\)/);
+  assert.match(m.x, /1550/);
+  assert.equal(({ pip: {} }).pip.animate, undefined, 'static PiP remains the default');
+});
