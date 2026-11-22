@@ -21,6 +21,7 @@ export function meanPixelError(a,b){
 const pixels=image=>{const c=new Canvas(image.width,image.height),ctx=c.getContext('2d');ctx.drawImage(image,0,0);return ctx.getImageData(0,0,image.width,image.height).data;};
 export async function verifyStudy(manifestPath,output,{directory=dirname(output)}={}){
   const manifest=JSON.parse(await readFile(manifestPath,'utf8')),plan=compileManifest(manifest),id=output.split(/[\\/]/).at(-1).replace(/\.mp4$/,'');
+  const receipt=JSON.parse(await readFile(output.replace(/\.mp4$/i,'.receipt.json'),'utf8'));plan.outputScale=receipt.outputScale??1;
   for(const s of plan.shots){s.source.path=resolve(dirname(manifestPath),s.source.path).replaceAll('\\','/');const bounds=s.target.bounds??s.target.locator.bounds;s.overview=mapTarget(s.source,bounds,s.viewport,'contain');}
   if(plan.font==='Barlow')FontLibrary.use('Barlow',resolve(dirname(fileURLToPath(import.meta.url)),'../fonts/barlow-latin-500-normal.woff2'));
   const samples=sampleFrames(plan),framesDir=join(directory,'frames',id);await mkdir(framesDir,{recursive:true});

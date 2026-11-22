@@ -79,10 +79,13 @@
     activeShot(shots,t){let index=0;for(let i=1;i<shots.length;i++)if(t>=shots[i].start)index=i;return index;},
     state(s,t){const cue=s.start+s.cue,visible=t>=cue-1e-9&&t<s.end-1e-9;const q=M.clamp((t-cue)/s.move);return {visible,progress:s.accessibility.reducedMotion?(visible?1:0):M.ease.outCubic(q)};},
     mount(plan){
+      const scale=plan.outputScale??1;
+      if(!Number.isFinite(scale)||scale<=0||scale>3||!Number.isInteger(plan.width*scale)||!Number.isInteger(plan.height*scale))throw Error('Invalid UI output scale');
       M.fonts([`400 40px "${plan.font}"`]);
       const images=plan.shots.map(s=>M.image(s.source.path));
-      M.setup({width:plan.width,height:plan.height,fps:plan.fps,duration:plan.duration,cuts:plan.shots.slice(1).map(s=>s.start),background:'#111214',
+      M.setup({width:plan.width*scale,height:plan.height*scale,fps:plan.fps,duration:plan.duration,cuts:plan.shots.slice(1).map(s=>s.start),background:'#111214',
         draw(c,t){
+          c.save();c.scale(scale,scale);try{
           const index=window.UIMotion.activeShot(plan.shots,t);
           const s=plan.shots[index],transitionAt=(plan.shots[index+1]?.start??s.end)-s.transition.duration;
           if(t>=transitionAt&&index<plan.shots.length-1&&s.transition.kind==='chapter'&&!s.accessibility.reducedMotion){
@@ -92,6 +95,7 @@
             shot(c,plan.shots[index+1].start,plan,plan.shots[index+1],images);c.restore();
             c.fillStyle=plan.accent;c.fillRect(plan.width*M.ease.inOutCubic(progress)-2,0,4,plan.height);
           }else shot(c,t,plan,s,images);
+          }finally{c.restore();}
         }});
     }
   };

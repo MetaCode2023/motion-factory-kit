@@ -16,8 +16,11 @@ export function sceneDocument(plan){
   const data=JSON.stringify(plan).replace(/</g,'\\u003c');
   return `<!doctype html><meta charset="utf-8"><title>UI motion recipe</title>\n<script src="${kitRoot.replaceAll('\\','/')}/kit/motion.js"></script>\n<script src="${kitRoot.replaceAll('\\','/')}/kit/fx.js"></script>\n<script src="${kitRoot.replaceAll('\\','/')}/kit/ui-motion.js"></script>\n<script>UIMotion.mount(${data});</script>`;
 }
-export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,audio,renderCommand=command}={}){
+export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,audio,outputScale=1,renderCommand=command}={}){
   const plan=compileManifest(manifest);
+  if(!Number.isFinite(outputScale)||outputScale<=0||outputScale>3||!Number.isInteger(plan.width*outputScale)||!Number.isInteger(plan.height*outputScale))throw new Error('Invalid UI output scale');
+  plan.outputScale=outputScale;
+  const width=plan.width*outputScale,height=plan.height*outputScale;
   const needsReview=plan.shots.filter(s=>s.status==='review'&&s.fallback==='review');
   if(needsReview.length)throw new Error('Target review required: '+needsReview.map(s=>s.id+': '+s.warnings.join(' ')).join('; '));
   // Context fallback cannot invent a location; rendering is refused when target mapping is unknown.
@@ -51,11 +54,11 @@ export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,aud
     await renderCommand(process.execPath,[join(kitRoot,'render.mjs'),scene,'--out',candidate,'--jobs',String(jobs),...(audio?['--audio',resolve(audio)]:[])]);
     const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-show_format','-of','json',candidate]));
     const video=probe.streams.find(s=>s.codec_type==='video');
-    if(!video||video.width!==plan.width||video.height!==plan.height||video.avg_frame_rate!=='30/1'||Math.abs(Number(video.duration)-plan.duration)>1/plan.fps+.00001)throw new Error('Rendered dimensions, frame rate or duration do not match manifest');
+    if(!video||video.width!==width||video.height!==height||video.avg_frame_rate!=='30/1'||Math.abs(Number(video.duration)-plan.duration)>1/plan.fps+.00001)throw new Error('Rendered dimensions, frame rate or duration do not match manifest');
     await command('ffmpeg',['-v','error','-i',candidate,'-f','null','-']);
     const bytes=await readFile(candidate),sha256=createHash('sha256').update(bytes).digest('hex');
     const receipt={version:1,id:plan.id,date:new Date().toISOString(),recipe:plan.recipeVersion,font:plan.font,sourceManifest:manifest,
-      render:output,width:plan.width,height:plan.height,fps:plan.fps,duration:plan.duration,sha256,bytes:bytes.length,
+      render:output,width,height,outputScale,coordinateSpace:{width:plan.width,height:plan.height},fps:plan.fps,duration:plan.duration,sha256,bytes:bytes.length,
       engineering:{decode:'pass',metadata:'pass'},creativeReview:'pending',modelAdvisory:'pending',humanApproval:'pending',
       shots:plan.shots.map(s=>({id:s.id,start:s.start,cue:s.start+s.cue,readable:s.start+s.cue+s.move,holdEnd:s.end-s.transition.duration,transitionEnd:s.end,
         mapped:s.mapped,callout:s.callout,status:s.status,warnings:s.warnings}))};
@@ -68,7 +71,7 @@ export async function renderStudy(manifest,{root=process.cwd(),output,jobs=2,aud
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   try{const args=process.argv.slice(2),opt=n=>args[args.indexOf(n)+1];
     if(!args[0])throw new Error('Usage: node tools/render-ui-motion.mjs manifest.json [--out path.mp4] [--audio path.wav]');
-    const file=resolve(args[0]);const receipt=await renderStudy(JSON.parse(await readFile(file,'utf8')),{root:dirname(file),output:args.includes('--out')?opt('--out'):undefined,audio:args.includes('--audio')?opt('--audio'):undefined});
+    const file=resolve(args[0]);const receipt=await renderStudy(JSON.parse(await readFile(file,'utf8')),{root:dirname(file),output:args.includes('--out')?opt('--out'):undefined,audio:args.includes('--audio')?opt('--audio'):undefined,outputScale:args.includes('--scale')?Number(opt('--scale')):1});
     console.log(JSON.stringify({id:receipt.id,render:receipt.render,duration:receipt.duration,font:receipt.font,decode:receipt.engineering.decode}));
   }catch(e){console.error(e.message);process.exitCode=1;}
 }

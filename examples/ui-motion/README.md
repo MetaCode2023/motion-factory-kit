@@ -62,3 +62,13 @@ separate engineering/creative/model/human statuses. Video binaries belong in
 `out/` or an external review package, never Git.
 
 The examples are candidate studies, not human-approved toolbox entries.
+
+The exception is [Ontrel editorial 13s](approved/ontrel-editorial-13s/approval.json),
+explicitly approved by Austin. Its manifest and screenshot hashes are pinned;
+the approved MP4 stays outside Git. Changed copies require their own review.
+
+The pure layout module `kit/ui-motion-layout.mjs` is shared by browser previews
+and validated Node rendering. Validate input before calling `compileLayout`.
+For native 1080p production output, pass `--scale 1.5` to the render command.
+Geometry stays in the original recipe coordinate space; the canvas paints at
+the larger output size. Receipts disclose output scale and both coordinate spaces.
