@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkPlan, loadIndex } from '../tools/plans.mjs';
+import { source, direction, prepareCutaway, selectCutaway, cutawayStatus, cutawayPreferences } from '../cutaway.mjs';
 import ffmpegPath from 'ffmpeg-static';
 import { spawnSync } from 'node:child_process';
 
@@ -108,12 +109,32 @@ const server = new McpServer({ name: 'motion-factory', version: VERSION });
 
 server.registerTool('kit_overview', {
   title: 'What the kit can do',
-  description: 'Start here. Lists the templates (with their data keys), blocks, caption styles, the footage-editor workflow and the docs to read. Read CLAUDE.md in the repo for the full rules.',
+  description: 'Start here to choose a production route for your source media and goal. Returns tool sequences, the visual playbook, templates, blocks, and caption styles.',
   inputSchema: {},
 }, async () => text({
   root: ROOT, version: VERSION,
+  production: {
+    playbook: 'docs/PRODUCTION-PLAYBOOK.md',
+    routes: [
+      { id: 'raw-footage', useWhen: 'Choose and reorder moments from raw clips into shorts or ads',
+        steps: ['footage_index', 'footage_check_plan', 'footage_write_plan', 'footage_build'], guide: 'docs/EDITOR.md' },
+      { id: 'recorded-script', useWhen: 'Align a recorded script and put visuals on exact words',
+        steps: ['longform_script', 'longform_from_script', 'longform_build'], guide: 'docs/LONGFORM.md' },
+      { id: 'longform-footage', useWhen: 'Find and assemble moments from existing long-form footage',
+        steps: ['longform_index', 'longform_search', 'longform_write_plan', 'longform_build'], guide: 'docs/LONGFORM.md' },
+      { id: 'locked-edit', useWhen: 'Add graphics to a cut whose timing is locked',
+        steps: ['overlay_transcribe', 'overlay_write_cues', 'overlay_render'], guide: 'docs/OVERLAYS.md' },
+      { id: 'script-line', useWhen: 'Design and approve an insert for a specific Writer line',
+        steps: ['cutaway_preferences', 'cutaway_preview', 'cutaway_select', 'cutaway_status'], guide: 'docs/CUTAWAYS.md' },
+      { id: 'custom-scene', useWhen: 'Make a bespoke visual, simulation, character performance, or editorial transition',
+        steps: ['render_still', 'make_video', 'look_at'], guide: 'docs/PRODUCTION-PLAYBOOK.md' },
+    ],
+  },
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
+    characterAnimation: { guide: 'docs/CHARACTER-ANIMATION.md', example: 'scenes/examples/character-wave-lab.html' },
+    editorialEffects: { guide: 'docs/EDITORIAL-EFFECTS.md', example: 'scenes/examples/editorial-reel.html' },
+    reelEffects: { guide: 'docs/REEL-EFFECTS.md', example: 'scenes/examples/reel-effects.html' },
     scene: ['write a scene HTML (draw(ctx, t)) or copy a template', 'render_still to look at frames', 'make_video (MP4 + report + cuts image)', 'look_at the cuts image, fix, rebuild'],
     longform: ['ask the subject; write the script with the creator (longform_script: [[cues]] every ~15 s)', 'they record it; longform_from_script (align, plan, build)', 'longform_broll (automatic free-license cutaways), longform_stock / longform_pull (fill placeholders), rebuild', 'or from existing footage: longform_index (hours of talking footage -> numbered sentences, topics)', 'longform_search (find moments by topic)', 'longform_write_plan (A-roll ranges, inserts anchored to words, chapters, music)', 'longform_build (MP4 + Premiere XML + captions + chapters + report; returns the contact sheet)'],
     overlays: ['overlay_transcribe (one finished clip -> timestamped lines)', 'overlay_write_cues (chapters + explainer cards)', 'overlay_render (progress bar + cards + SFX; returns the contact sheet)', 'hook_alert (optional 3 s cold open)', 'overlay_join (hook + clip)'],
@@ -190,6 +211,46 @@ server.registerTool('review_page', {
   description: 'Write or refresh out/<batch>/review.html: the client approval page for a batch (approve / needs changes / notes per ad and hook).',
   inputSchema: { batch: z.string() },
 }, async ({ batch }) => text(await cli('footage.mjs', ['review', inRepo(join('out', batch))])));
+
+const CUTAWAYS = join(ROOT, 'out', 'cutaways');
+
+server.registerTool('cutaway_preferences', {
+  description: 'Get recent approved directions and revision notes for this project before proposing new cutaways.',
+  inputSchema: { projectId: source.shape.projectId },
+}, async ({ projectId }) => text(cutawayPreferences(CUTAWAYS, projectId)));
+
+server.registerTool('cutaway_preview', {
+  description: 'Render up to three paper-cutout directions for a selected script line. Propose distinct visual options using the line and project preferences, then show the returned clips and stills to the user.',
+  inputSchema: { line: source, options: z.array(direction).min(1).max(3) },
+}, async (input) => {
+  const { id, folder } = prepareCutaway(CUTAWAYS, input);
+  const previews = [];
+  for (const [index, visual] of input.options.entries()) {
+    const option = index + 1;
+    const result = await cli('make.mjs', [
+      join(ROOT, 'scenes', 'templates', 'paper-cutout.html'),
+      '--data', join(folder, `option-${option}.json`),
+      '--name', `cutaway-${id}-${option}`,
+      '--out', join(folder, `option-${option}.mp4`),
+    ]);
+    previews.push({ option, direction: visual, ...result });
+  }
+  return text({ id, line: input.line, previews });
+});
+
+server.registerTool('cutaway_select', {
+  description: 'Record the user-approved cutaway and return a production handoff. Pass the current script line from Writer so edits can be detected. Run only after the user chooses an option.',
+  inputSchema: { id: z.uuid(), option: z.number().int().min(1).max(3), currentLine: source, feedback: z.string().trim().min(1).max(1000).optional() },
+}, async (input) => {
+  const result = selectCutaway(CUTAWAYS, input);
+  if (result.handoff) result.handoff = relative(ROOT, result.handoff);
+  return text(result);
+});
+
+server.registerTool('cutaway_status', {
+  description: 'Check a saved cutaway against the latest text before inserting it in a production edit.',
+  inputSchema: { draftId: z.uuid(), selectionId: z.uuid(), currentLine: source },
+}, async (input) => text(cutawayStatus(CUTAWAYS, input)));
 
 server.registerTool('make_video', {
   title: 'Build a video from a scene',

@@ -21,13 +21,14 @@ other than `footage/`) in the server's environment if you want them.
 
 | Tool | What it does |
 |---|---|
-| `kit_overview` | Start here: templates with their data keys, blocks, caption styles, the workflow, the rules. |
+| `kit_overview` | Start here for workflow routes in `production.routes`, the [production playbook](PRODUCTION-PLAYBOOK.md), templates, blocks, and caption styles. |
 | `footage_index` | Transcribe and thumbnail a folder of clips. Returns sentences with timings and speakers, face coverage, thumbnail paths. |
 | `footage_check_plan` | Validate an edit plan against the index without cutting: unknown clips, missing sentences, bad tallies, length. |
 | `footage_write_plan` | Check, then save a plan to `edits/<name>.json`. |
 | `footage_build` | Build ads from plans: every hook, every size, `DELIVERY.csv`, `review.html`. `only` / `redo` rebuild a subset. |
 | `review_feedback` | Apply a client's `review.json`: `FEEDBACK.md`, `approved/`, the review column. Returns the ads to re-cut. |
 | `review_page` | (Re)write a batch's review page. |
+| `cutaway_preview`, `cutaway_select`, `cutaway_status`, `cutaway_preferences` | [Script-linked paper-cutout previews and production handoffs](CUTAWAYS.md). |
 | `make_video` | Build any scene or template (with `data` for a template row). Returns files and every PASS/FIX check. |
 | `render_still` | One frame of a scene, returned as a picture. |
 | `look_at` | Any PNG/JPG in the kit (cut stills, thumbnails, covers) returned as a picture. |

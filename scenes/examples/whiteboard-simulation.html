@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Whiteboard simulation · How pieces settle</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../node_modules/matter-js/build/matter.min.js"></script>
+<script src="../../node_modules/animejs/dist/bundles/anime.umd.min.js"></script>
+<script src="../../kit/simulation.js"></script>
+</head>
+<body>
+<script>
+const { Engine, Bodies, Composite, Body } = Matter;
+const { bakePhysics, morphPoints, drawJoint, particleField } = MotionSimulation;
+const duration = 8;
+const release = 2.3;
+const engine = Engine.create();
+const pieces = [
+  Bodies.rectangle(210, 308, 74, 40, { angle: -0.24, restitution: 0.45 }),
+  Bodies.circle(286, 246, 26, { restitution: 0.6 }),
+  Bodies.rectangle(365, 278, 54, 54, { angle: 0.35, restitution: 0.4 }),
+];
+Body.setAngularVelocity(pieces[0], 0.035);
+const tray = [
+  Bodies.rectangle(288, 675, 380, 24, { isStatic: true }),
+  Bodies.rectangle(105, 625, 20, 92, { isStatic: true, angle: -0.18 }),
+  Bodies.rectangle(471, 625, 20, 92, { isStatic: true, angle: 0.18 }),
+];
+Composite.add(engine.world, [...pieces, ...tray]);
+const physicsAt = bakePhysics(engine, pieces, { duration: duration - release });
+const dust = particleField({ count: 48, width: 576, height: 1024, seed: 21, speed: 12 });
+const labels = [{ opacity: 0 }, { opacity: 0 }];
+const titles = anime.createTimeline({ autoplay: false, loop: false })
+  .add(labels, { opacity: 1, duration: 520, ease: 'outQuad' }, anime.stagger(180));
+const looseTray = [[96, 603], [115, 671], [203, 682], [376, 664], [459, 680], [483, 597]];
+const cleanTray = [[97, 582], [113, 675], [203, 675], [376, 675], [463, 675], [479, 582]];
+const colors = ['#ffad72', '#8ee9d5', '#b1baff'];
+
+M.setup({
+  width: 576, height: 1024, duration, fps: 30, cuts: [release], background: '#101820',
+  music: { track: 'reflect', volume: 0.16 },
+  sfx: [{ at: release, name: 'tap', volume: 0.3 }],
+  draw(ctx, t) {
+    const sweep = ctx.createLinearGradient(0, 0, 576, 1024);
+    const center = 0.15 + 0.6 * M.prog(t, 0, 1.1) - 0.24 * (1 - Math.cos(Math.max(0, t - 1.1) * 1.55));
+    sweep.addColorStop(0, '#101820');
+    sweep.addColorStop(center, '#2b414b');
+    sweep.addColorStop(1, '#101820');
+    ctx.fillStyle = sweep;
+    ctx.fillRect(0, 0, 576, 1024);
+    dust(ctx, t, '#243441');
+    titles.seek(Math.min(t * 1000, titles.duration));
+    M.text(ctx, 'SIMULATION STUDY', 56, 154, { font: '600 18px sans-serif', color: '#8ee9d5', alpha: labels[0].opacity });
+    M.text(ctx, 'How pieces settle', 56, 213, { font: 'bold 45px sans-serif', color: '#f1f5f4', alpha: 0.8 + 0.2 * labels[1].opacity });
+
+    const progress = M.prog(t, 0, 1.35, M.ease.outCubic);
+    const points = morphPoints(looseTray, cleanTray, progress);
+    ctx.beginPath();
+    points.forEach(([x, y], index) => index ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+    ctx.lineWidth = 8;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#819aac';
+    ctx.stroke();
+
+    physicsAt(t - release).forEach((pose, index) => drawJoint(ctx, pose, () => {
+      ctx.fillStyle = colors[index];
+      if (index === 1) {
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const [width, height] = index === 0 ? [74, 40] : [54, 54];
+        ctx.fillRect(-width / 2, -height / 2, width, height);
+      }
+    }));
+
+    // Two nested joints keep the indicator's pointer attached to its rotating arm.
+    drawJoint(ctx, { x: 415, y: 387, angle: M.prog(t, 1.7, 0.6, M.ease.outCubic) * 0.75 }, () => {
+      ctx.fillStyle = '#a2b5c4';
+      ctx.fillRect(-2, 0, 4, 46);
+      drawJoint(ctx, { y: 44, angle: -0.25 }, () => {
+        ctx.beginPath();
+        ctx.moveTo(-8, 0);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(0, 14);
+        ctx.fill();
+      });
+    });
+
+    const section = t < release ? '01  DRAW THE TRAY' : t < 5 ? '02  RELEASE THE PIECES' : '03  WATCH THEM SETTLE';
+    M.text(ctx, section, 56, 735, { font: '600 22px sans-serif', color: '#c5d3df' });
+  },
+});
+</script>
+</body>
+</html>

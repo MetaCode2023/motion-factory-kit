@@ -140,6 +140,8 @@ export async function open(scenePath, { layout = false, textOnly = false, captio
   }
 
   const sandbox = {
+    // Anime.js uses these for type checks even when targeting plain scene objects.
+    NodeList: class NodeList {}, HTMLCollection: class HTMLCollection {}, SVGElement: class SVGElement {},
     document, Image: SceneImage, Path2D, DOMMatrix, console, URLSearchParams, performance,
     setTimeout, clearTimeout, setInterval, clearInterval,
     location: { search: '?render', href: 'file:///' + file.replace(/\\/g, '/') + '?render' },

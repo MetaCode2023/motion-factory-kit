@@ -310,6 +310,45 @@
   };
   FX.withCamera = (ctx, t, opts, draw) => { const end = FX.camera(ctx, t, opts); try { draw(); } finally { end(); } };
 
+  // A continuous camera stays in the same world. Focus can be a fixed point or a
+  // function of scene time, such as a position sampled from a baked simulation.
+  FX.cameraPath = (keyframes, { width, height }) => {
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+      throw new RangeError('Camera path requires positive viewport dimensions');
+    }
+    if (!keyframes.length) throw new RangeError('Camera path requires at least one keyframe');
+    const frames = keyframes.map(({ at, focus, zoom = 1 }, index) => {
+      if (!Number.isFinite(at) || (index > 0 && at <= keyframes[index - 1].at) ||
+          !Number.isFinite(zoom) || zoom <= 0) {
+        throw new RangeError('Camera keyframes need increasing finite times and positive zoom');
+      }
+      return { at, focus, zoom };
+    });
+    const focusAt = (frame, t) => {
+      const point = typeof frame.focus === 'function' ? frame.focus(t) : frame.focus;
+      if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) {
+        throw new RangeError('Camera focus requires finite x and y coordinates');
+      }
+      return point;
+    };
+    return (t) => {
+      if (!Number.isFinite(t)) throw new RangeError('Camera time must be finite');
+      const right = frames.findIndex(({ at }) => at > t);
+      const start = frames[right < 0 ? frames.length - 1 : Math.max(0, right - 1)];
+      const end = right > 0 ? frames[right] : start;
+      const a = focusAt(start, t);
+      const b = end === start ? a : focusAt(end, t);
+      const elapsed = end === start ? 0 : (t - start.at) / (end.at - start.at);
+      const mix = elapsed * elapsed * (3 - 2 * elapsed);
+      const zoom = M.lerp(start.zoom, end.zoom, mix);
+      return {
+        zoom,
+        x: (width / 2 - M.lerp(a.x, b.x, mix)) * zoom,
+        y: (height / 2 - M.lerp(a.y, b.y, mix)) * zoom,
+      };
+    };
+  };
+
   // ===================================================================================== transitions
 
   // A cinematic cut between two beats at time `at`. drawOld(c) / drawNew(c) paint each beat onto

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Reel effects patterns</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../kit/reel.js"></script>
+</head><body><script>
+const cuts = [3, 6, 9, 12];
+const mint = '#64e1bf';
+function subject(ctx, x, y, radius, color = mint) {
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = color; ctx.fill();
+}
+const shots = [
+  ['Orbit', (ctx, t) => {
+    subject(ctx, 480, 282, 52);
+    ReelFX.orbit(ctx, t, { x:480, y:282, rx:200, ry:100, items:['Clip','Type','Sound','Cut'] }, (c, item) => {
+      c.fillStyle='#254e51'; M.roundRect(c,-44,-22,88,44,10); c.fill();
+      M.text(c,item,0,5,{font:'600 16px sans-serif',color:'#effffb',align:'center'});
+    });
+  }],
+  ['Frame escape', (ctx, t) => {
+    const y=320-98*M.prog(t,0,1.3);
+    ReelFX.frameEscape(ctx,{x:307,y:235,width:346,height:187}, c => {
+      c.fillStyle='#254e51';c.fillRect(307,235,346,187);
+      subject(c,380,386,42,'#4d777a');
+    }, c => subject(c,480,y,64));
+  }],
+  ['Headline storm', (ctx, t) => ReelFX.headlines(ctx,t,{x:275,y:194,width:410,rowHeight:52,
+    items:[{at:0,text:'A better opening'},{at:.42,text:'One clear idea'},{at:.86,text:'The proof follows'}]})],
+  ['Growth curve', (ctx, t) => {
+    ctx.strokeStyle='#365a63';ctx.lineWidth=1;ctx.strokeRect(240,192,480,205);
+    ReelFX.growthCurve(ctx,M.prog(t,0,2),{x:240,y:192,width:480,height:205,values:[.1,.18,.17,.36,.58,.64,.84]});
+    M.text(ctx,'ILLUSTRATIVE DATA',241,428,{font:'600 15px monospace',color:'#c4e2e7'});
+  }],
+  ['Digital zoom', (ctx,t) => {
+    const zoom=1+.4*M.prog(t,0,1.4);
+    FX.withCamera(ctx,t,{zoom},()=>subject(ctx,480,291,64));
+    ReelFX.cameraHud(ctx,{x:236,y:163,width:488,height:262,zoom});
+  }],
+];
+M.setup({width:960,height:540,duration:15,cuts,background:'#12232d',music:{track:'reflect',volume:.16},
+  draw(ctx,t){
+    const index=cuts.filter(at=>t>=at).length;
+    const local=t-(cuts[index-1]||0);
+    const gradient=ctx.createLinearGradient(0,0,960,540);
+    gradient.addColorStop(0,'#101b24');gradient.addColorStop(.33+.25*Math.sin(t*2),'#32535c');gradient.addColorStop(1,'#101b24');
+    ctx.fillStyle=gradient;ctx.fillRect(0,0,960,540);
+    M.text(ctx,shots[index][0],58,109,{font:'bold 44px sans-serif',color:'#e8fcf7'});
+    shots[index][1](ctx,local);
+  }
+});
+</script></body></html>

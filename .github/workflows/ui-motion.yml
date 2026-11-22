@@ -1,0 +1,36 @@
+name: UI motion recipe
+on:
+  pull_request:
+jobs:
+  ui-motion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install FFmpeg and ffprobe for real-media verification
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Focused regressions
+        run: node --test tests/ui-motion*.test.mjs
+      - name: Explicit licensed font fallback
+        run: node tools/ui-motion-fixtures.mjs --barlow out/ui-ci/manifests
+      - name: Render portrait and landscape MP4s
+        run: |
+          node tools/render-ui-motion.mjs out/ui-ci/manifests/editorial.json --out out/ui-ci/editorial.mp4
+          node tools/render-ui-motion.mjs out/ui-ci/manifests/recompose-landscape.json --out out/ui-ci/landscape.mp4
+      - name: Verify decoded cue, move, hold and transition frames
+        run: |
+          node tools/verify-ui-motion.mjs out/ui-ci/manifests/editorial.json out/ui-ci/editorial.mp4
+          node tools/verify-ui-motion.mjs out/ui-ci/manifests/recompose-landscape.json out/ui-ci/landscape.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-motion-evidence
+          path: out/ui-ci/
+          retention-days: 14

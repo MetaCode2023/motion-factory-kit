@@ -1,0 +1,21 @@
+<!doctype html>
+<meta charset="utf-8"><title>Pipette pose sheet</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/simulation.js"></script>
+<script src="../../kit/character.js"></script>
+<script src="../../assets/characters/pipette.js"></script>
+<body><script>
+M.setup({width:960,height:540,duration:1,background:'#132d37',
+  draw(ctx){
+    M.text(ctx,'Pipette',54,107,{font:'bold 65px sans-serif',color:'#eafffb'});
+    M.text(ctx,'XOVION LAB ASSISTANT',58,137,{font:'600 15px monospace',color:'#a1f6d9'});
+    Object.keys(Pipette.poses).forEach((name,i)=>{
+      const x=116+i*180;
+      ctx.fillStyle='#203e48';M.roundRect(ctx,x-82,191,164,256,16);ctx.fill();
+      const cue=CharacterMotion.poseAt([{at:0,pose:name}],Pipette.poses);
+      Pipette.draw(ctx,{x:x-8,y:379,scale:.86,pose:cue(0)});
+      M.text(ctx,name,x,418,{font:'600 20px sans-serif',color:'#eafffb',align:'center'});
+    });
+  }
+});
+</script></body>

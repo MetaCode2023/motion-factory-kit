@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sine trace · Manim compositing example</title>
+<script src="../../kit/motion.js"></script>
+</head>
+<body>
+<script>
+const trace = M.video('../../out/manim/sine-trace.mp4', { audio: false });
+M.setup({
+  width: 854, height: 480, fps: 30, duration: 4,
+  background: '#101820',
+  draw(ctx, t) {
+    trace.draw(ctx, t, 0, 0, 854, 480);
+    M.text(ctx, 'MOTION FACTORY  /  MATH STUDY', 32, 438, {
+      font: '600 16px sans-serif', color: '#8ee9d5',
+    });
+  },
+});
+</script>
+</body>
+</html>

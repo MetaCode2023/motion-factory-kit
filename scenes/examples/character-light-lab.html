@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8"><title>Pipette's shadow lab</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/simulation.js"></script>
+<script src="../../kit/character.js"></script>
+<script src="../../assets/characters/pipette.js"></script>
+<body><script>
+const pose=CharacterMotion.poseAt([
+  {at:0,pose:'neutral'},{at:.45,pose:'point',holdUntil:2.2,ease:'outCubic'},
+  {at:3.3,pose:'inspect'},{at:4.8,pose:'relieved'},{at:6,pose:'neutral'},
+],Pipette.poses);
+M.setup({width:960,height:540,duration:7,fps:30,background:'#182032',
+  music:{track:'reflect',volume:.16},
+  draw(ctx,t){
+    const scale=M.prog(t,0,5,M.ease.outCubic),lightX=345+185*scale;
+    const glow=ctx.createRadialGradient(lightX,296,12,lightX,296,410);
+    glow.addColorStop(0,'#a0744c');glow.addColorStop(1,'#182032');
+    ctx.fillStyle=glow;ctx.fillRect(0,0,960,540);
+    M.text(ctx,'PIPETTE’S SHADOW LAB',49,61,{font:'600 17px monospace',color:'#ffc395'});
+    M.text(ctx,'Move the light closer',45,121,{font:'bold 49px sans-serif',color:'#f7f3ef'});
+    const shadow=(819-lightX)/(628-lightX)*27;
+    ctx.fillStyle='#f5a76a30';
+    ctx.beginPath();ctx.moveTo(lightX,296);ctx.lineTo(819,296-shadow);ctx.lineTo(819,296+shadow);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fcb485';ctx.beginPath();ctx.arc(lightX,296,19,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#bcccf0';M.roundRect(ctx,614,269,28,54,7);ctx.fill();
+    ctx.fillStyle='#cbb9ac';M.roundRect(ctx,819,164,18,265,7);ctx.fill();
+    ctx.fillStyle='#222037';ctx.fillRect(819,296-shadow,18,shadow*2);
+    Pipette.draw(ctx,{x:176,y:450,scale:1.35,pose:pose(t),t});
+    M.text(ctx,'Watch the shadow stretch.',49,502,{font:'600 25px sans-serif',color:'#f7f3ef'});
+  }
+});
+</script></body>

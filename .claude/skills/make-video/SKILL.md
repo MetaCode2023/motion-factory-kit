@@ -5,7 +5,7 @@ description: Make a finished short-form video with this repo — a motion-graphi
 
 # Make a video
 
-Follow `CLAUDE.md` in the repo root. In short:
+Follow `CLAUDE.md` in the repo root. Use the [production playbook](../../../docs/PRODUCTION-PLAYBOOK.md) to choose the edit workflow, match tools to individual beats, and plan the first preview. In short:
 
 1. Decide the type: **UGC ad** (footage of a creator/product → `scenes/examples/ugc-ad.html` + `docs/HIGGSFIELD.md`), **explainer** (`scenes/examples/showreel.html` with `kit/fx.js`), **raw client footage → many ads** (`footage.mjs`, `docs/EDITOR.md`: index, write edit plans, build, then the client review loop; street interviews get question cards, name lower-thirds, counters and a poll bar from the plan), **creator-native organic posts** (`rapid-list`, `title-explainer`, `meme-caption` in `scenes/templates/`), or **many ads from a sheet** (`batch-ads.mjs` + a template in `scenes/templates/`). Read `design/DESIGN.md`.
 2. Ask at most one question if something essential is missing (product, offer, which clips). Otherwise start. Defaults: 1080×1920, 30 fps, 15–25 s, 3 hook variants via `M.pick`.
@@ -13,3 +13,28 @@ Follow `CLAUDE.md` in the repo root. In short:
 4. Clips: use files in `assets/higgsfield/` if the user has them. If the Higgsfield tools are connected and the user wants new footage, draft the prompts from `docs/HIGGSFIELD.md`, show them, and generate only after a yes.
 5. Build: `node make.mjs scenes/mine/<slug>.html --variants` (add `--formats 4:5,1:1,16:9` if they want other sizes). Read `out/<name>.report.md` and look at `out/<name>.cuts.png`; fix every FIX you can and rebuild until clean.
 6. Hand over the MP4s with one line each, plus anything the user still needs to supply.
+
+## Simulation shots
+
+When the story depends on motion, use [the simulation guide](../../../docs/SIMULATION.md)
+and [the whiteboard example](../../../scenes/examples/whiteboard-simulation.html). Pick a technique
+for each shot, render a short preview, and inspect frames at the key moments before the final build.
+Keep motion tied to scene time so previews and exports can seek directly to any frame.
+For a continuous shot, start with [the one-take tray example](../../../scenes/examples/whiteboard-one-take.html).
+Plan the wide view, push-in, tracked action, and reveal before writing the scene.
+Use one shared world and align each camera beat to a story cue or simulation event.
+
+For a visual based on a specific script line, use the [cutaway workflow](../../../docs/CUTAWAYS.md).
+Read project preferences, render distinct options, and recheck the line before saving the user's choice.
+
+For talking-head reels, consult [reel effects](../../../docs/REEL-EFFECTS.md).
+Choose the primary effect by story purpose and available assets, time it to the spoken cue,
+then inspect the entrance, readable hold, and exit before the final export.
+
+For a recurring character, follow [character animation](../../../docs/CHARACTER-ANIMATION.md).
+Use its approved shared asset, choose named poses based on what the viewer should notice,
+and time each gesture to the relevant story cue. Hold the pose while the viewer reads the result.
+
+For editorial reveals, focus shifts, or decorative compositions, consult
+[editorial effects](../../../docs/EDITORIAL-EFFECTS.md). Use the real screen or media
+when it is evidence, and render a frame at the cue before building the full reel.

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Whiteboard one take · Follow the collision</title>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="../../node_modules/matter-js/build/matter.min.js"></script>
+<script src="../../kit/simulation.js"></script>
+</head>
+<body>
+<script>
+const { Engine, Bodies, Body, Composite, Events } = Matter;
+const { bakePhysics, morphPoints, drawJoint } = MotionSimulation;
+const width = 960, height = 540, duration = 15;
+const release = 4.4, timeScale = 0.36;
+const engine = Engine.create();
+const block = Bodies.rectangle(426, 326, 78, 44, { restitution: 0.55 });
+const ball = Bodies.circle(366, 156, 23, { restitution: 0.72 });
+const floor = Bodies.rectangle(480, 363, 690, 30, { isStatic: true });
+const leftWall = Bodies.rectangle(143, 327, 16, 66, { isStatic: true });
+const rightWall = Bodies.rectangle(817, 327, 16, 66, { isStatic: true });
+Composite.add(engine.world, [block, ball, floor, leftWall, rightWall]);
+Body.setVelocity(ball, { x: 2.4, y: 0 });
+
+let contact;
+Events.on(engine, 'collisionStart', ({ pairs, timestamp }) => {
+  if (!contact && pairs.some(({ bodyA, bodyB }) =>
+    (bodyA === block && bodyB === ball) || (bodyB === block && bodyA === ball))) {
+    contact = timestamp / 1000;
+  }
+});
+const sample = bakePhysics(engine, [ball, block], { duration: (duration - release) * timeScale });
+if (contact === undefined) throw new Error('The tracked ball must hit the block');
+const impact = release + contact / timeScale;
+const ballAt = (t) => sample((t - release) * timeScale)[0];
+const trackBall = (t) => {
+  const { x, y } = ballAt(t);
+  return { x, y: y + 35 };
+};
+const wide = { x: 480, y: 270 };
+const cameraAt = FX.cameraPath([
+  { at: 0, focus: wide, zoom: 1 },
+  { at: 0.85, focus: { x: 446, y: 255 }, zoom: 1.18 },
+  { at: release - 0.8, focus: { x: 394, y: 238 }, zoom: 1.4 },
+  { at: release + 0.25, focus: trackBall, zoom: 1.6 },
+  { at: impact + 0.9, focus: trackBall, zoom: 1.6 },
+  { at: duration, focus: { x: 505, y: 275 }, zoom: 0.94 },
+], { width, height });
+
+const loose = [[146,296],[155,348],[290,356],[465,343],[643,354],[804,347],[816,301]];
+const clean = [[143,294],[143,348],[290,348],[465,348],[643,348],[817,348],[817,294]];
+const captions = [
+  { at: 0, line: 'The sketch becomes a tray' },
+  { at: release, line: 'Follow the ball' },
+  { at: impact, line: 'The ball transfers momentum to the block' },
+  { at: 10.8, line: 'Pull back to see where both pieces land' },
+];
+const mint = '#8ee9d5';
+
+M.setup({
+  width, height, duration, fps: 30, background: '#111d27',
+  music: { track: 'reflect', volume: 0.18 },
+  sfx: [{ at: release, name: 'tap', volume: 0.24 }, { at: impact, name: 'hit', volume: 0.34 }],
+  draw(ctx, t) {
+    FX.withCamera(ctx, t, cameraAt(t), () => {
+      const light = ctx.createRadialGradient(480, 225, 30, 480, 225, 590);
+      light.addColorStop(0, '#293f4b'); light.addColorStop(1, '#111d27');
+      ctx.fillStyle = light;
+      ctx.fillRect(-960, -540, 2880, 1620);
+      ctx.beginPath();
+      for (let x = -960; x <= 1920; x += 30) {
+        ctx.moveTo(x, -540); ctx.lineTo(x, 1080);
+      }
+      for (let y = -540; y <= 1080; y += 30) {
+        ctx.moveTo(-960, y); ctx.lineTo(1920, y);
+      }
+      ctx.strokeStyle = '#51667255'; ctx.lineWidth = 1; ctx.stroke();
+
+      ctx.beginPath();
+      morphPoints(loose, clean, M.prog(t, 0.25, 2.8)).forEach(([x, y], index) => {
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.lineWidth = 6; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      ctx.strokeStyle = '#a8bac4'; ctx.stroke();
+      const [ballPose, blockPose] = sample((t - release) * timeScale);
+      drawJoint(ctx, blockPose, () => {
+        ctx.fillStyle = '#ffc18b';
+        M.roundRect(ctx, -39, -22, 78, 44, 7); ctx.fill();
+      });
+      drawJoint(ctx, ballPose, () => {
+        ctx.beginPath(); ctx.arc(0, 0, 23, 0, Math.PI * 2);
+        ctx.fillStyle = mint; ctx.fill();
+      });
+      const sinceHit = t - impact;
+      if (sinceHit >= 0 && sinceHit < 0.85) {
+        const pose = ballAt(impact);
+        ctx.beginPath(); ctx.arc(pose.x, pose.y, 26 + sinceHit * 53, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(142,233,213,${0.8 * (1 - sinceHit / 0.85)})`;
+        ctx.lineWidth = 2; ctx.stroke();
+      }
+    });
+
+    const heading = 'Follow the collision';
+    const caption = captions.findLast(({ at }) => t >= at);
+    ctx.fillStyle = '#101b25e8'; M.roundRect(ctx, 32, 26, 393, 70, 12); ctx.fill();
+    M.text(ctx, heading, 48, 61, { font: 'bold 30px sans-serif', color: '#eff6f5' });
+    M.text(ctx, 'ONE CONTINUOUS SHOT', 49, 83, { font: '600 12px monospace', color: mint });
+    ctx.fillStyle = '#101b25e8'; M.roundRect(ctx, 32, 447, 896, 61, 12); ctx.fill();
+    M.text(ctx, caption.line, 48, 479, { font: '600 23px sans-serif', color: '#eff6f5' });
+    ctx.fillStyle = '#435964'; ctx.fillRect(48, 492, 864, 3);
+    ctx.fillStyle = mint; ctx.fillRect(48, 492, 864 * t / duration, 3);
+  },
+});
+</script>
+</body>
+</html>

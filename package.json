@@ -11,13 +11,15 @@
     "gallery": "node render.mjs scenes/examples/blocks-gallery.html --sheet",
     "render": "node render.mjs",
     "examples": "node batch.mjs scenes/examples --sheet",
-    "test": "node --test tests/longform.test.mjs tests/broll.test.mjs tests/kit.test.mjs tests/sound.test.mjs tests/batch.test.mjs tests/footage.test.mjs tests/review.test.mjs tests/mcp.test.mjs tests/content.test.mjs",
+    "test": "node --test tests/longform.test.mjs tests/broll.test.mjs tests/kit.test.mjs tests/sound.test.mjs tests/batch.test.mjs tests/footage.test.mjs tests/review.test.mjs tests/mcp.test.mjs tests/content.test.mjs tests/clef-motion-calibration.test.mjs tests/ui-motion.test.mjs tests/ui-motion-render.test.mjs tests/ui-motion-fixtures.test.mjs tests/ui-motion-runtime.test.mjs tests/ui-motion-verification.test.mjs tests/ui-motion-portable.test.mjs tests/ui-motion-scale.test.mjs",
     "mcp": "node mcp/server.mjs",
     "overlays-demo": "python3 tools/overlay.py demo"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
+    "animejs": "4.2.2",
     "ffmpeg-static": "^5.2.0",
+    "matter-js": "0.20.0",
     "skia-canvas": "^4.0.0",
     "zod": "^4.6.7"
   },
