@@ -132,6 +132,11 @@ server.registerTool('kit_overview', {
   },
   workflow: {
     footage: ['footage_index (clips -> sentences, speakers, faces)', 'footage_check_plan / footage_write_plan (one plan per ad)', 'footage_build (ads + DELIVERY.csv + review.html)', 'review_feedback (client decisions -> FEEDBACK.md, approved/)', 'footage_build with redo (re-cut only flagged ads)'],
+    hyperframes: {
+      useWhen: 'The shot depends on actual DOM layout or browser animation',
+      guide: 'docs/HYPERFRAMES.md', example: 'examples/hyperframes/index.html',
+      cli: 'npm run hyperframes --', handoff: 'Render the shot, then import its MP4 into the Kit scene',
+    },
     characterAnimation: { guide: 'docs/CHARACTER-ANIMATION.md', example: 'scenes/examples/character-wave-lab.html' },
     editorialEffects: { guide: 'docs/EDITORIAL-EFFECTS.md', example: 'scenes/examples/editorial-reel.html' },
     reelEffects: { guide: 'docs/REEL-EFFECTS.md', example: 'scenes/examples/reel-effects.html' },

@@ -38,3 +38,7 @@ and time each gesture to the relevant story cue. Hold the pose while the viewer 
 For editorial reveals, focus shifts, or decorative compositions, consult
 [editorial effects](../../../docs/EDITORIAL-EFFECTS.md). Use the real screen or media
 when it is evidence, and render a frame at the cue before building the full reel.
+
+For a shot that depends on real DOM layout, CSS animation, or a seekable GSAP timeline,
+use the [HyperFrames decision and render guide](../../../docs/HYPERFRAMES.md). For recorded UI
+and existing Kit scenes, follow the Kit routes in the production playbook.

@@ -18,6 +18,8 @@ Exact timing, no timeline editor.
 **Check the editor in one command, no API keys:** `npm install && npm run demo` runs the full footage pipeline
 on bundled test clips (simple drawn stand-ins, not showcase footage) and writes ads plus a review page ([examples/demo](examples/demo)).
 
+**Rendering a real HTML/CSS shot?** Use the [optional HyperFrames workflow](docs/HYPERFRAMES.md) and import its MP4 into the Kit edit.
+
 **Plug it into your agent:** an MCP server exposes every step as a tool (index footage, check and write
 edit plans, build, apply client feedback, render and *look at* frames). [docs/MCP.md](docs/MCP.md)
 

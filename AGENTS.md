@@ -2,6 +2,8 @@
 
 Start with [the production playbook](docs/PRODUCTION-PLAYBOOK.md) to choose an edit workflow and a visual treatment for each beat. It covers combining footage, simulations, characters and editorial effects, and checking the result before delivery.
 
+For shots that depend on real HTML layout or CSS animation, use the [HyperFrames decision guide](docs/HYPERFRAMES.md).
+
 See CLAUDE.md: the same workflow applies to any coding agent. If you speak MCP, connect
 `mcp/server.mjs` (docs/MCP.md) and every step is a tool. `npm run demo` shows the footage editor end to
 end with no API keys; `node longform.mjs demo` does the same for the long-form YouTube editor (docs/LONGFORM.md).
