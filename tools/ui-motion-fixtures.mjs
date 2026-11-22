@@ -39,7 +39,7 @@ export async function generateFixtures(directory,{font='Bahnschrift'}={}){
     c.strokeStyle=accent;c.lineWidth=3;c.beginPath();c.arc(550,196,55,0,Math.PI*2);c.stroke();
     for(let i=0;i<3;i++){rect(c,44,330+i*82,1012,68,'#d0cbbf');text(c,['VIDEO','AUDIO','MUSIC'][i],56,370+i*82,19,muted);
       rect(c,165,344+i*82,825,40,'#b4afa4');}
-    rect(c,528,426,198,42,accent);text(c,'ACTIVE',580,455,25,'#fff6ed');
+    rect(c,528,426,198,42,accent);text(c,'ACTIVE',540,455,25,'#fff6ed');
     c.strokeStyle=ink;c.lineWidth=3;c.beginPath();c.moveTo(627,310);c.lineTo(627,585);c.stroke();
     text(c,'00:08',590,624,23,muted);await save(canvas,'editor');
   }

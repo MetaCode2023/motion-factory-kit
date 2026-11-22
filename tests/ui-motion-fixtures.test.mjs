@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadImage } from 'skia-canvas';
+import { loadImage, Canvas } from 'skia-canvas';
 import { generateFixtures } from '../tools/ui-motion-fixtures.mjs';
 import { compileManifest } from '../tools/ui-motion-plan.mjs';
 import { spawnSync } from 'node:child_process';
@@ -16,6 +16,10 @@ test('synthetic fixture generator writes matching source dimensions and renderab
     assert.ok(plan.shots[1].mapped.target.w>450,'primary action must fill enough width for its original label to read on a phone');
     const held=compileManifest(JSON.parse(await readFile(join(dir,'held-out-table.json'),'utf8')));
     assert.ok(held.shots[0].mapped.target.w>350,'held-out control must read without relying on the callout');
+    const editor=await loadImage(join(dir,'fixtures/editor.png')),c=new Canvas(1100,650).getContext('2d');c.drawImage(editor,0,0);
+    const labelPixels=c.getImageData(540,430,35,34).data;let readableInk=0;
+    for(let i=0;i<labelPixels.length;i+=4)if(labelPixels[i]>230&&labelPixels[i+1]>210&&labelPixels[i+2]>200)readableInk++;
+    assert.ok(readableInk>30,'editor label must sit to the left of the playhead instead of being crossed by it');
   }finally{await rm(dir,{recursive:true,force:true});}
 });
 test('fixture CLI accepts explicit fallback flag before output directory',async()=>{

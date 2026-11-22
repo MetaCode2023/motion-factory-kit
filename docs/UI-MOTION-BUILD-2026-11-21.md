@@ -84,3 +84,17 @@ Code checkpoint includes focused CI with explicit Barlow generation, real
 portrait/landscape renders and decoded-frame verification. Next: finish
 playback checks, independent media metadata/audio checks, package and draft
 PR. Glass and all example acceptance remain pending human approval.
+
+## Milestone 3 — review package and CI correction
+
+2026-11-21 20:18 Phoenix: draft PR #16 opened, stacked on PR #15. Focused
+Linux CI passed its tests and fixture generation, then exposed missing
+`ffprobe` on the runner. Add explicit FFmpeg/ffprobe installation to this
+new job; local installed tools already provide them. First failing job:
+https://github.com/MetaCode2023/motion-factory-kit/actions/runs/44979786905/job/137077547871
+
+Playback observations revealed the synthetic editor playhead crossing the
+word ACTIVE. A failing raster regression now requires readable source label
+ink left of the playhead; move the unchanged text left, retain target bounds.
+Rerender all affected reels and verify their decoded samples again. This
+fixture correction does not affect the table before/after or hold pair.

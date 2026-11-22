@@ -12,6 +12,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install FFmpeg and ffprobe for real-media verification
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Focused regressions
         run: node --test tests/ui-motion*.test.mjs
       - name: Explicit licensed font fallback
