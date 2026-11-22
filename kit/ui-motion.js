@@ -72,7 +72,8 @@
     if(s.caption){box(c,s.caption,colors.light?'#17191c':'#eeebe2',8);type(c,s.copy.caption,s.caption.x+20,s.caption.y+43,portrait?28:44,colors.light?'#f2efe5':'#181a1c',p.font,s.caption.w-40);}
     // Quiet chapter spine carries the accent through each composition.
     const py=portrait?1170:680;c.fillStyle=colors.line;c.fillRect(60,py,p.width-120,2);
-    c.fillStyle=p.accent;c.fillRect(60,py,(p.width-120)*Math.min(1,t/p.duration),2);
+    const chapter=(s.index+M.clamp((t-s.start)/(s.end-s.start)))/p.shots.length;
+    c.fillStyle=p.accent;c.fillRect(60,py,(p.width-120)*chapter,2);
   }
   window.UIMotion={
     activeShot(shots,t){let index=0;for(let i=1;i<shots.length;i++)if(t>=shots[i].start)index=i;return index;},

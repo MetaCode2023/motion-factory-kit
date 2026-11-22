@@ -112,3 +112,34 @@ the two earlier beats stay unchanged. The earlier single-shot diagnostic
 was superseded and is not catalogued. Focused Linux CI now passes after
 the explicit ffprobe dependency fix; final source-framing revision will
 be pushed and checked again.
+
+## Milestone 4 — scoped revision and final evidence
+
+2026-11-21 20:31 Phoenix: a raw-frame equality test caught the global progress
+spine changing earlier beats when the last hold grew. Changed the spine to
+use per-chapter timing. The same test now verifies identical raw source
+frames at 1.2s and 5.2s in the 12s/13s pair, including the spine. No renderer
+code is supplied through the manifest. Re-rendered and checked all eight
+studies against the final fixed scene; 160 decoded frame samples pass,
+including zero best offsets on every sampled move. Final source controls
+were inspected together at 320px width in the phone-readability strip.
+
+The editorial/glass decoded PCM hashes match, as do the table pair hashes.
+The revision pair's shared audio prefix matches. Audio is intentionally a
+quiet synthetic diagnostic bed (editorial mean -39.8dB, peak -25.8dB), not a
+claimed finished soundtrack. Listening remains unverified. Normal-rate
+browser playback works; continuous perceptual review remains sampled.
+
+Self-review complete: explicit target failures, source dimensions, exact
+copy legibility, cue frames, safe areas, gaps, reduced motion, encoder
+failure preserving prior output, and revision isolation have regressions.
+Original main worktree's human changes remain untouched. No generated MP4
+or Windows font binary added to Git. Existing Barlow license identifies
+SIL Open Font License 1.1. New local recipe suite has 21 unique tests;
+relevant Kit/Clef/recipe run has 31 tests. The existing full Windows suite's
+one POSIX-stub failure stays separate from these results.
+
+Review assets are uploaded privately through authorized Drive access; no
+sharing permissions expanded. Design Memory is still inaccessible, so the
+review package includes an append-ready entry and separate results JSON.
+All creative examples, especially glass, remain pending human approval.
