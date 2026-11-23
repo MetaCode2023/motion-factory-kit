@@ -5,6 +5,7 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { FILLERS, H, ROOT, W, bare, fmt, readJSON, seconds } from './common.mjs';
 import { loadLibrary } from './library.mjs';
 import { lockedInserts } from '../broll/index.mjs';
+import { clipFills, lockedClips } from '../clips/index.mjs';
 
 export const KINDS = ['animation', 'broll', 'pull', 'image', 'face'];
 // full: the visual fills the frame. side: a box beside the speaker. pip: the visual fills the frame and the
@@ -136,8 +137,10 @@ export function resolveAt(item, cuts, lib, where) {
 
 // Everything the build needs, resolved and checked. Problems are collected, not thrown, so the
 // agent sees all of them at once.
-export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}) {
+export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true, clips = true } = {}) {
   const errors = [], warnings = [];
+  let fills = {};
+  if (clips) try { fills = clipFills(plan); } catch (e) { warnings.push(`outside clips skipped: ${e.message}`); }
   let cuts = [];
   try { cuts = cutList(plan, lib); } catch (e) { errors.push(e.message); return { errors, warnings }; }
   const total = cuts.reduce((a, c) => a + c.d, 0);
@@ -189,6 +192,10 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
     } else if (ins.kind === 'pull') {
       if (!ins.url && !ins.search) errors.push(`${where}: a pull needs "url" (or "search" if the exact source isn't known yet)`);
       r.url = ins.url || ''; r.search = ins.search || ''; r.from = ins.from ?? ''; r.to = ins.to ?? ''; r.title = ins.title || ins.note || 'Clip to pull';
+      r.outsideClip = true;
+      // `node longform.mjs clips` found a source for this cue: its url, seconds and credit come from the lockfile.
+      const fill = !ins.url && fills[r.id];
+      if (fill) Object.assign(r, { url: fill.url, from: fill.from, to: fill.to, credit: fill.credit, label: fill.label });
       // Once the clip is saved (assets/broll/<id>.mp4, or "file"), it replaces the placeholder: trimmed
       // to its start ("clip_from", default 0) and muted unless "audio" is set.
       const saved = ins.file ? rel(ins.file) : join(ROOT, 'assets', 'broll', `${r.id}.mp4`);
@@ -220,6 +227,14 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true } = {}
     }
   });
   for (let k = inserts.length - 1; k >= 0; k--) if (inserts[k].kind === 'face') inserts.splice(k, 1);
+  // Outside clips named in the talk (node longform.mjs clips): locked picks, placed in the gaps before automatic B-roll.
+  if (clips) {
+    try {
+      const oc = lockedClips(plan, { inserts, total, resolveAt, cuts, lib });
+      warnings.push(...oc.warnings);
+      if (oc.inserts.length) { inserts.push(...oc.inserts); inserts.sort((a, b) => a.at - b.at); }
+    } catch (e) { warnings.push(`outside clips skipped: ${e.message}`); }
+  }
   // Automatic B-roll (node longform.mjs broll): locked picks go into the gaps left between the plan's own visuals.
   if (autoBroll) {
     try {

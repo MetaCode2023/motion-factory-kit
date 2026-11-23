@@ -79,7 +79,7 @@ base: backdrop                                      // optional: never show the 
 | `[[superposition]]` `[[collapse]]` `[[deception]]` | The poker x physics set (`scenes/longform/`) |
 | `[[<any scene name> key: value]]` / `[[anim path.html]]` | Any 16:9 scene in `scenes/longform/`, including new ones Claude writes for this video |
 | `[[stock <search>]]` | Free stock footage from Pexels (`node longform.mjs stock`) |
-| `[[clip <title> \| url \| from \| to \| search \| audio]]` | An outside clip that backs up the point (see "Outside clips") |
+| `[[clip <title> \| search \| say \| url \| from \| to \| audio]]` | An outside clip that backs up the point; `node longform.mjs clips` finds it (see "Outside clips") |
 | `[[broll <library clip> \| from: ..]]` / `[[image file]]` | Your own footage or a picture |
 | `[[face]]` | Back to you on camera here (ends the previous visual) |
 | `[[music drive 0.08]]` / `[[sfx hit]]` | Music from here / one effect on the next word |
@@ -231,6 +231,7 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs script <x.script.md>` | Checks the script (cues, runtime at your pace, a visual every ~15 s, chapters) and writes `<x>.read.txt` for the teleprompter. |
 | `node longform.mjs from-script <script> <recording> [--build]` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. |
 | `node longform.mjs pull <plan>` | Downloads outside clips that have a `url` and `from`/`to` (needs yt-dlp). |
+| `node longform.mjs clips <plan>` | Finds and cuts outside clips: a source for every clip cue, plus clips of the people and events named (needs yt-dlp; `--dry`, `--no-auto`). See "Outside clips". |
 | `node longform.mjs index [dir]` | Transcribes and indexes everything. Writes `footage/library/.index/LIBRARY.md` (one row per clip with its topics), `<clip>.md` (every sentence numbered with times), and `<clip>.sheet.jpg` (12 frames). |
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
@@ -357,16 +358,41 @@ node longform.mjs build edits/longform/x.json         # the cutaways are in the 
 
 ## Outside clips
 
-Clips from other channels, news and TV make a point land ("here's the moment he folded the winning hand").
-While writing the script, Claude finds specific moments with web search and writes them as
-`[[clip title | url: .. | from: m:ss | to: m:ss]]`. Each one builds as a labelled placeholder until the clip is in
-`assets/broll/<id>.mp4`. `node longform.mjs pull <plan>` downloads just those seconds with yt-dlp if you have it,
-or you can save them yourself. `audio: 0.6` plays the clip's own sound under you.
+Clips from other channels, news and TV make a point land ("here's the moment he folded the winning hand"). They
+are found and cut automatically, the fair-use way: a few seconds, talked over, credited.
 
-Using someone else's footage is your call, and YouTube's Content ID can claim or block a video over it.
-Keep each clip short (the report flags anything over 10 s), make it part of what you're explaining, talk
-over it or right after it, and credit the source. Every pull is listed in PULL-LIST.md and as a timeline
-marker, so you can review them before you post.
+```
+node longform.mjs clips edits/longform/x.json [--dry] [--no-auto]
+```
+
+1. **Clip cues get a source.** Every `[[clip <what it shows> | search: <words> | say: <words spoken in it>]]` without
+   a url is searched on YouTube. The best match is taken (on topic first, then popular; no Shorts, live streams,
+   age-gated videos or `exclude`d channels) and the seconds are chosen: where the `say:` words are spoken in its
+   captions, else the video's **most-replayed moment** (YouTube's heatmap), else a third of the way in.
+2. **Names said get clips too.** The people and events the speaker names ("Phil Ivey", "Tom Dwan") get a 3-8 s clip
+   in a box beside them (layout `side`), in the gaps between the plan's own visuals, at most one per 40 s. Two names
+   in one sentence make one search. `--no-auto` fills only the cues.
+3. **Cut and credited.** Each is cut with yt-dlp into `assets/broll/<id>.mp4` and used by the next build. Sound is off
+   unless `audio` is set; a small "Source: <channel>" label sits on the clip, and `CREDITS.md` has a line per clip
+   (title, channel, link to the exact second) for the description.
+4. **You check, not hunt.** `out/longform/<name>/CLIPS.md` links every pick to its exact second. The lockfile
+   `edits/longform/<name>.clips.lock.json` is the edit surface: `"status": "drop"` or `"keep"`, `"pick": 2` (the next
+   video), a new `"query"` (+ `"query_set_by_hand": true`), `"say"`, or your own `"url"` (+ `"url_set_by_hand": true`)
+   or `"from"`/`"to"` (+ `"window_set_by_hand": true`). Rerun `clips`, rebuild. Picks don't change between runs.
+
+Plan settings, all optional:
+
+```json
+"auto_clips": { "context": "poker", "exclude": ["Simulation Series"], "skip": ["Austin"], "every": 40, "max": 8,
+                "layout": "side", "audio": 0, "force": [{ "at": "ep1#16", "word": "best", "query": "Phil Ivey Tom Dwan bluff" }] }
+```
+
+`"auto_clips": false` turns off the automatic ones (cues are still filled). A cue with its own `url` is left alone,
+and `node longform.mjs pull` still fetches those.
+
+Fair use is a judgement, and YouTube's Content ID can still claim a video. What keeps it strong: each clip short
+(the report flags anything over 10 s), part of what you're explaining, talked over, credited, and no music videos.
+Watch CLIPS.md's links before posting.
 
 ## What it doesn't do (yet)
 

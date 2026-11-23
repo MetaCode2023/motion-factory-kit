@@ -376,13 +376,13 @@ function mixAudio(R, plan, voice, out, stemsDir) {
     else { f.push('[bed][key]sidechaincompress=threshold=0.025:ratio=10:attack=15:release=450:makeup=1[ducked]'); parts.push('[ducked]'); }
   } else f.push('[key]anullsink');
   if (fx.length) { f.push(`${fx.join('')}amix=inputs=${fx.length}:normalize=0,apad[fx]`); parts.push('[fx]'); }
-  f.push(`${parts.join('')}amix=inputs=${parts.length}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[out]`);
+  f.push(`${parts.join('')}amix=inputs=${parts.length}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,aformat=sample_fmts=s16:channel_layouts=stereo[out]`);
   ff([...inputs, '-filter_complex', f.join(';'), '-map', '[out]', '-t', R.total.toFixed(3), '-c:a', 'pcm_s16le', out], 'mix');
   if (plan.voice !== false && !stemsDir.endsWith('.tmp')) copyFileSync(voice, join(stemsDir, 'voice.wav'));
 }
 
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
-function assCaptions(R, accent, file) {
+function assCaptions(R, accent, file, plan = {}) {
   const gapsOnly = R.captions.burn === 'gaps';
   const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
@@ -399,6 +399,13 @@ function assCaptions(R, accent, file) {
   });
   if (cur.length) lines.push(cur);
   const ev = [];
+  // Outside clips name their source on screen: a small channel label in the clip's corner.
+  const SB = sideBox(plan);
+  for (const i of R.inserts.filter((x) => x.label && x.pulled)) {
+    const pos = i.layout === 'side' ? `{\\an1\\pos(${SB.x + SB.border + 14},${SB.y + SB.h - SB.border - 10})}` : '{\\an7\\pos(44,36)}';
+    ev.push(`Dialogue: 1,${ts(i.at + 0.15)},${ts(i.at + i.dur - 0.1)},L,,0,0,0,,${pos}${esc(`Source: ${i.label}`)}`);
+  }
+  if (!R.captions.burn) lines.length = 0;   // labels only
   for (const ln of lines) {
     const end = ln[ln.length - 1].e + 0.15;
     ln.forEach((w, k) => {
@@ -413,7 +420,7 @@ function assCaptions(R, accent, file) {
     : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
+    style, 'Style: L,Plus Jakarta Sans,26,&H00FFFFFF,&H00FFFFFF,&H00000000,&H99000000,-1,0,0,0,100,100,0,0,3,6,0,1,0,0,0,1', '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
   return file;
 }
 
@@ -489,7 +496,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
-  const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
+  const ass = R.captions.burn || R.inserts.some((i) => i.label && i.pulled) ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`), plan) : null;
   composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null);
 
   const files = [relative(ROOT, video)];
@@ -497,7 +504,10 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   write(`${plan.name}.srt`, srt(R.words));
   if (R.chapters.length) write('CHAPTERS.txt', R.chapters.map((c) => `${fmtChapter(c.at)} ${c.title}`).join('\n') + '\n');
   const auto = R.inserts.filter((i) => i.autoBroll);
-  if (auto.length) write('CREDITS.md', `# Credits: ${plan.title || plan.name}\n\nB-roll (paste into the video description):\n\n${[...new Set(auto.map((i) => `- ${i.credit}`))].join('\n')}\n`);
+  const outside = R.inserts.filter((i) => i.outsideClip && i.pulled && i.credit);
+  if (auto.length || outside.length) write('CREDITS.md', [`# Credits: ${plan.title || plan.name}`, '', 'Paste into the video description:', '',
+    ...(outside.length ? ['Clips shown with commentary:', '', ...new Set(outside.map((i) => `- ${i.credit}`)), ''] : []),
+    ...(auto.length ? ['B-roll:', '', ...new Set(auto.map((i) => `- ${i.credit}`)), ''] : [])].join('\n'));
   const pl = pullList(R, plan);
   if (pl) write('PULL-LIST.md', pl);
   if (!previewOnly) {
