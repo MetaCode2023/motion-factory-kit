@@ -101,3 +101,27 @@ test('real when it has to be real: real events refuse generated or staged footag
   ], 'JFK we choose to go to the moon speech');
   assert.equal(r[0].id, 'lib', 'the verified, official, older upload wins over a bigger re-upload');
 });
+
+test('studio echoes: signed-in POST with the Access token, the same-origin headers, and clear sign-in errors', async () => {
+  const { studioEchoes, studioPost } = await import('../tools/longform/studio.mjs');
+  const seen = [];
+  const fetcher = async (url, init) => { seen.push({ url, init }); return new Response(JSON.stringify({ matches: [{ sentence: 0, video: 'abcdefghijk', score: 0.81 }] }), { status: 200 }); };
+  const m = await studioEchoes(['Awareness is not an object at all.'], { before: '2025-08-01', fetcher, url: 'https://studio.example', token: 'a.b.c' });
+  assert.equal(m[0].video, 'abcdefghijk');
+  assert.equal(seen[0].url, 'https://studio.example/api/writer/echoes');
+  assert.equal(seen[0].init.headers['cf-access-token'], 'a.b.c');
+  assert.equal(seen[0].init.headers.origin, 'https://studio.example');
+  assert.equal(seen[0].init.headers['x-studio-request'], '1');
+  assert.deepEqual(JSON.parse(seen[0].init.body), { sentences: ['Awareness is not an object at all.'], before: '2025-08-01', min: 0.5, top: 5 });
+  await assert.rejects(studioPost('/x', {}, { fetcher: async () => new Response('', { status: 302 }), url: 'https://studio.example', token: 't' }), /cloudflared access login/);
+  await assert.rejects(studioPost('/x', {}, { fetcher: async () => new Response('{"error":"access_denied"}', { status: 403 }), url: 'https://studio.example', token: 't' }), /403 access_denied/);
+});
+
+test('a pulled passage is trimmed to its own words even when its times were only estimated', async () => {
+  const { passageSpan } = await import('../tools/longform/echoes.mjs');
+  const ws = words('and that was the end of it. You are not an object in awareness, you are awareness itself. So anyway let us go on.');
+  const { first, last } = passageSpan(ws, 'You are not an object in awareness, you are awareness itself.');
+  assert.equal(first.w, 'You');
+  assert.equal(last.w, 'itself.');
+  assert.deepEqual(passageSpan(ws, 'completely different words here'), {});
+});

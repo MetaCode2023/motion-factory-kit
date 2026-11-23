@@ -427,8 +427,14 @@ older count (`--older 90`, in days; the plan's `"date"` or the clip's file date 
 little higher. `ECHOES.md` lists the top 5: date,
 both quotes, a link. `--pull n --apply` cuts echo n from YouTube into the library, trims it to exactly the passage, and
 splices it into the plan right after the sentence it echoes. Matching is by shared words (it finds the times you said
-it nearly the same way, the strongest flashbacks); the same idea in completely different words needs the studio's
-semantic search.
+it nearly the same way, the strongest flashbacks).
+
+**`--studio`** also asks the creator's Studio Engine, which searches the whole archive by meaning: the same idea in
+completely different words counts too. ECHOES.md marks each one "same idea" or "same words". Setup, once: put
+`STUDIO_URL=https://<the studio's address>` in `.env` (git-ignored), `brew install cloudflared`, then
+`cloudflared access login <that address>` (it opens the browser for the usual sign-in). The studio only returns
+approved YouTube passages from before the cut-off date, narrowed to the few lines closest to the sentence; their
+times are estimates, so `--pull` cuts a few seconds of slack and trims to the spoken words.
 
 **Use them sparingly.** A flashback is a spice: one, two at most, only where it really lands (the same idea, said a
 year or two ago, that the new take builds on). Plenty of videos need none. The same goes for flash-forwards.

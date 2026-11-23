@@ -17,7 +17,7 @@
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
 //   node longform.mjs pull <plan>                 # fetch pulls that have a url + from/to (needs yt-dlp)
 //   node longform.mjs clips <plan> [--dry]        # outside clips: find + cut the moments for clip cues and names said (yt-dlp)
-//   node longform.mjs echoes <plan> [--archive d] # flashbacks: where you said the same thing before; --pull n --apply splices one in
+//   node longform.mjs echoes <plan> [--archive d] [--studio] # flashbacks: where you said the same thing before; --pull n --apply splices one in
 //
 //   Around the video:
 //   node longform.mjs doctor                      # is this machine set up? what's missing and how to fix it
@@ -189,7 +189,7 @@ try {
       if (!json) console.log(`a_roll item:\n  ${JSON.stringify(r.item)}${r.applied ? '' : '\n(add --apply to splice it into the plan after the sentence it echoes)'}`);
       emit(r);
     } else {
-      const r = await echoes(args[0], { archive: opt('--archive'), top: Number(opt('--top') || 5), older: Number(opt('--older') || 90), log });
+      const r = await echoes(args[0], { archive: opt('--archive'), studio: rest.includes('--studio'), top: Number(opt('--top') || 5), older: Number(opt('--older') || 90), log });
       if (!json) { r.items.slice(0, 5).forEach((i) => console.log(`  ${i.n}. ${i.score}  ${i.then.date || 'undated'}  "${i.then.text.slice(0, 90)}"`)); console.log(`${r.echoes} echo(es) -> ${relative(ROOT, r.report)}`); }
       emit(r);
     }

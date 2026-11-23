@@ -146,8 +146,8 @@ the goal is a 10-minute video they can post without touching it.
    (PEXELS_API_KEY) fill placeholders, then `build`. Write clip cues fearlessly, one every 60-90 s: no URL needed.
    Real people and events get the actual footage (nothing generated or re-created); imagined things (an AI dystopia, a
    future city) may come from movies or CGI; never a deepfake of a real person. **Flashbacks** (the creator's
-   signature, sparingly: 0-2 a video): `node longform.mjs echoes <plan> --archive <their transcripts>` finds where they
-   said the same thing 3+ months before; `--pull n --apply` cuts it in with a rewind and the date. **Flash-forwards**
+   signature, sparingly: 0-2 a video): `node longform.mjs echoes <plan> --studio` (or `--archive <their transcripts>`) finds
+   where they said the same thing, or the same idea, 3+ months before; `--pull n --apply` cuts it in with a rewind and the date. **Flash-forwards**
    (just as rare): `[[future year: 2032 | place: ...]]` for a vision of the future.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
