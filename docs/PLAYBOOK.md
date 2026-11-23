@@ -57,16 +57,30 @@ Put the look in each script's header (`theme: paper`) so the build follows it.
 
 ## 4. Outside clips
 
-- The creator decides what to use. Claude proposes: the exact URL, start and end, what it proves, and one
-  line on why this clip and not another.
-- Short and talked over: under 10 s each (the build flags longer), the creator's voice continues over it,
-  the clip's own sound low or off. A clip is evidence for a point the creator is making, never the content.
-- A few per video (2-5), from different sources. Credit every one in the description
-  (`assets/broll/CREDITS.md` collects them).
-- Don't propose: music videos or songs, full scenes from films and TV, sports broadcasts, another creator's
-  video used as the backbone of this one, anything showing private people in distress, or footage whose
-  source can't be identified.
-- If a point can be shown with a drawn animation, stock footage or the creator's own footage instead, prefer that.
+Outside clips are part of the look: a real moment on screen makes a point land ("here's the hand he folded").
+Use them fearlessly, the fair-use way: a few seconds, talked over, credited.
+
+- **Write them into the script.** Put a `[[clip <what it shows> | search: <words> | say: <words spoken in it>]]` cue
+  wherever a real-world moment proves the point: the famous hand, the launch, the interview line. You don't need
+  the URL; `node longform.mjs clips <plan>` finds the video, picks the seconds (where `say:` is spoken, else the
+  most-replayed moment) and cuts them. Aim for one every 60-90 s in a 10-minute video.
+- **Names said get clips on their own.** The same command finds the people and events the speaker names ("Phil
+  Ivey", "Tom Dwan") and adds a 3-8 s clip in a box beside them, in the gaps between other visuals. Set
+  `"auto_clips": { "context": "poker" }` in the plan so the searches stay on the subject, `exclude` for channels
+  never to use (the creator's own), `skip` for names that aren't the subject.
+- **Short and talked over:** under 10 s each (the build flags longer), the creator's voice continues over it, the
+  clip's own sound off by default (`audio: 0.3` brings it up under the voice). Each clip shows a small "Source:
+  channel" label, and CREDITS.md has the line for the description.
+- **The creator checks, not hunts:** CLIPS.md links every pick to its exact second. Drop or swap any in the
+  lockfile (`"status": "drop"`, `"pick": 2`, a new `"query"`), rerun `clips`, rebuild.
+- **Real when it has to be real.** A real person or event needs the actual footage, never generated, re-created or
+  staged. Something imagined (an AI dystopia, a future city) can come from movies, CGI or animation. Faking a real
+  person (deepfakes, voice clones, impressions) is never used. Judge by what the clip is for, not a blanket rule.
+- **Flashbacks** are the signature move, used sparingly: one or two in a video at most, many videos none. Reach back
+  3 months to 2 years, to where the creator said the same thing (`node longform.mjs echoes`), rewind to it with the
+  date on screen. Flash-forwards (`future` scene) are just as rare.
+- **Don't use:** music videos or songs (the music gets claimed), full scenes from films and TV, another creator's
+  video as the backbone of this one, private people in distress, or footage whose source can't be identified.
 
 ## 5. The publish package
 

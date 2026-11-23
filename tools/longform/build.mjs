@@ -21,6 +21,9 @@ function brandAccent() {
   try { const m = readFileSync(join(ROOT, 'brand.js'), 'utf8').match(/accent\s*:\s*['"](#[0-9a-fA-F]{6})/); return m ? m[1] : '#FC5C2B'; } catch { return '#FC5C2B'; }
 }
 
+// Old footage: warmer, faded colour, film grain and a vignette. Applied to flashback pieces of the A-roll.
+const FLASHBACK_LOOK = 'eq=saturation=0.55:contrast=1.06:brightness=0.02,colorchannelmixer=rr=1.0:rg=0.12:gg=0.95:gb=0.05:bb=0.8:br=0.08,noise=alls=12:allf=t,vignette=PI/4.2';
+
 // ---- A-roll: every kept piece encoded once (cached), then joined -----------------------------------
 function buildARoll(R, plan, dir, log) {
   const vlist = [], alist = [];
@@ -34,12 +37,26 @@ function buildARoll(R, plan, dir, log) {
       loop ??= renderScene(join(ROOT, 'scenes', 'longform', 'backdrop.html'), { ...(plan.theme || {}), dur: LOOP }, plan.fps, 'backdrop', log);
       const off = (c.out % LOOP).toFixed(3);
       vlist.push(cached(hash('bg', loop, off, frames), '.mp4', (f) => ff(['-stream_loop', '-1', '-ss', off, '-i', loop, '-frames:v', String(frames), '-vf', `fps=${plan.fps}`, '-an', ...VENC(plan.fps), f], 'backdrop piece')));
+    } else if (c.bridge === 'rewind') {
+      // VHS rewind into the old moment: its next few seconds played backwards at 4x, washed out, with a tracking band.
+      const span = Math.min(c.d * 4, Math.max(0.5, clip.duration - c.s - 0.05));
+      const key = hash('rw', clip.key, c.s, frames, plan.fps);
+      vlist.push(cached(key, '.mp4', (f) => ff(['-ss', c.s.toFixed(3), '-t', span.toFixed(3), '-i', clip.file, '-vf',
+        `reverse,setpts=PTS*${(c.d / span).toFixed(4)},${cover(1, ...c.focus)},fps=${plan.fps},${FLASHBACK_LOOK},hue=s=0.25,noise=alls=26:allf=t,drawbox=x=0:y='mod(t*1400\,ih)':w=iw:h=70:color=white@0.22:t=fill,fade=t=in:st=0:d=0.12:color=white,tpad=stop_mode=clone:stop_duration=1`,
+        '-frames:v', String(frames), '-an', ...VENC(plan.fps), f], `flashback rewind ${i + 1}`)));
+    } else if (c.bridge === 'return') {
+      // Back to now: a white flash fading into the present frame.
+      const key = hash('rt', clip.key, c.s, frames, c.zoom, plan.fps);
+      vlist.push(cached(key, '.mp4', (f) => ff(['-ss', c.s.toFixed(3), '-i', clip.file, '-vf', `${cover(1, ...c.focus)},fps=${plan.fps},trim=end_frame=1,tpad=stop_mode=clone:stop_duration=${(c.d + 0.5).toFixed(2)},fade=t=in:st=0:d=${(c.d * 0.85).toFixed(3)}:color=white`,
+        '-frames:v', String(frames), '-an', ...VENC(plan.fps), f], `flashback return ${i + 1}`)));
     } else {
-      const key = hash('v', clip.key, c.s, frames, c.zoom, c.focus, plan.fps);
-      vlist.push(cached(key, '.mp4', (f) => ff(['-ss', c.s.toFixed(3), '-i', clip.file, '-frames:v', String(frames), '-vf', `${cover(c.zoom, ...c.focus)},fps=${plan.fps}`, '-an', ...VENC(plan.fps), f], `A-roll piece ${i + 1}`)));
+      // A flashback piece wears the old-footage look (warm, faded, grainy, vignetted).
+      const look = c.fb ? `,${FLASHBACK_LOOK}` : '';
+      const key = hash('v', clip.key, c.s, frames, c.zoom, c.focus, plan.fps, look);
+      vlist.push(cached(key, '.mp4', (f) => ff(['-ss', c.s.toFixed(3), '-i', clip.file, '-frames:v', String(frames), '-vf', `${cover(c.zoom, ...c.focus)},fps=${plan.fps}${look}`, '-an', ...VENC(plan.fps), f], `A-roll piece ${i + 1}`)));
     }
-    const akey = hash('a', clip.key, c.s, c.d);
-    alist.push(cached(akey, '.wav', (f) => clip.hasAudio
+    const akey = hash('a', clip.key, c.s, c.d, c.bridge || '');
+    alist.push(cached(akey, '.wav', (f) => clip.hasAudio && !c.bridge
       ? ff(['-ss', c.s.toFixed(3), '-i', clip.file, '-t', c.d.toFixed(4), '-vn', '-ac', '2', '-ar', '48000', '-af', `afade=t=in:d=0.012,afade=t=out:st=${Math.max(0, c.d - 0.02).toFixed(4)}:d=0.02`, '-c:a', 'pcm_s16le', f], 'A-roll audio')
       : ff(['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo', '-t', c.d.toFixed(4), '-c:a', 'pcm_s16le', f], 'silence')));
     if ((i + 1) % 25 === 0) log(`  A-roll ${i + 1}/${R.cuts.length} pieces`);
@@ -376,13 +393,13 @@ function mixAudio(R, plan, voice, out, stemsDir) {
     else { f.push('[bed][key]sidechaincompress=threshold=0.025:ratio=10:attack=15:release=450:makeup=1[ducked]'); parts.push('[ducked]'); }
   } else f.push('[key]anullsink');
   if (fx.length) { f.push(`${fx.join('')}amix=inputs=${fx.length}:normalize=0,apad[fx]`); parts.push('[fx]'); }
-  f.push(`${parts.join('')}amix=inputs=${parts.length}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[out]`);
+  f.push(`${parts.join('')}amix=inputs=${parts.length}:normalize=0:duration=first,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000,aformat=sample_fmts=s16:channel_layouts=stereo[out]`);
   ff([...inputs, '-filter_complex', f.join(';'), '-map', '[out]', '-t', R.total.toFixed(3), '-c:a', 'pcm_s16le', out], 'mix');
   if (plan.voice !== false && !stemsDir.endsWith('.tmp')) copyFileSync(voice, join(stemsDir, 'voice.wav'));
 }
 
 // ---- burned-in captions (ASS, karaoke: the word being said lights up) ------------------------------
-function assCaptions(R, accent, file) {
+function assCaptions(R, accent, file, plan = {}) {
   const gapsOnly = R.captions.burn === 'gaps';
   const full = R.inserts.filter((i) => (i.layout === 'full' || i.layout === 'pip') && !i.autoBroll).map((i) => [i.at, i.at + i.dur]);
   const covered = (a, b) => full.some(([s, e]) => a < e - 0.05 && b > s + 0.05);
@@ -399,6 +416,18 @@ function assCaptions(R, accent, file) {
   });
   if (cur.length) lines.push(cur);
   const ev = [];
+  // Outside clips name their source on screen: a small channel label in the clip's corner.
+  const SB = sideBox(plan);
+  for (const i of R.inserts.filter((x) => x.label && x.pulled)) {
+    const pos = i.layout === 'side' ? `{\\an1\\pos(${SB.x + SB.border + 14},${SB.y + SB.h - SB.border - 10})}` : '{\\an7\\pos(44,36)}';
+    ev.push(`Dialogue: 1,${ts(i.at + 0.15)},${ts(i.at + i.dur - 0.1)},L,,0,0,0,,${pos}${esc(`Source: ${i.label}`)}`);
+  }
+  // Flashbacks: a camcorder-style stamp, "<< FLASHBACK" over the date, for the whole flashback; "<<" big while it rewinds.
+  for (const fb of R.flashbacks || []) {
+    ev.push(`Dialogue: 2,${ts(fb.at)},${ts(fb.rewindEnd)},R,,0,0,0,,{\\an4\\pos(110,540)}◀◀`);
+    ev.push(`Dialogue: 2,${ts(fb.rewindEnd)},${ts(fb.end)},F,,0,0,0,,{\\an7\\pos(64,56)}{\\fs30}◀◀ ${esc(fb.label)}${fb.date ? `\\N{\\fs56}${esc(fb.date)}` : ''}`);
+  }
+  if (!R.captions.burn) lines.length = 0;   // labels only
   for (const ln of lines) {
     const end = ln[ln.length - 1].e + 0.15;
     ln.forEach((w, k) => {
@@ -413,7 +442,7 @@ function assCaptions(R, accent, file) {
     : 'Style: C,Plus Jakarta Sans,58,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,0,0,1,3,0,2,160,160,70,1';
   writeFileSync(file, ['[Script Info]', 'ScriptType: v4.00+', 'PlayResX: 1920', 'PlayResY: 1080', 'WrapStyle: 0', '', '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    style, '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
+    style, 'Style: F,JetBrains Mono,56,&H00FFFFFF,&H00FFFFFF,&H00101010,&H80000000,-1,0,0,0,100,100,1,0,1,3,2,7,0,0,0,1', 'Style: R,JetBrains Mono,150,&H00FFFFFF,&H00FFFFFF,&H00101010,&H00000000,-1,0,0,0,100,100,0,0,1,5,0,4,0,0,0,1', 'Style: L,Plus Jakarta Sans,26,&H00FFFFFF,&H00FFFFFF,&H00000000,&H99000000,-1,0,0,0,100,100,0,0,3,6,0,1,0,0,0,1', '', '[Events]', 'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text', ...ev].join('\n') + '\n');
   return file;
 }
 
@@ -489,7 +518,7 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   mixAudio(R, plan, aroll.audio, mix, join(dir, 'stems'));
   const video = join(dir, `${plan.name}.mp4`);
   log('  compositing');
-  const ass = R.captions.burn ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`)) : null;
+  const ass = R.captions.burn || R.inserts.some((i) => i.label && i.pulled) || R.flashbacks?.length ? assCaptions(R, accent, join(dir, `${plan.name}.captions.ass`), plan) : null;
   composite(R, plan, aroll, mix, video, accent, ass, log, R.inserts.some((i) => i.layout === 'pip') ? await pipAssets(join(dir, 'media'), accent, plan) : null);
 
   const files = [relative(ROOT, video)];
@@ -497,7 +526,10 @@ export async function build(planFile, { log = console.log, previewOnly = false }
   write(`${plan.name}.srt`, srt(R.words));
   if (R.chapters.length) write('CHAPTERS.txt', R.chapters.map((c) => `${fmtChapter(c.at)} ${c.title}`).join('\n') + '\n');
   const auto = R.inserts.filter((i) => i.autoBroll);
-  if (auto.length) write('CREDITS.md', `# Credits: ${plan.title || plan.name}\n\nB-roll (paste into the video description):\n\n${[...new Set(auto.map((i) => `- ${i.credit}`))].join('\n')}\n`);
+  const outside = R.inserts.filter((i) => i.outsideClip && i.pulled && i.credit);
+  if (auto.length || outside.length) write('CREDITS.md', [`# Credits: ${plan.title || plan.name}`, '', 'Paste into the video description:', '',
+    ...(outside.length ? ['Clips shown with commentary:', '', ...new Set(outside.map((i) => `- ${i.credit}`)), ''] : []),
+    ...(auto.length ? ['B-roll:', '', ...new Set(auto.map((i) => `- ${i.credit}`)), ''] : [])].join('\n'));
   const pl = pullList(R, plan);
   if (pl) write('PULL-LIST.md', pl);
   if (!previewOnly) {

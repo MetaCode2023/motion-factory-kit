@@ -79,7 +79,7 @@ base: backdrop                                      // optional: never show the 
 | `[[superposition]]` `[[collapse]]` `[[deception]]` | The poker x physics set (`scenes/longform/`) |
 | `[[<any scene name> key: value]]` / `[[anim path.html]]` | Any 16:9 scene in `scenes/longform/`, including new ones Claude writes for this video |
 | `[[stock <search>]]` | Free stock footage from Pexels (`node longform.mjs stock`) |
-| `[[clip <title> \| url \| from \| to \| search \| audio]]` | An outside clip that backs up the point (see "Outside clips") |
+| `[[clip <title> \| search \| say \| url \| from \| to \| audio]]` | An outside clip that backs up the point; `node longform.mjs clips` finds it (see "Outside clips") |
 | `[[broll <library clip> \| from: ..]]` / `[[image file]]` | Your own footage or a picture |
 | `[[face]]` | Back to you on camera here (ends the previous visual) |
 | `[[music drive 0.08]]` / `[[sfx hit]]` | Music from here / one effect on the next word |
@@ -231,6 +231,8 @@ transcription. After that, only new files are processed. Already have transcript
 | `node longform.mjs script <x.script.md>` | Checks the script (cues, runtime at your pace, a visual every ~15 s, chapters) and writes `<x>.read.txt` for the teleprompter. |
 | `node longform.mjs from-script <script> <recording> [--build]` | Transcribes the recording, aligns it to the script, and writes `edits/longform/<name>.json`. Reports retakes cut, ad-libs kept, and lines it couldn't find. |
 | `node longform.mjs pull <plan>` | Downloads outside clips that have a `url` and `from`/`to` (needs yt-dlp). |
+| `node longform.mjs echoes <plan> [--archive dir]` | Where you said the same thing before (other recordings, past transcripts): ECHOES.md; `--pull n --apply` splices one in as a flashback. See "Flashbacks". |
+| `node longform.mjs clips <plan>` | Finds and cuts outside clips: a source for every clip cue, plus clips of the people and events named (needs yt-dlp; `--dry`, `--no-auto`). See "Outside clips". |
 | `node longform.mjs index [dir]` | Transcribes and indexes everything. Writes `footage/library/.index/LIBRARY.md` (one row per clip with its topics), `<clip>.md` (every sentence numbered with times), and `<clip>.sheet.jpg` (12 frames). |
 | `node longform.mjs search "bluffing"` | Ranks moments across the whole archive. Each hit is an anchor like `ep12#88` you can use directly in a plan. |
 | `node longform.mjs clip <id>` / `words <id> [#n]` | One clip's sentences, or word timings for cutting false starts. |
@@ -357,16 +359,92 @@ node longform.mjs build edits/longform/x.json         # the cutaways are in the 
 
 ## Outside clips
 
-Clips from other channels, news and TV make a point land ("here's the moment he folded the winning hand").
-While writing the script, Claude finds specific moments with web search and writes them as
-`[[clip title | url: .. | from: m:ss | to: m:ss]]`. Each one builds as a labelled placeholder until the clip is in
-`assets/broll/<id>.mp4`. `node longform.mjs pull <plan>` downloads just those seconds with yt-dlp if you have it,
-or you can save them yourself. `audio: 0.6` plays the clip's own sound under you.
+Clips from other channels, news and TV make a point land ("here's the moment he folded the winning hand"). They
+are found and cut automatically, the fair-use way: a few seconds, talked over, credited.
 
-Using someone else's footage is your call, and YouTube's Content ID can claim or block a video over it.
-Keep each clip short (the report flags anything over 10 s), make it part of what you're explaining, talk
-over it or right after it, and credit the source. Every pull is listed in PULL-LIST.md and as a timeline
-marker, so you can review them before you post.
+```
+node longform.mjs clips edits/longform/x.json [--dry] [--no-auto]
+```
+
+1. **Clip cues get a source.** Every `[[clip <what it shows> | search: <words> | say: <words spoken in it>]]` without
+   a url is searched on YouTube. The best match is taken (on topic first, then real, then popular; no Shorts, live
+   streams, age-gated videos or `exclude`d channels). Then the seconds, **the moment asked for first**: where the
+   `say:` words are spoken in its captions; else where a chapter title or the captions describe what the cue says it
+   shows ("he falls off the bike"); only then the video's **most-replayed moment** (YouTube's heatmap), which is
+   usually the famous bit when the video is about one thing; else a third of the way in.
+   **Real when it has to be real.** It depends on what the clip is for. A real person or event (JFK at Rice, WWII
+   footage, a famous hand) must be the actual footage: nothing generated, re-created, reimagined, CGI or staged
+   (title, description and tags are checked; "AI" in the title is out unless the search is about AI). Something
+   imagined (a Terminator-style AI dystopia, a future city, a movie moment) can come from films, CGI or animation;
+   the search words decide (`movie`, `sci-fi`, `dystopia`, `futuristic`, `animated`...), and `real: yes|no` on the
+   cue overrides. Faking a real person (deepfakes, face swaps, voice clones, impressions) is never used. Verified
+   channels and official sources (archives, libraries, NASA, universities, news) rank higher, and so do uploads from
+   before 2023, when real events couldn't be faked convincingly.
+2. **Names said get clips too.** The people and events the speaker names ("Phil Ivey", "Tom Dwan") get a 3-8 s clip
+   in a box beside them (layout `side`), in the gaps between the plan's own visuals, at most one per 40 s. Two names
+   in one sentence make one search. `--no-auto` fills only the cues.
+3. **Cut and credited.** Each is cut with yt-dlp into `assets/broll/<id>.mp4` and used by the next build. Sound is off
+   unless `audio` is set; a small "Source: <channel>" label sits on the clip, and `CREDITS.md` has a line per clip
+   (title, channel, link to the exact second) for the description.
+4. **You check, not hunt.** `out/longform/<name>/CLIPS.md` links every pick to its exact second. The lockfile
+   `edits/longform/<name>.clips.lock.json` is the edit surface: `"status": "drop"` or `"keep"`, `"pick": 2` (the next
+   video), a new `"query"` (+ `"query_set_by_hand": true`), `"say"`, or your own `"url"` (+ `"url_set_by_hand": true`)
+   or `"from"`/`"to"` (+ `"window_set_by_hand": true`). Rerun `clips`, rebuild. Picks don't change between runs.
+
+Plan settings, all optional:
+
+```json
+"auto_clips": { "context": "poker", "exclude": ["Simulation Series"], "skip": ["Austin"], "every": 40, "max": 8,
+                "layout": "side", "audio": 0, "force": [{ "at": "ep1#16", "word": "best", "query": "Phil Ivey Tom Dwan bluff" }] }
+```
+
+`"auto_clips": false` turns off the automatic ones (cues are still filled). A cue with its own `url` is left alone,
+and `node longform.mjs pull` still fetches those.
+
+Fair use is a judgement, and YouTube's Content ID can still claim a video. What keeps it strong: each clip short
+(the report flags anything over 10 s), part of what you're explaining, talked over, credited, and no music videos.
+Watch CLIPS.md's links before posting.
+
+## Flashbacks
+
+The signature move: you say something now, the picture rewinds, and there you are a year ago saying the same
+thing, with the date on screen; then a flash and you're back. An `a_roll` item with `flashback`:
+
+```json
+{ "clip": "20251018-xuln7kvfi8s-2459", "from": 0, "to": 7.85, "flashback": { "date": "2025-10-18" } }
+```
+
+- A 0.7 s **rewind** bridge before it (the old footage scrubbing backwards, VHS-style, a tape-rewind sound), the old
+  clip in a warm, faded, grainy look with a camcorder stamp (`◀◀ FLASHBACK` / `OCT 18, 2025`), then a 0.4 s white
+  **flash back to now** with a whoosh. The bridges are silent, so the sounds never land on a word.
+- `flashback: true` takes the date from the file name (`20251018_...` or `2025-10-18...`); `{ "label": "ONE YEAR AGO" }`
+  changes the top line.
+
+**Finding them: `node longform.mjs echoes <plan> [--archive <dir>]`** matches every sentence of the new recording
+against the other recordings in the library and, with `--archive`, every past transcript (the Librarian's YouTube
+export: `<base>.transcript.json` + `<base>.info.json`; ~400k passages search in seconds). Only moments at least 3 months
+older count (`--older 90`, in days; the plan's `"date"` or the clip's file date is "now"), and a year or two back ranks a
+little higher. `ECHOES.md` lists the top 5: date,
+both quotes, a link. `--pull n --apply` cuts echo n from YouTube into the library, trims it to exactly the passage, and
+splices it into the plan right after the sentence it echoes. Matching is by shared words (it finds the times you said
+it nearly the same way, the strongest flashbacks).
+
+**`--studio`** also asks the creator's Studio Engine, which searches the whole archive by meaning: the same idea in
+completely different words counts too. ECHOES.md marks each one "same idea" or "same words". Setup, once: put
+`STUDIO_URL=https://<the studio's address>` in `.env` (git-ignored), `brew install cloudflared`, then
+`cloudflared access login <that address>` (it opens the browser for the usual sign-in). The studio only returns
+approved YouTube passages from before the cut-off date, narrowed to the few lines closest to the sentence; their
+times are estimates, so `--pull` cuts a few seconds of slack and trims to the spoken words.
+
+**Use them sparingly.** A flashback is a spice: one, two at most, only where it really lands (the same idea, said a
+year or two ago, that the new take builds on). Plenty of videos need none. The same goes for flash-forwards.
+
+## Flash-forwards
+
+`[[future year: 2032 | place: New Hope America | caption: ...]]`: a leap ahead (a rush of light, a rising sweep) to a
+drawn regenerative city (terraced garden towers, wind, solar, a maglev, a river) under `▶▶ FLASH FORWARD`, the year
+and the place (`tag: ...` adds a small corner line if you want one). To show a video of the vision instead (e.g.
+generated with Higgsfield, or a pulled clip), `file: ../../assets/visions/new-hope.mp4`.
 
 ## What it doesn't do (yet)
 

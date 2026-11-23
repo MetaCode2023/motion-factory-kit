@@ -11,6 +11,7 @@ import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from './common.mjs';
 import { loadPlan } from './plan.mjs';
+import { clipFills } from '../clips/index.mjs';
 
 export async function stock(planFile, { log = console.log } = {}) {
   const key = process.env.PEXELS_API_KEY;
@@ -54,8 +55,11 @@ export async function pull(planFile, { log = console.log } = {}) {
   const dir = join(ROOT, 'assets', 'broll');
   mkdirSync(dir, { recursive: true });
   const saved = [], skipped = [], failed = [];
-  for (const [i, ins] of (plan.inserts || []).entries()) {
-    if (ins.kind !== 'pull') continue;
+  const fills = clipFills(plan);   // sources `node longform.mjs clips` found for cues without a url
+  for (const [i, ins0] of (plan.inserts || []).entries()) {
+    if (ins0.kind !== 'pull') continue;
+    const fill = !ins0.url && fills[ins0.id || `${ins0.kind}-${i + 1}`];
+    const ins = fill ? { ...ins0, url: fill.url, from: String(fill.from), to: String(fill.to) } : ins0;
     const id = ins.id || `${ins.kind}-${i + 1}`, out = join(dir, `${id}.mp4`);
     if (existsSync(out)) continue;
     if (!ins.url) { skipped.push(`${id}: no url yet (search: ${ins.search || '?'})`); continue; }

@@ -120,7 +120,7 @@ the goal is a 10-minute video they can post without touching it.
    index the solo ones and run `node longform.mjs voice`.
 1. **Ask what the video is about** if they haven't said, and the angle (e.g. "why people love poker, as a Trojan
    horse for quantum mechanics"). Then research it (web search): the real numbers, the clearest analogies, and
-   2-5 specific outside clips that prove a point (exact URL + timestamps).
+   the real moments worth showing (the famous hand, the launch, the interview line).
 2. **Outline, then draft the script** in `scripts/<name>.script.md` (git-ignored; format in docs/LONGFORM.md).
    Hook in the first 10 s, 4-6 chapters (`##`), ~1,400-1,600 words for 10 min, written to be said out loud.
    **Put a visual cue every ~15 s** (every ~35-40 words): animations for ideas (`stat`, `term`, `compare`,
@@ -141,7 +141,14 @@ the goal is a 10-minute video they can post without touching it.
 4. **Recording in** (`footage/` or wherever they put it): `node longform.mjs from-script <script> <recording>`.
    Read the alignment report: lines not found and ad-libs are your call (drop with `tighten.drop`/`cut`).
    `broll` (automatic: cutaways to free-license photos of the places and things named, no key; review BROLL.md),
-   `stock` (PEXELS_API_KEY) and `pull` (yt-dlp, clips with a url) fill placeholders, then `build`.
+   `clips` (outside clips, fair use: finds and cuts a source for every `[[clip ... | search: | say:]]` cue and adds
+   3-8 s clips of the people and events named, in a box beside the speaker, credited; read CLIPS.md) and `stock`
+   (PEXELS_API_KEY) fill placeholders, then `build`. Write clip cues fearlessly, one every 60-90 s: no URL needed.
+   Real people and events get the actual footage (nothing generated or re-created); imagined things (an AI dystopia, a
+   future city) may come from movies or CGI; never a deepfake of a real person. **Flashbacks** (the creator's
+   signature, sparingly: 0-2 a video): `node longform.mjs echoes <plan> --studio` (or `--archive <their transcripts>`) finds
+   where they said the same thing, or the same idea, 3+ months before; `--pull n --apply` cuts it in with a rewind and the date. **Flash-forwards**
+   (just as rare): `[[future year: 2032 | place: ...]]` for a vision of the future.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
 5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).

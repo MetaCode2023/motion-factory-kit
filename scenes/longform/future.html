@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Future: a flash-forward to a regenerative city</title>
+<script src="../../brand.js"></script>
+<script src="../../kit/motion.js"></script>
+<script src="../../kit/fx.js"></script>
+<script src="lf.js"></script>
+</head>
+<body>
+<script>
+// A flash-forward: the picture leaps ahead in time (a white rush of light streaks) and lands on a drawn
+// regenerative city: terraced towers with gardens, wind turbines, solar roofs, a maglev gliding past, a river,
+// trees. A camcorder-style stamp says where and when ("FLASH FORWARD", "2032", "New Hope America").
+// A drawn vision of where things could go.
+// Data: year, place, caption (one line, optional), tag (an optional small corner line), file (optional: a video
+//       you made of the vision, e.g. ../../assets/visions/new-hope.mp4, shown instead of the drawn city),
+//       dur, style / color / tint
+const D = M.data({ dur: 4.5, year: '2032', place: 'New Hope America', caption: '', tag: '', file: '' });
+const th = LF.theme(D);
+const VID = D.file ? M.video(D.file, { audio: false }) : null;
+M.setup({ preset: 'youtube', duration: D.dur, background: '#06121A', draw, look: 'cinematic', motionBlur: LF.blur,
+  sfx: [{ at: 0, name: 'forward', volume: 0.55 }, { at: 0.95, name: 'tick', volume: 0.35 }] });
+
+const W = 1920, H = 1080, HORIZON = 700;
+const R = FX.rng(2032);
+const FAR = Array.from({ length: 22 }, (_, i) => ({ x: -120 + i * 98 + R() * 40, w: 56 + R() * 50, h: 110 + R() * 260, r: R() }));
+const NEAR = [[180, 150, 420], [420, 120, 300], [1330, 170, 470], [1600, 130, 340], [1830, 110, 260]].map(([x, w, h]) => ({ x, w, h }));
+const TURB = [[300, 470], [610, 430], [1150, 455], [1500, 420], [1760, 460]];
+const TREES = Array.from({ length: 34 }, (_, i) => ({ x: -40 + i * 60 + R() * 30, s: 34 + R() * 30, c: R() }));
+const BIRDS = Array.from({ length: 7 }, () => ({ x: R() * W, y: 160 + R() * 160, p: R() * 6 }));
+const GREEN = ['#5FD38D', '#3DB87A', '#8BE3A5'], GOLD = '#FFC96B';
+
+function sky(c, t) {
+  const g = c.createLinearGradient(0, 0, 0, HORIZON);
+  g.addColorStop(0, '#0E3A55'); g.addColorStop(0.55, '#2E7A8C'); g.addColorStop(1, '#F6C989');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const sun = c.createRadialGradient(1220, HORIZON - 120, 10, 1220, HORIZON - 120, 520);
+  sun.addColorStop(0, 'rgba(255,236,190,0.95)'); sun.addColorStop(0.15, 'rgba(255,214,140,0.55)'); sun.addColorStop(1, 'rgba(255,200,120,0)');
+  c.fillStyle = sun; c.fillRect(0, 0, W, H);
+}
+function tower(c, x, w, h, base, col, t, k) {
+  // A terraced tower: glass in steps, a garden on every ledge, solar on the roof.
+  const steps = 4, sh = h / steps;
+  for (let i = 0; i < steps; i++) {
+    const ww = w * (1 - i * 0.14), xx = x - ww / 2, yy = base - (i + 1) * sh;
+    c.fillStyle = col; M.roundRect(c, xx, yy, ww, sh + 2, 10); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.10)'; for (let wy = yy + 12; wy < yy + sh - 8; wy += 16) c.fillRect(xx + 8, wy, ww - 16, 5);
+    c.fillStyle = GREEN[(i + k) % 3]; M.roundRect(c, xx - 6, yy - 6, ww + 12, 12, 6); c.fill();   // the garden ledge
+    for (let j = 0; j < 4; j++) { c.beginPath(); c.arc(xx + 10 + j * (ww - 20) / 3, yy - 9, 8 + 3 * Math.sin(j + k), 0, Math.PI * 2); c.fill(); }
+  }
+  const top = base - h;
+  c.fillStyle = '#1B3550'; c.fillRect(x - w * 0.22, top - 12, w * 0.44, 10);
+  c.fillStyle = `rgba(160,220,255,${0.35 + 0.35 * LF.pulse(t, 2, k)})`; c.fillRect(x - w * 0.2, top - 11, w * 0.4, 4);   // solar glint
+}
+function turbine(c, x, y, t, s = 1) {
+  c.strokeStyle = 'rgba(240,248,255,0.9)'; c.lineWidth = 4 * s; c.beginPath(); c.moveTo(x, y); c.lineTo(x, HORIZON + 10); c.stroke();
+  c.save(); c.translate(x, y); c.rotate(t * 1.6 + x);
+  for (let i = 0; i < 3; i++) { c.rotate((Math.PI * 2) / 3); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(10 * s, -30 * s, 0, -70 * s); c.quadraticCurveTo(-4 * s, -30 * s, 0, 0); c.fillStyle = 'rgba(245,250,255,0.95)'; c.fill(); }
+  c.restore(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 5 * s, 0, Math.PI * 2); c.fill();
+}
+function city(c, t) {
+  sky(c, t);
+  const k = M.ease.inOutCubic(M.clamp(t / D.dur));
+  // birds
+  c.strokeStyle = 'rgba(20,40,50,0.6)'; c.lineWidth = 2.5;
+  for (const b of BIRDS) { const x = (b.x + t * 60) % (W + 100) - 50, y = b.y + 8 * Math.sin(t * 2 + b.p), f = 6 * Math.sin(t * 9 + b.p); c.beginPath(); c.moveTo(x - 12, y - f); c.quadraticCurveTo(x - 5, y - 4, x, y); c.quadraticCurveTo(x + 5, y - 4, x + 12, y - f); c.stroke(); }
+  // far skyline (slow)
+  c.save(); c.translate(-30 * k, 0);
+  for (const b of FAR) { c.fillStyle = `rgba(30,80,100,${0.35 + b.r * 0.2})`; M.roundRect(c, b.x, HORIZON - b.h, b.w, b.h, 16); c.fill(); c.fillStyle = 'rgba(110,210,150,0.35)'; c.fillRect(b.x - 3, HORIZON - b.h * 0.55, b.w + 6, 6); }
+  c.restore();
+  // turbines on the hills
+  c.save(); c.translate(-50 * k, 0); for (const [x, y] of TURB) turbine(c, x, y, t, 0.9); c.restore();
+  // land and river
+  const g = c.createLinearGradient(0, HORIZON, 0, H); g.addColorStop(0, '#2F6B4F'); g.addColorStop(1, '#173A2C');
+  c.fillStyle = g; c.fillRect(0, HORIZON, W, H - HORIZON);
+  c.fillStyle = 'rgba(140,210,230,0.55)'; c.beginPath(); c.moveTo(780, HORIZON); c.bezierCurveTo(900, 820, 600, 920, 820, H); c.lineTo(1180, H); c.bezierCurveTo(960, 930, 1180, 820, 860, HORIZON); c.fill();
+  // near towers (faster)
+  c.save(); c.translate(-90 * k, 0);
+  NEAR.forEach((b, i) => tower(c, b.x, b.w, b.h, HORIZON + 30, i % 2 ? '#2B5E7E' : '#24506C', t, i));
+  tower(c, 960, 210, 560, HORIZON + 30, '#2E6A8A', t, 7);   // the hero tower
+  c.restore();
+  // maglev on its rail
+  const rail = HORIZON + 70;
+  c.fillStyle = 'rgba(230,240,245,0.85)'; c.fillRect(0, rail, W, 7);
+  for (let x = 40; x < W; x += 160) c.fillRect(x, rail, 8, 60);
+  const tx = ((t * 520) % (W + 900)) - 700;
+  c.fillStyle = '#F4F8FA'; M.roundRect(c, tx, rail - 34, 640, 32, 16); c.fill();
+  c.fillStyle = 'rgba(30,90,120,0.8)'; for (let i = 0; i < 9; i++) c.fillRect(tx + 40 + i * 64, rail - 27, 40, 12);
+  // trees (fastest)
+  c.save(); c.translate(-150 * k, 0);
+  for (const tr of TREES) { const y = H - 60 - tr.s * 0.3; c.fillStyle = '#5A3B23'; c.fillRect(tr.x - 4, y, 8, 50); c.fillStyle = tr.c > 0.5 ? '#3FA867' : '#2F8F59'; c.beginPath(); c.arc(tr.x, y - tr.s * 0.4, tr.s, 0, Math.PI * 2); c.fill(); }
+  c.restore();
+  // drifting light
+  for (let i = 0; i < 40; i++) { const x = (i * 137 + t * 25) % W, y = 200 + ((i * 263 - t * 18) % 700 + 700) % 700, a = 0.25 * LF.pulse(t, 1.5, i); c.fillStyle = `rgba(255,240,200,${a})`; c.beginPath(); c.arc(x, y, 2 + (i % 3), 0, Math.PI * 2); c.fill(); }
+}
+function warp(c, t) {
+  // The leap forward: light streaks rushing out from the centre, fading as the city resolves.
+  const a = 1 - M.clamp(t / 0.7);
+  if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.strokeStyle = '#fff';
+  for (let i = 0; i < 90; i++) {
+    const ang = (i * 2.39996) % (Math.PI * 2), r0 = 80 + ((i * 53) % 200) + t * 1400, len = 120 + (i % 5) * 60;
+    c.lineWidth = 1 + (i % 3); c.beginPath(); c.moveTo(960 + Math.cos(ang) * r0, 540 + Math.sin(ang) * r0); c.lineTo(960 + Math.cos(ang) * (r0 + len), 540 + Math.sin(ang) * (r0 + len)); c.stroke();
+  }
+  c.fillStyle = `rgba(255,255,255,${Math.pow(a, 2)})`; c.fillRect(0, 0, W, H);
+  c.restore();
+}
+function stamp(c, t) {
+  const a = M.prog(t, 0.45, 0.35);
+  if (a <= 0) return;
+  c.save(); c.globalAlpha = a;
+  c.shadowColor = 'rgba(0,0,0,0.55)'; c.shadowBlur = 14;
+  c.fillStyle = '#FFFFFF';   // two play triangles, drawn (the glyph renders as an emoji)
+  for (const x of [64, 88]) { c.beginPath(); c.moveTo(x, 70); c.lineTo(x + 22, 82); c.lineTo(x, 94); c.closePath(); c.fill(); }
+  M.text(c, 'FLASH FORWARD', 124, 92, { font: `700 30px ${LF.F.mono}`, color: '#FFFFFF' });
+  // The year lands big, the place under it.
+  const y = M.prog(t, 0.9, 0.5);
+  if (y > 0) {
+    c.globalAlpha = a * y;
+    M.text(c, String(D.year), 960, 330 + 20 * (1 - y), { font: `800 190px ${LF.F.display}`, color: '#FFFFFF', align: 'center' });
+    M.text(c, String(D.place).toUpperCase(), 960, 410 + 20 * (1 - y), { font: `700 46px ${LF.F.mono}`, color: GOLD, align: 'center' });
+    if (D.caption) M.text(c, D.caption, 960, 480 + 20 * (1 - y), { font: `600 40px ${LF.F.display}`, color: '#FFFFFF', align: 'center' });
+  }
+  if (D.tag) { c.globalAlpha = a * 0.85; M.text(c, D.tag, 1856, 1030, { font: `600 22px ${LF.F.mono}`, color: '#FFFFFF', align: 'right' }); }
+  c.restore();
+}
+function draw(c, t) {
+  const end = LF.drift(c, t, D, { zoom: 0.06, x: 8, y: 4 });
+  if (VID) VID.draw(c, t, 0, 0, W, H, { zoom: 1.02 });
+  else city(c, t);
+  end();
+  // warm future bloom
+  const b = c.createRadialGradient(960, 420, 50, 960, 420, 1100); b.addColorStop(0, 'rgba(255,230,180,0.12)'); b.addColorStop(1, 'rgba(255,230,180,0)');
+  c.fillStyle = b; c.fillRect(0, 0, W, H);
+  LF.vignette(c, th, 0.35);
+  warp(c, t);
+  stamp(c, t);
+}
+</script>
+</body>
+</html>

@@ -219,6 +219,33 @@ const SFX = {
     }
     return fadeEdges(peakNorm(x, 0.7), 0.002, 0.004);
   },
+  // Tape rewinding: a fast chattering whine sweeping down with hiss, for a flashback (back in time).
+  rewind() {
+    const D = 0.75, x = buf(D), f = svf(), g = svf();
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / D;
+      ph += TAU * (2400 - 1900 * Math.pow(p, 0.6)) / SR;
+      const chatter = 0.55 + 0.45 * Math.sign(Math.sin(TAU * (38 - 22 * p) * t));   // the reels flutter
+      const whine = Math.sin(ph) * 0.35 + Math.sin(ph * 2.01) * 0.12;
+      const hiss = f(rand(), 3500 - 2200 * p, 1.1).bp * 0.6 + g(rand(), 900, 0.8).lp * 0.15;
+      x[n] = (whine + hiss) * chatter * Math.pow(Math.sin(Math.PI * Math.min(1, p * 1.15)), 0.6);
+    }
+    return fadeEdges(peakNorm(x, 0.6), 0.004, 0.06);
+  },
+  // Into the future: an airy rising sweep that blooms into a bright shimmer chord.
+  forward() {
+    const D = 1.1, x = buf(D), f = svf();
+    let ph = 0;
+    for (let n = 0; n < x.length; n++) {
+      const t = n / SR, p = t / D;
+      ph += TAU * (300 + 1500 * p * p) / SR;
+      const sweep = (f(rand(), 600 + 5000 * p * p, 1.3).bp * 0.7 + Math.sin(ph) * 0.18) * Math.pow(Math.min(1, p / 0.7), 2) * (p < 0.7 ? 1 : Math.max(0, 1 - (p - 0.7) / 0.3));
+      const bloom = t > 0.62 ? [76, 83, 88, 95].reduce((a, m, k) => a + Math.sin(TAU * midi(m) * (t - 0.62) + k) * 0.22, 0) * env(t - 0.62, 0.01, 0.35) : 0;
+      x[n] = sweep + bloom;
+    }
+    return fadeEdges(peakNorm(reverb(x, { mix: 0.3 }), 0.62), 0.004, 0.08);
+  },
   // Soft cash-register style "ka-ching" substitute: bright bell + click, for money moments.
   coin() {
     const x = buf(0.8);

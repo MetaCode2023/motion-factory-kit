@@ -76,7 +76,7 @@ export function premiereXML(R, plan, { accent } = {}) {
     const links = `<link><linkclipref>${vid}</linkclipref><mediatype>video</mediatype><trackindex>1</trackindex><clipindex>${k + 1}</clipindex></link>` +
       (clip.hasAudio ? `<link><linkclipref>${aid}</linkclipref><mediatype>audio</mediatype><trackindex>1</trackindex><clipindex>${k + 1}</clipindex><groupindex>1</groupindex></link>` : '');
     v1.push(item({ name: `${c.clip} ${c.s.toFixed(1)}s`, path: clip.file, start, end, srcIn: c.s, filters: motion(sc, c.zoom > 1 ? cx : 0, c.zoom > 1 ? cy : 0), links }).xml);
-    if (clip.hasAudio) a1.push(item({ name: `${c.clip} ${c.s.toFixed(1)}s`, path: clip.file, start, end, srcIn: c.s, kind: 'audio', links }).xml);
+    if (clip.hasAudio && !c.bridge) a1.push(item({ name: `${c.clip} ${c.s.toFixed(1)}s`, path: clip.file, start, end, srcIn: c.s, kind: 'audio', links }).xml);
   });
 
   // V2: inserts. Library B-roll points at the original file; everything else at its rendered clip in media/.

@@ -16,6 +16,8 @@
 //   node longform.mjs build edits/longform/x.json # preview MP4 + Premiere XML + captions + chapters + report
 //   node longform.mjs demo [podcast]              # the whole thing on bundled stand-in footage, no keys
 //   node longform.mjs pull <plan>                 # fetch pulls that have a url + from/to (needs yt-dlp)
+//   node longform.mjs clips <plan> [--dry]        # outside clips: find + cut the moments for clip cues and names said (yt-dlp)
+//   node longform.mjs echoes <plan> [--archive d] [--studio] # flashbacks: where you said the same thing before; --pull n --apply splices one in
 //
 //   Around the video:
 //   node longform.mjs doctor                      # is this machine set up? what's missing and how to fix it
@@ -31,6 +33,8 @@ import { IDX, index, libDir, loadLibrary, search } from './tools/longform/librar
 import { build, check, remix } from './tools/longform/build.mjs';
 import { pull, stock } from './tools/longform/stock.mjs';
 import { autoBroll } from './tools/broll/index.mjs';
+import { findClips } from './tools/clips/index.mjs';
+import { echoes, pullEcho } from './tools/longform/echoes.mjs';
 import { loadPlan, resolveAt, resolvePlan } from './tools/longform/plan.mjs';
 import { doctor, feedback, shorts, thumbnails, voicePace, voiceProfile } from './tools/longform/extras.mjs';
 import { lintScript, planFromScript, readingCopy, tryScenes } from './tools/longform/script.mjs';
@@ -164,6 +168,31 @@ try {
       (r.problems || []).slice(0, 12).forEach((p) => console.log('  ! ' + p));
     }
     emit(r);
+  } else if (cmd === 'clips') {
+    // Outside clips (fair use): a source for every clip cue, plus the people and events named in the talk.
+    const plan = loadPlan(args[0]);
+    if (rest.includes('--no-auto')) plan.auto_clips = false;   // only fill the script's clip cues
+    const R = resolvePlan(plan, undefined, { autoBroll: false, clips: false });
+    if (R.errors.length) throw new Error(`fix the plan first:\n  ${R.errors.join('\n  ')}`);
+    R.resolveAt = (f) => { try { return resolveAt(f, R.cuts, R.lib, 'auto_clips.force'); } catch { return null; } };
+    const r = await findClips(plan, R, { dry: rest.includes('--dry'), log });
+    if (!json) {
+      console.log(`${r.clips} clip(s), ${r.ready} ready (${r.pulled} new)\n-> ${relative(ROOT, r.report)}\n-> ${relative(ROOT, r.lock)}`);
+      r.problems.slice(0, 12).forEach((p) => console.log('  ! ' + p));
+    }
+    emit(r);
+  } else if (cmd === 'echoes') {
+    // Flashbacks: where the speaker said the same thing before (other recordings, or an archive of past transcripts).
+    const opt = (k) => { const i = rest.indexOf(k); return i >= 0 ? rest[i + 1] : null; };
+    if (opt('--pull')) {
+      const r = await pullEcho(args[0], Number(opt('--pull')), { apply: rest.includes('--apply'), log });
+      if (!json) console.log(`a_roll item:\n  ${JSON.stringify(r.item)}${r.applied ? '' : '\n(add --apply to splice it into the plan after the sentence it echoes)'}`);
+      emit(r);
+    } else {
+      const r = await echoes(args[0], { archive: opt('--archive'), studio: rest.includes('--studio'), top: Number(opt('--top') || 5), older: Number(opt('--older') || 90), log });
+      if (!json) { r.items.slice(0, 5).forEach((i) => console.log(`  ${i.n}. ${i.score}  ${i.then.date || 'undated'}  "${i.then.text.slice(0, 90)}"`)); console.log(`${r.echoes} echo(es) -> ${relative(ROOT, r.report)}`); }
+      emit(r);
+    }
   } else if (cmd === 'stock' || cmd === 'pull') {
     const r = await (cmd === 'stock' ? stock : pull)(args[0], { log });
     if (!json) (r.skipped || []).forEach((f) => console.log('skipped ' + f));
@@ -222,6 +251,8 @@ function readmeUsage() {
   node longform.mjs stock <plan.json>  download stock B-roll for "stock" inserts (PEXELS_API_KEY)
   node longform.mjs build <plan.json>  build the video, Premiere XML, captions, chapters, report
   node longform.mjs pull <plan.json>   fetch pulls with a url + from/to (yt-dlp)
+  node longform.mjs clips <plan.json>  find and cut outside clips: clip cues + people/events named (yt-dlp; --dry)
+  node longform.mjs echoes <plan.json> [--archive dir]   where you said the same thing before (flashbacks); --pull n [--apply]
   node longform.mjs demo [podcast]     run it all on bundled stand-in footage
   node longform.mjs voice [clip ids]   measure how the creator talks -> scripts/VOICE.md
   node longform.mjs doctor             check this machine is set up
