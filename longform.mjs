@@ -189,7 +189,7 @@ try {
       if (!json) console.log(`a_roll item:\n  ${JSON.stringify(r.item)}${r.applied ? '' : '\n(add --apply to splice it into the plan after the sentence it echoes)'}`);
       emit(r);
     } else {
-      const r = await echoes(args[0], { archive: opt('--archive'), top: Number(opt('--top') || 12), older: Number(opt('--older') || 60), log });
+      const r = await echoes(args[0], { archive: opt('--archive'), top: Number(opt('--top') || 5), older: Number(opt('--older') || 90), log });
       if (!json) { r.items.slice(0, 5).forEach((i) => console.log(`  ${i.n}. ${i.score}  ${i.then.date || 'undated'}  "${i.then.text.slice(0, 90)}"`)); console.log(`${r.echoes} echo(es) -> ${relative(ROOT, r.report)}`); }
       emit(r);
     }

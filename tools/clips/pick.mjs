@@ -27,18 +27,28 @@ const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9$' ]+/g, ' '
 // "crashes" ~ "crash", "falling" ~ "fall": enough stemming to match titles and captions.
 const stem = (w) => (w.length > 4 ? w.replace(/(ing|ed|es|s)$/, '') : w);
 
-// Real footage only. Anything that says it's generated, faked, recreated or reimagined is out: a pulled clip is
-// evidence, and evidence can't be synthetic. (A vision of the future is made on purpose and labelled; see the
-// `future` scene.)
-export const SYNTHETIC = /\b(a\.?i\.?[- ]?(generated|made|created|video|videos|animation|animated|art|film|movie|short|recreat\w*|restor\w*|enhanc\w*|upscal\w*|colori[sz]\w*|voice|cover|version)|generated (with|by|using) a\.?i|made (with|by|using) a\.?i|deep ?fakes?|face ?swap\w*|sora|veo ?\d?|runway ?(ml|gen)|gen-?[234]\b|kling|midjourney|pika ?(labs)?|hailuo|minimax video|luma (ai|dream)|dream machine|stable (diffusion|video)|synthetic|re-?creation|re-?created|re-?enact\w*|reimagin\w*|what if\b|fan ?made|parody|spoof|satire|fake (video|footage|speech|clip)|not real|cgi (recreation|version)|speech synthesi[sz]\w*|synthesi[sz]ed (voice|speech)|text[- ]to[- ](speech|video)|tts|voice ?clon\w*|cloned voice|copypasta|impressions?|impersonat\w*|sketch|skit|snl|saturday night live|key (&|and) peele|meme|cgi|3d (render\w*|animation)|rendered|render|concept (art|video)|visuali[sz]ation|sci-?fi|ambient)\b/i;
+// What's allowed depends on what the clip is for. A real person or a real event (JFK at Rice, a WWII landing, a
+// famous hand) needs the actual footage: nothing generated, re-created, CGI or staged. An imagined thing (a
+// Terminator-style AI dystopia, a future city, a movie moment) is fine from a film, CGI or animation: movies are
+// made of that. Faking a real person (deepfakes, face swaps, voice clones, impressions) is never fine.
+export const FAKE_PERSON = /\b(deep ?fakes?|face ?swap\w*|voice ?clon\w*|cloned voice|impersonat\w*|impressions?)\b/i;
+export const SYNTHETIC = /\b(a\.?i\.?[- ]?(generated|made|created|video|videos|animation|animated|art|film|movie|short|recreat\w*|restor\w*|enhanc\w*|upscal\w*|colori[sz]\w*|voice|cover|version)|generated (with|by|using) a\.?i|made (with|by|using) a\.?i|sora|veo ?\d?|runway ?(ml|gen)|gen-?[234]\b|kling|midjourney|pika ?(labs)?|hailuo|minimax video|luma (ai|dream)|dream machine|stable (diffusion|video)|synthetic|re-?creation|re-?created|re-?enact\w*|reimagin\w*|what if\b|fan ?made|parody|spoof|satire|fake (video|footage|speech|clip)|not real|cgi (recreation|version)|speech synthesi[sz]\w*|synthesi[sz]ed (voice|speech)|text[- ]to[- ](speech|video)|tts|copypasta|sketch|skit|snl|saturday night live|key (&|and) peele|meme|cgi|3d (render\w*|animation)|rendered|render|concept (art|video)|visuali[sz]ation|sci-?fi|ambient)\b/i;
+// Searches for something imagined rather than something that happened.
+export const IMAGINED = /\b(movies?|films?|trailer|sci-?fi|science fiction|dystopi\w*|utopi\w*|futuristic|future (city|world|cities)|cyberpunk|solarpunk|fantasy|terminator|skynet|matrix|blade runner|robot (uprising|army|war)|killer robots?|aliens?|spaceships?|starships?|apocalyp\w*|animation|animated|cartoon|anime|cgi|vfx|imagined|ambient)\b/i;
 export const OFFICIAL = /\b(official|archives?|library|libraries|museum|university|college|institute|nasa|esa|c-?span|pbs|bbc|reuters|associated press|ap archive|nbc|cbs|abc news|cnn|fox news|sky news|bloomberg|cnbc|the guardian|new york times|nytimes|washington post|wsj|wall street journal|british path[eé]|path[eé]|national geographic|smithsonian|white house|united nations|\bun\b|ted|tedx|world economic forum|nobel|history channel|periscope films|critical past|nara)\b/i;
 const GEN_ERA = Date.UTC(2023, 0, 1) / 1000;   // before this, video generators couldn't fake a real event
 
-/** Why a video looks synthetic, or '' if it doesn't. Checks title, channel, description and tags. */
-export function syntheticWhy(v, query = '') {
+/** Does this clip have to be the real thing? `real` (true/false on the cue) decides; else the search does. */
+export const wantsReal = (query = '', real = null) => (real === true || real === false ? real : !IMAGINED.test(query));
+
+/** Why a video can't be used for this search, or '' if it can. Checks title, channel, description and tags. */
+export function syntheticWhy(v, query = '', { real = null } = {}) {
   const text = [v.title, v.channel || v.uploader, v.description, ...(v.tags || [])].filter(Boolean).join(' \n ');
+  const f = text.match(FAKE_PERSON);
+  if (f) return `fakes a real person ("${f[0]}")`;
+  if (!wantsReal(query, real)) return '';
   const m = text.match(SYNTHETIC);
-  if (m) return `looks generated or staged ("${m[0]}")`;
+  if (m) return `looks generated or staged, and this should be the real thing ("${m[0]}")`;
   // "AI" in the title of footage that should be real is too risky, unless the search itself is about AI.
   if (/\bA\.?I\.?(?![a-z])/.test(v.title || '') && !/\b(ai|a\.i\.|artificial intelligence)\b/i.test(query)) return 'says "AI" in the title';
   return '';
@@ -46,10 +56,11 @@ export function syntheticWhy(v, query = '') {
 
 /**
  * rankVideos(entries, query, { exclude, need }) -> entries sorted best first, each with `score` and `why`.
+ * real: true/false forces the real-footage check on or off (default: from the search, see wantsReal).
  * entries: yt-dlp flat search results ({ id, title, duration, view_count, channel, live_status, url }).
  * Order of what counts: on topic, then real (verified/official/older), then popular.
  */
-export function rankVideos(entries, query, { exclude = [], need = 4 } = {}) {
+export function rankVideos(entries, query, { exclude = [], need = 4, real = null } = {}) {
   const q = new Set(words(query));
   const ex = exclude.map((x) => String(x).toLowerCase());
   const out = [];
@@ -62,17 +73,19 @@ export function rankVideos(entries, query, { exclude = [], need = 4 } = {}) {
     if (e.duration && e.duration < need + 6) { skip('too short to cut from'); continue; }
     if (e.duration && e.duration > 4 * 3600) { skip('over 4 hours'); continue; }
     if (ex.some((x) => ch.toLowerCase().includes(x) || title.toLowerCase().includes(x))) { skip('excluded channel'); continue; }
-    const fake = syntheticWhy(e, query);
+    const fake = syntheticWhy(e, query, { real });
     if (fake) { skip(fake); continue; }
     const t = new Set(words(title + ' ' + ch).map(stem));
     const hit = [...q].filter((w) => t.has(stem(w))).length / Math.max(1, q.size);
     const views = Math.log10((e.view_count || 0) + 10);
     const verified = e.channel_is_verified ? 1.5 : 0, official = OFFICIAL.test(ch) ? 1.5 : 0;
     const old = e.timestamp && e.timestamp < GEN_ERA ? 0.5 : 0;
+    // Allowed for an imagined thing, but the real movie still beats an AI-made remix of it.
+    const gen = !wantsReal(query, real) && (SYNTHETIC.test(title + ' ' + ch) || /\bA\.?I\.?(?![a-z])/.test(title + ' ' + ch)) ? 2 : 0;
     // On topic first (a popular video about the wrong thing is worse than a smaller one about the right thing),
     // then real sources, then views.
-    const score = +(hit * 8 + verified + official + old + views * 0.6).toFixed(3);
-    out.push({ ...e, score, why: [`${Math.round(hit * 100)}% of the search in the title`, verified && 'verified channel', official && 'official source', old && 'uploaded before 2023', `${e.view_count ?? '?'} views`].filter(Boolean).join(', ') });
+    const score = +(hit * 8 + verified + official + old + views * 0.6 - gen).toFixed(3);
+    out.push({ ...e, score, why: [`${Math.round(hit * 100)}% of the search in the title`, verified && 'verified channel', official && 'official source', old && 'uploaded before 2023', gen && 'made with AI or CGI (allowed here, ranked lower)', `${e.view_count ?? '?'} views`].filter(Boolean).join(', ') });
   }
   return out.sort((a, b) => b.score - a.score);
 }

@@ -2,7 +2,7 @@
 // flashback ("a year ago I put it like this..."). The new recording's sentences are matched against the rest of
 // the footage library and, optionally, an archive of their past transcripts (every YouTube video they've made).
 //
-//   node longform.mjs echoes edits/longform/x.json [--archive <dir>] [--top 12]
+//   node longform.mjs echoes edits/longform/x.json [--archive <dir>] [--top 5] [--older 90]
 //   node longform.mjs echoes edits/longform/x.json --pull 3 [--apply]
 //
 // The first form writes out/longform/<name>/ECHOES.md: each match with the date, the source, both quotes and a
@@ -87,7 +87,7 @@ const echoesFile = (plan) => join(ROOT, 'out', 'longform', plan.name, 'echoes.js
 
 const days = (a, b) => (Date.parse(a) - Date.parse(b)) / 864e5;
 
-export async function echoes(planFile, { archive = null, top = 12, min = 0.45, older = 60, log = console.log } = {}) {
+export async function echoes(planFile, { archive = null, top = 5, min = 0.45, older = 90, log = console.log } = {}) {
   const plan = loadPlan(planFile), lib = loadLibrary();
   const R = resolvePlan(plan, lib, { autoBroll: false, clips: false });
   if (R.errors.length) throw new Error(`fix the plan first:\n  ${R.errors.join('\n  ')}`);
@@ -120,7 +120,9 @@ export async function echoes(planFile, { archive = null, top = 12, min = 0.45, o
   const skip = (c) => !c.date || days(nowDate, c.date) < older;
   const found = [], taken = new Set();
   for (const s of now) for (const r of idx.score(s.text, { min, shared: 4, limit: 3, skip })) found.push({ now: s, ...r });
-  found.sort((a, b) => b.score - a.score);
+  // Further back reads better ("two years ago I said..."): a small lift for age, up to two years.
+  const lift = (f) => f.score * (1 + 0.12 * Math.min(2, days(nowDate, f.chunk.date) / 365));
+  found.sort((a, b) => lift(b) - lift(a));
   const list = [];
   for (const f of found) {
     const key = f.chunk.source === 'archive' ? `${f.chunk.video}@${Math.round(f.chunk.start)}` : `${f.chunk.clip}#${f.chunk.n}`;
@@ -134,7 +136,7 @@ export async function echoes(planFile, { archive = null, top = 12, min = 0.45, o
   mkdirSync(outDir, { recursive: true });
   writeFileSync(echoesFile(plan), JSON.stringify({ plan: relative(ROOT, plan._file), archive, items }, null, 2));
   const md = [`# Echoes: ${plan.title || plan.name}`, '',
-    `Moments where you said the same thing before (at least ${older} days before ${nowDate}). The best ones make a flashback: \`node longform.mjs echoes <plan> --pull <n> --apply\``,
+    `Moments where you said the same thing before (at least ${older} days before ${nowDate}). A flashback is a spice: one, two at most, and only where it lands; plenty of videos need none. \`node longform.mjs echoes <plan> --pull <n> --apply\``,
     'cuts it in right after the sentence it echoes (rewind, the old clip with its date, back to now).', '',
     ...items.flatMap((i) => [`## ${i.n}. ${i.then.date ? dateLabel(i.then.date) : 'undated'} · score ${i.score}`, '',
       `**Now (${fmt(i.now.at)}):** "${i.now.text}"`, '',

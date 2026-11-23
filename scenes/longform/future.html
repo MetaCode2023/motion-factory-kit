@@ -13,11 +13,11 @@
 // A flash-forward: the picture leaps ahead in time (a white rush of light streaks) and lands on a drawn
 // regenerative city: terraced towers with gardens, wind turbines, solar roofs, a maglev gliding past, a river,
 // trees. A camcorder-style stamp says where and when ("FLASH FORWARD", "2032", "New Hope America").
-// It is a vision, not footage, and says so on screen ("A VISION · NOT FOOTAGE"); pulled clips are always real.
-// Data: year, place, caption (one line, optional), tag (the honesty line; "" to hide), file (optional: a video
+// A drawn vision of where things could go.
+// Data: year, place, caption (one line, optional), tag (an optional small corner line), file (optional: a video
 //       you made of the vision, e.g. ../../assets/visions/new-hope.mp4, shown instead of the drawn city),
 //       dur, style / color / tint
-const D = M.data({ dur: 4.5, year: '2032', place: 'New Hope America', caption: '', tag: 'A VISION · NOT FOOTAGE', file: '' });
+const D = M.data({ dur: 4.5, year: '2032', place: 'New Hope America', caption: '', tag: '', file: '' });
 const th = LF.theme(D);
 const VID = D.file ? M.video(D.file, { audio: false }) : null;
 M.setup({ preset: 'youtube', duration: D.dur, background: '#06121A', draw, look: 'cinematic', motionBlur: LF.blur,

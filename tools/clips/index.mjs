@@ -164,7 +164,7 @@ export async function findClips(plan, R, { dry = false, log = console.log, outDi
   for (const ins of R.inserts) {
     if (!ins.outsideClip || ins.autoBroll || ins.stock || ins.src?.url) continue;   // a cue with its own url is left alone
     const prev = old.get(ins.id) || {};
-    entries.push({ ...prev, id: ins.id, source: 'plan', said: ins.title, query: prev.query_set_by_hand ? prev.query : (ins.search || ins.title), say: prev.say ?? ins.src?.say ?? '',
+    entries.push({ ...prev, id: ins.id, source: 'plan', said: ins.title, query: prev.query_set_by_hand ? prev.query : (ins.search || ins.title), say: prev.say ?? ins.src?.say ?? '', real: prev.real ?? ins.src?.real ?? null,
       dur: +Math.min(HARD_MAX, ins.dur).toFixed(2), status: prev.status || 'auto', at_out: +ins.at.toFixed(2) });
   }
   // 2. names in the talk
@@ -204,18 +204,18 @@ export async function findClips(plan, R, { dry = false, log = console.log, outDi
         if (!id) throw new Error(`can't read a YouTube id from ${e.url}`);
         v = videoInfo(id);
       } else {
-        const ranked = rankVideos(searchVideos(e.query), e.query, { exclude: o.exclude, need: e.dur }).filter((x) => x.score >= 0 && !used.has(x.id));
+        const ranked = rankVideos(searchVideos(e.query), e.query, { exclude: o.exclude, need: e.dur, real: e.real }).filter((x) => x.score >= 0 && !used.has(x.id));
         const pick = ranked[Math.max(0, (e.pick || 1) - 1)];
         if (!pick) { e.why = `no usable video for "${e.query}"`; problems.push(`${e.said}: ${e.why}`); continue; }
         // The full page can still give it away (description, tags): generated, age-gated or vertical -> the next one.
         v = null;
         for (const cand of ranked.slice(Math.max(0, (e.pick || 1) - 1), Math.max(0, (e.pick || 1) - 1) + 4)) {
           const info = videoInfo(cand.id);
-          const no = syntheticWhy(info, e.query) || (info.age_limit >= 18 && 'age-gated') || (info.width && info.height && info.width < info.height && 'vertical');
+          const no = syntheticWhy(info, e.query, { real: e.real }) || (info.age_limit >= 18 && 'age-gated') || (info.width && info.height && info.width < info.height && 'vertical');
           if (no) { log(`  passed over "${info.title}": ${no}`); continue; }
           v = info; break;
         }
-        if (!v) { e.why = `no real, usable video for "${e.query}"`; problems.push(`${e.said}: ${e.why}`); continue; }
+        if (!v) { e.why = `no usable video for "${e.query}"`; problems.push(`${e.said}: ${e.why}`); continue; }
         alts = ranked.filter((x) => x.id !== v.id).slice(0, 3).map((x) => ({ id: x.id, title: x.title, channel: x.channel, views: x.view_count }));
       }
       used.add(v.id);

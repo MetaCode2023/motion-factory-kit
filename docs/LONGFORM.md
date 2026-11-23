@@ -372,10 +372,14 @@ node longform.mjs clips edits/longform/x.json [--dry] [--no-auto]
    `say:` words are spoken in its captions; else where a chapter title or the captions describe what the cue says it
    shows ("he falls off the bike"); only then the video's **most-replayed moment** (YouTube's heatmap), which is
    usually the famous bit when the video is about one thing; else a third of the way in.
-   **Real footage only.** A pulled clip is evidence, so nothing generated, deepfaked, re-created, reimagined, CGI,
-   comedy impressions or voice clones (title, description and tags are checked; "AI" in the title is out unless the
-   search is about AI). Verified channels and official sources (archives, libraries, NASA, universities, news) rank
-   higher, and so do uploads from before 2023, when real events couldn't be faked convincingly.
+   **Real when it has to be real.** It depends on what the clip is for. A real person or event (JFK at Rice, WWII
+   footage, a famous hand) must be the actual footage: nothing generated, re-created, reimagined, CGI or staged
+   (title, description and tags are checked; "AI" in the title is out unless the search is about AI). Something
+   imagined (a Terminator-style AI dystopia, a future city, a movie moment) can come from films, CGI or animation;
+   the search words decide (`movie`, `sci-fi`, `dystopia`, `futuristic`, `animated`...), and `real: yes|no` on the
+   cue overrides. Faking a real person (deepfakes, face swaps, voice clones, impressions) is never used. Verified
+   channels and official sources (archives, libraries, NASA, universities, news) rank higher, and so do uploads from
+   before 2023, when real events couldn't be faked convincingly.
 2. **Names said get clips too.** The people and events the speaker names ("Phil Ivey", "Tom Dwan") get a 3-8 s clip
    in a box beside them (layout `side`), in the gaps between the plan's own visuals, at most one per 40 s. Two names
    in one sentence make one search. `--no-auto` fills only the cues.
@@ -418,20 +422,23 @@ thing, with the date on screen; then a flash and you're back. An `a_roll` item w
 
 **Finding them: `node longform.mjs echoes <plan> [--archive <dir>]`** matches every sentence of the new recording
 against the other recordings in the library and, with `--archive`, every past transcript (the Librarian's YouTube
-export: `<base>.transcript.json` + `<base>.info.json`; ~400k passages search in seconds). Only moments at least 60
-days older count (`--older`; the plan's `"date"` or the clip's file date is "now"). `ECHOES.md` lists each one: date,
+export: `<base>.transcript.json` + `<base>.info.json`; ~400k passages search in seconds). Only moments at least 3 months
+older count (`--older 90`, in days; the plan's `"date"` or the clip's file date is "now"), and a year or two back ranks a
+little higher. `ECHOES.md` lists the top 5: date,
 both quotes, a link. `--pull n --apply` cuts echo n from YouTube into the library, trims it to exactly the passage, and
 splices it into the plan right after the sentence it echoes. Matching is by shared words (it finds the times you said
 it nearly the same way, the strongest flashbacks); the same idea in completely different words needs the studio's
 semantic search.
 
+**Use them sparingly.** A flashback is a spice: one, two at most, only where it really lands (the same idea, said a
+year or two ago, that the new take builds on). Plenty of videos need none. The same goes for flash-forwards.
+
 ## Flash-forwards
 
 `[[future year: 2032 | place: New Hope America | caption: ...]]`: a leap ahead (a rush of light, a rising sweep) to a
 drawn regenerative city (terraced garden towers, wind, solar, a maglev, a river) under `▶▶ FLASH FORWARD`, the year
-and the place. It says `A VISION · NOT FOOTAGE` in the corner (`tag: ""` hides it). To show a video of the vision you
-made instead (e.g. generated with Higgsfield), `file: ../../assets/visions/new-hope.mp4`. A vision is made, never
-pulled: the clip finder refuses generated footage.
+and the place (`tag: ...` adds a small corner line if you want one). To show a video of the vision instead (e.g.
+generated with Higgsfield, or a pulled clip), `file: ../../assets/visions/new-hope.mp4`.
 
 ## What it doesn't do (yet)
 

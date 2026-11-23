@@ -73,10 +73,12 @@ Use them fearlessly, the fair-use way: a few seconds, talked over, credited.
   channel" label, and CREDITS.md has the line for the description.
 - **The creator checks, not hunts:** CLIPS.md links every pick to its exact second. Drop or swap any in the
   lockfile (`"status": "drop"`, `"pick": 2`, a new `"query"`), rerun `clips`, rebuild.
-- **Real footage only.** A clip is evidence: never generated, deepfaked, re-created or a comedy impression. The finder
-  refuses those and prefers verified and official sources. A vision of the future is made (`future` scene) and says so.
-- **Flashbacks** are the signature move: once or twice a video, where the creator said the same thing a year ago
-  (`node longform.mjs echoes`), rewind to it with the date on screen.
+- **Real when it has to be real.** A real person or event needs the actual footage, never generated, re-created or
+  staged. Something imagined (an AI dystopia, a future city) can come from movies, CGI or animation. Faking a real
+  person (deepfakes, voice clones, impressions) is never used. Judge by what the clip is for, not a blanket rule.
+- **Flashbacks** are the signature move, used sparingly: one or two in a video at most, many videos none. Reach back
+  3 months to 2 years, to where the creator said the same thing (`node longform.mjs echoes`), rewind to it with the
+  date on screen. Flash-forwards (`future` scene) are just as rare.
 - **Don't use:** music videos or songs (the music gets claimed), full scenes from films and TV, another creator's
   video as the backbone of this one, private people in distress, or footage whose source can't be identified.
 

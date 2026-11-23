@@ -80,7 +80,7 @@ test('archive transcripts become sentence-sized passages with their video, date 
   assert.ok(!ch[0].text.includes('&gt;') && !ch[0].text.includes('>>'), 'caption markers cleaned');
 });
 
-test('real footage only: generated, deepfaked, staged or "AI" videos are never pulled as evidence', () => {
+test('real when it has to be real: real events refuse generated or staged footage; imagined things may use movies and CGI', () => {
   for (const title of ['JFK speech but AI generated', 'Obama deepfake goes viral', 'Moon landing recreation 4K', 'City of the future (Sora)', 'MLK speech reimagined',
     'JFK reads copypasta (speech synthesis)', 'Key & Peele - Obama meet and greet', 'Future City Utopia 4K | Sci-Fi Ambient', 'Mars colony CGI animation', 'This AI made a movie'])
     assert.ok(syntheticWhy({ title }), title);
@@ -88,6 +88,13 @@ test('real footage only: generated, deepfaked, staged or "AI" videos are never p
   assert.equal(syntheticWhy({ title: 'How AI is changing Hollywood' }, 'AI Hollywood news'), '', 'fine when the search is about AI');
   for (const title of ['JFK at Rice University, Sept. 12, 1962 - "We choose to go to the Moon"', 'Martin Luther King Jr. I Have A Dream Speech', 'Tom Dwan vs Phil Ivey CRAZY BLUFF! | High Stakes Poker'])
     assert.equal(syntheticWhy({ title }), '', title);
+  // Imagined things: movies, CGI and sci-fi are fine. Faking a real person never is.
+  assert.equal(syntheticWhy({ title: 'Terminator 2 - Skynet nuclear war scene (CGI)' }, 'Terminator AI dystopia movie scene'), '');
+  assert.equal(syntheticWhy({ title: 'Future City Utopia 4K | Sci-Fi Ambient' }, 'futuristic solarpunk city'), '');
+  assert.ok(syntheticWhy({ title: 'Obama deepfake goes viral' }, 'AI dystopia movie'), 'a deepfake is out whatever the search');
+  assert.ok(syntheticWhy({ title: 'Mars colony CGI animation' }, 'Mars colony', { real: true }), 'real: yes on the cue forces it');
+  assert.equal(syntheticWhy({ title: 'Normandy landing reimagined' }, 'Normandy landing', { real: false }), '', 'real: no relaxes it');
+  assert.ok(syntheticWhy({ title: 'D-Day landing CGI recreation' }, 'World War II D-Day landing footage'), 'history stays real');
   const r = rankVideos([
     { id: 'fan', title: 'We choose to go to the moon JFK speech', channel: 'Random Uploads', duration: 900, view_count: 900000 },
     { id: 'lib', title: 'We choose to go to the moon JFK speech', channel: 'JFK Library', channel_is_verified: true, duration: 1060, view_count: 150000, timestamp: 1400000000 },

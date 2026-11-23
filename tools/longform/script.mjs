@@ -12,7 +12,7 @@
 //   stat compare steps term quote bars superposition collapse deception ...  any scenes/longform/<name>.html
 //   anim <scene path> | ...            any scene file
 //   stock <search>                     free stock footage (Pexels) for this moment
-//   clip <title> | search: | say: | url: | from: | to:   a clip from elsewhere (`node longform.mjs clips` finds it)
+//   clip <title> | search: | say: | real: yes|no | url: | from: | to:   a clip from elsewhere (`node longform.mjs clips` finds it)
 //   broll <library clip> | from:       their own footage;  image <file>
 //   face                               back to the speaker here (ends the previous visual)
 //   music <track> [volume]             music from here;  sfx <name>   one effect on the next word
@@ -302,7 +302,7 @@ export function planFromScript(text, clip, { name } = {}) {
     }
     if (c.kind === 'anim') plan.inserts.push({ id, kind: 'animation', scene: c.scene, data: c.data, ...(Object.keys(marks).length ? { marks } : {}), dur, ...(c.opts.max_dur ? { max_dur: c.opts.max_dur } : {}), ...common });
     else if (c.kind === 'stock') plan.inserts.push({ id, kind: 'broll', stock: c.arg || c.data.search, dur, ...common });
-    else if (c.kind === 'clip') plan.inserts.push({ id, kind: 'pull', title: c.arg || c.data.title, search: c.data.search || c.arg, url: c.data.url, from: c.data.from, to: c.data.to, ...(c.data.say ? { say: c.data.say } : {}), ...(c.data.audio ? { audio: Number(c.data.audio) } : {}), dur, ...common });
+    else if (c.kind === 'clip') plan.inserts.push({ id, kind: 'pull', title: c.arg || c.data.title, search: c.data.search || c.arg, url: c.data.url, from: c.data.from, to: c.data.to, ...(c.data.say ? { say: c.data.say } : {}), ...(c.data.real ? { real: !/^(no|false|0)$/i.test(c.data.real) } : {}), ...(c.data.audio ? { audio: Number(c.data.audio) } : {}), dur, ...common });
     else if (c.kind === 'broll') plan.inserts.push({ id, kind: 'broll', clip: c.arg || c.data.clip, from: c.data.from, dur, ...common });
     else if (c.kind === 'image') plan.inserts.push({ id, kind: 'image', file: c.arg || c.data.file, dur, ...common });
     else if (c.kind === 'face') plan.inserts.push({ id, kind: 'face', ...common, offset: 0 });
