@@ -45,7 +45,8 @@ const pickKeys = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] != null
 
 // Output time -> a source anchor ("clip@12.345") that survives re-cuts of the plan.
 function toAnchor(cuts, t) {
-  const c = cuts.find((x) => t >= x.out - 1e-3 && t < x.out + x.d + 1e-3) || cuts[cuts.length - 1];
+  const real = cuts.filter((x) => !x.bridge);
+  const c = real.find((x) => t >= x.out - 1e-3 && t < x.out + x.d + 1e-3) || real.find((x) => x.out >= t) || real[real.length - 1];
   return `${c.clip}@${(c.s + Math.max(0, t - c.out)).toFixed(3)}`;
 }
 

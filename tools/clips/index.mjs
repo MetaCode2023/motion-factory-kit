@@ -22,7 +22,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, wri
 import { join, relative, resolve } from 'node:path';
 import { FF, ROOT, bare, fmt, probe } from '../longform/common.mjs';
 import { placeBroll } from '../broll/place.mjs';
-import { CLIP, HARD_MAX, clipMoments, creditLine, mmss, parseVtt, pickWindow, rankVideos, sourceLabel } from './pick.mjs';
+import { CLIP, HARD_MAX, clipMoments, creditLine, mmss, parseVtt, pickWindow, rankVideos, sourceLabel, syntheticWhy } from './pick.mjs';
 
 export const clipsLockPath = (plan) => plan._file.replace(/\.json$/, '') + '.clips.lock.json';
 const CACHE = () => join(ROOT, 'assets', 'broll', '.cache', 'clips');
@@ -78,7 +78,8 @@ export function videoInfo(id) {
   return cached(`info-${id}.json`, () => {
     const d = JSON.parse(yt(['-j', '--skip-download', `https://www.youtube.com/watch?v=${id}`], `info ${id}`));
     return { id: d.id, title: d.title, channel: d.channel || d.uploader, duration: d.duration, view_count: d.view_count, width: d.width, height: d.height,
-      age_limit: d.age_limit, live_status: d.live_status, heatmap: d.heatmap || [], has_captions: !!Object.keys(d.automatic_captions || {}).some((k) => k.startsWith('en')) || !!Object.keys(d.subtitles || {}).some((k) => k.startsWith('en')) };
+      age_limit: d.age_limit, live_status: d.live_status, heatmap: d.heatmap || [], chapters: d.chapters || [], upload_date: d.upload_date,
+      channel_is_verified: !!d.channel_is_verified, description: (d.description || '').slice(0, 3000), tags: (d.tags || []).slice(0, 40), has_captions: !!Object.keys(d.automatic_captions || {}).some((k) => k.startsWith('en')) || !!Object.keys(d.subtitles || {}).some((k) => k.startsWith('en')) };
   });
 }
 export function captionsFor(id) {
@@ -107,7 +108,8 @@ export function downloadSection(id, from, to, out) {
 
 // Output time -> a source anchor that survives re-cuts of the plan (same as automatic B-roll).
 function toAnchor(cuts, t) {
-  const c = cuts.find((x) => t >= x.out - 1e-3 && t < x.out + x.d + 1e-3) || cuts[cuts.length - 1];
+  const real = cuts.filter((x) => !x.bridge);
+  const c = real.find((x) => t >= x.out - 1e-3 && t < x.out + x.d + 1e-3) || real.find((x) => x.out >= t) || real[real.length - 1];
   return `${c.clip}@${(c.s + Math.max(0, t - c.out)).toFixed(3)}`;
 }
 
@@ -205,16 +207,20 @@ export async function findClips(plan, R, { dry = false, log = console.log, outDi
         const ranked = rankVideos(searchVideos(e.query), e.query, { exclude: o.exclude, need: e.dur }).filter((x) => x.score >= 0 && !used.has(x.id));
         const pick = ranked[Math.max(0, (e.pick || 1) - 1)];
         if (!pick) { e.why = `no usable video for "${e.query}"`; problems.push(`${e.said}: ${e.why}`); continue; }
-        v = videoInfo(pick.id);
-        if (v.age_limit >= 18 || (v.width && v.height && v.width < v.height)) {   // age-gated or vertical: next one
-          const next = ranked.find((x) => x.id !== pick.id);
-          if (next) v = videoInfo(next.id);
+        // The full page can still give it away (description, tags): generated, age-gated or vertical -> the next one.
+        v = null;
+        for (const cand of ranked.slice(Math.max(0, (e.pick || 1) - 1), Math.max(0, (e.pick || 1) - 1) + 4)) {
+          const info = videoInfo(cand.id);
+          const no = syntheticWhy(info, e.query) || (info.age_limit >= 18 && 'age-gated') || (info.width && info.height && info.width < info.height && 'vertical');
+          if (no) { log(`  passed over "${info.title}": ${no}`); continue; }
+          v = info; break;
         }
+        if (!v) { e.why = `no real, usable video for "${e.query}"`; problems.push(`${e.said}: ${e.why}`); continue; }
         alts = ranked.filter((x) => x.id !== v.id).slice(0, 3).map((x) => ({ id: x.id, title: x.title, channel: x.channel, views: x.view_count }));
       }
       used.add(v.id);
       const win = e.from != null && e.to != null && e.window_set_by_hand ? { from: e.from, to: e.to, how: 'set by hand' }
-        : pickWindow(v, e.dur, { captions: e.say ? captionsFor(v.id) : null, say: e.say });
+        : pickWindow(v, e.dur, { captions: e.say || e.source === 'plan' ? captionsFor(v.id) : null, say: e.say, want: e.source === 'plan' ? e.said : '' });
       const key = `${v.id}@${win.from}-${win.to}`;
       Object.assign(e, { url: `https://www.youtube.com/watch?v=${v.id}`, from: win.from, to: win.to, how: win.how,
         video: { id: v.id, title: v.title, channel: v.channel, views: v.view_count, duration: v.duration }, alternatives: alts.length ? alts : e.alternatives,

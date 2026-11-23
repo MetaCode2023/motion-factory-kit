@@ -144,6 +144,10 @@ the goal is a 10-minute video they can post without touching it.
    `clips` (outside clips, fair use: finds and cuts a source for every `[[clip ... | search: | say:]]` cue and adds
    3-8 s clips of the people and events named, in a box beside the speaker, credited; read CLIPS.md) and `stock`
    (PEXELS_API_KEY) fill placeholders, then `build`. Write clip cues fearlessly, one every 60-90 s: no URL needed.
+   Pulled clips are real footage only (nothing generated, deepfaked or re-created). **Flashbacks** (the creator's
+   signature): `node longform.mjs echoes <plan> --archive <their transcripts>` finds where they said the same thing
+   before; `--pull n --apply` cuts it in with a rewind and the date. **Flash-forwards**: `[[future year: 2032 | place: ...]]`
+   for a vision of the future, labelled as a vision.
    Visuals transition into each other on their own (wipes, slides, a blur whip; `transitions: fade` in the header for
    plain fades, `transition: <name>` on one cue to pick). Give each video a look: `theme: blueprint | noir | sunset | paper | terminal` in the script header (default `aurora`).
 5. **Check like a viewer**: REPORT.md, the inserts sheet, and stills at a few gaps. Fix and rebuild (cached).

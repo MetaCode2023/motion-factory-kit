@@ -18,7 +18,8 @@ Follow the "Long-form YouTube" section of `CLAUDE.md` and `docs/LONGFORM.md`. Th
 5. `node longform.mjs from-script scripts/<name>.script.md <recording> ` → read the alignment report →
    `broll` (automatic free-license cutaways; read BROLL.md, drop or re-search bad picks in the lockfile) →
    `clips` (outside clips: fills every clip cue and adds clips of the people named; read CLIPS.md, drop or swap in
-   the lockfile) → `stock` → `build`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
+   the lockfile) → `echoes --archive <past transcripts>` (pick 1-2 strong ones: `--pull n --apply` for a flashback)
+   → `stock` → `build`. A vision of the future: `[[future year: 2032 | place: ...]]`. Look at REPORT.md and `<name>.inserts.jpg`, fix, rebuild until clean.
 6. Hand over the MP4, a title + description (hook, chapters, sources, credits), and any clips still to pull.
 
 Existing footage instead of a new recording: `index` → `search` → plan → `build` (docs/LONGFORM.md).

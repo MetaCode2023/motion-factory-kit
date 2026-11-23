@@ -59,6 +59,26 @@ function findWord(clip, anchor, word) {
   return null;
 }
 
+// Flashback bridges (seconds): the rewind into the old moment, and the flash back to the present.
+export const FLASH = { rewind: 0.7, back: 0.4 };
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+/** The date a clip was recorded: "date" on the a_roll item, else YYYYMMDD / YYYY-MM-DD in its file name. */
+export function clipDate(clip) {
+  const m = String(clip?.file || '').replace(/^.*[\\/]/, '').match(/(?:^|[^0-9])((?:19|20)\d\d)[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?![0-9])/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+}
+/** "2025-11-02" -> "NOV 2, 2025"; "2025-11" -> "NOV 2025"; anything else is shown as written. */
+export function dateLabel(d) {
+  const m = String(d || '').match(/^((?:19|20)\d\d)-(\d\d)(?:-(\d\d))?$/);
+  if (!m) return String(d || '').toUpperCase();
+  return `${MONTHS[+m[2] - 1]} ${m[3] ? `${+m[3]}, ` : ''}${m[1]}`;
+}
+function flashInfo(f, clip) {
+  const o = f === true ? {} : typeof f === 'string' ? { date: f } : f;
+  return { date: dateLabel(o.date || clipDate(clip) || ''), label: o.label ?? 'FLASHBACK' };
+}
+
 // Word-exact cut list: [{ clip, s, e, out, d }] in output order.
 export function cutList(plan, lib) {
   const tighten = plan.tighten === false ? null : { ...TIGHTEN, ...(plan.tighten || {}) };
@@ -71,8 +91,9 @@ export function cutList(plan, lib) {
     const to = r.to == null ? clip.duration : String(r.to).startsWith('#') ? parseAnchor(r.clip + r.to, lib, { end: true }).t : seconds(r.to);
     if (!(to > from)) throw new Error(`a_roll[${ri}]: "to" must be after "from"`);
     const t = r.tighten === false ? null : tighten;
+    const tag = { ri, ...(r.flashback ? { fb: flashInfo(r.flashback, clip) } : {}) };
     const words = clip.words.filter((w) => w.s >= from - 0.05 && w.e <= to + 0.05);
-    if (!t || !words.length) { cuts.push({ clip: r.clip, s: from, e: Math.min(to, clip.duration) }); continue; }
+    if (!t || !words.length) { cuts.push({ clip: r.clip, s: from, e: Math.min(to, clip.duration), ...tag }); continue; }
     const dropped = new Set();
     for (const s of clip.sentences) if (drop.has(`${r.clip}#${s.n}`)) for (let i = s.from; i <= s.to; i++) dropped.add(i);
     // tighten.cut: [{ at: "clip#n", text: "they're running um" }] removes those exact words (false starts, repeats).
@@ -99,9 +120,20 @@ export function cutList(plan, lib) {
       const before = clip.words[g.first - 1], after = clip.words[g.last + 1];
       const lo = Math.max(from, before ? (before.e + g.s) / 2 : g.s - t.pad, g.s - t.pad);
       const hi = Math.min(to, after ? (g.e + after.s) / 2 : g.e + t.pad, g.e + t.pad);
-      cuts.push({ clip: r.clip, s: +lo.toFixed(3), e: +hi.toFixed(3) });
+      cuts.push({ clip: r.clip, s: +lo.toFixed(3), e: +hi.toFixed(3), ...tag });
     });
   }
+  // Flashbacks: a short silent bridge on each side, so the transition sounds sit in a pause, never on a word.
+  // "rewind" (the old footage scrubbing backwards into the moment) before, "return" (a flash back to now) after.
+  const all = [];
+  cuts.forEach((c, i) => {
+    const prev = cuts[i - 1], next = cuts[i + 1];
+    const starts = c.fb && !(prev?.fb && prev.ri === c.ri), ends = c.fb && !(next?.fb && next.ri === c.ri);
+    if (starts) all.push({ clip: c.clip, s: c.s, e: +(c.s + FLASH.rewind).toFixed(3), bridge: 'rewind', fb: c.fb, ri: c.ri });
+    all.push(c);
+    if (ends && next) all.push({ clip: next.clip, s: next.s, e: +(next.s + FLASH.back).toFixed(3), bridge: 'return', fb: c.fb, ri: c.ri });
+  });
+  cuts.splice(0, cuts.length, ...all);
   let out = 0;
   for (const c of cuts) {
     const frames = Math.max(1, Math.round((c.e - c.s) * plan.fps));
@@ -114,7 +146,7 @@ export function cutList(plan, lib) {
 export function mapTime(cuts, clip, t) {
   let best = null;
   for (const c of cuts) {
-    if (c.clip !== clip) continue;
+    if (c.clip !== clip || c.bridge) continue;
     if (t >= c.s - 1e-3 && t <= c.e + 1e-3) return c.out + Math.max(0, t - c.s);
     if (c.s > t && (!best || c.s < best.s)) best = c;
   }
@@ -279,22 +311,29 @@ export function resolvePlan(plan, lib = loadLibrary(), { autoBroll = true, clips
     try { sfx.push({ at: +resolveAt(s, cuts, lib, `sfx[${i}]`).toFixed(3), name: s.name, volume: s.volume ?? 0.5 }); } catch (e) { errors.push(e.message); }
   }
   for (const ins of inserts) if (ins.sfx && ins.kind !== 'face') sfx.push({ at: Math.max(0, ins.at - (ins.sfx === 'whoosh' ? 0.12 : 0)), name: ins.sfx, volume: 0.42, from: ins.id });
+  // Flashbacks: the tape rewinds in the bridge before, a whoosh carries us back to now in the bridge after.
+  const flashbacks = [];
+  for (const c of cuts) {
+    if (c.bridge === 'rewind') { flashbacks.push({ at: c.out, rewindEnd: c.out + c.d, end: c.out + c.d, date: c.fb.date, label: c.fb.label, clip: cuts[cuts.indexOf(c) + 1]?.clip }); sfx.push({ at: c.out, name: 'rewind', volume: 0.5, from: 'flashback' }); }
+    else if (c.fb && !c.bridge && flashbacks.length) flashbacks[flashbacks.length - 1].end = c.out + c.d;
+    else if (c.bridge === 'return') sfx.push({ at: c.out, name: 'whoosh', volume: 0.4, from: 'flashback' });
+  }
   for (const s of sfx) if (!existsSync(join(ROOT, 'sounds', 'sfx', `${s.name}.mp3`))) errors.push(`sfx "${s.name}" not in sounds/sfx/`);
 
   // Punch-ins: alternate framing on every Nth cut where the same clip continues (a jump cut).
   const pi = plan.punch_in === false ? null : { every: 2, zoom: 1.12, focus: [0.5, 0.42], ...(plan.punch_in || {}) };
   let k = 0;
   cuts.forEach((c, i) => {
-    const jump = i > 0 && cuts[i - 1].clip === c.clip;
+    const jump = i > 0 && cuts[i - 1].clip === c.clip && !c.bridge && !cuts[i - 1].bridge;
     if (!jump) k = 0; else k++;
-    c.zoom = pi && jump && k % pi.every === pi.every - 1 ? pi.zoom : 1;
+    c.zoom = pi && jump && !c.fb && k % pi.every === pi.every - 1 ? pi.zoom : 1;
     c.focus = pi?.focus || [0.5, 0.5];
   });
 
   // The words that stay, on the output timeline (captions and the report).
   const words = [];
-  for (const c of cuts) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
+  for (const c of cuts) if (!c.bridge) for (const w of lib.clips[c.clip].words) if (w.s >= c.s - 1e-3 && w.e <= c.e + 1e-3 && !FILLERS.has(bare(w.w))) words.push({ w: w.w, s: +(c.out + w.s - c.s).toFixed(3), e: +(c.out + w.e - c.s).toFixed(3) });
 
   const burn = plan.captions?.burn ?? (voiceOnly ? 'gaps' : false);
-  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, captions: { burn } };
+  return { errors, warnings, cuts, total, source, inserts, chapters, music, sfx, words, lib, voiceOnly, flashbacks, captions: { burn } };
 }

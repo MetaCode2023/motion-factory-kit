@@ -24,10 +24,30 @@ export const HARD_MAX = 10;   // the report flags borrowed clips longer than thi
 const STOPQ = new Set('the a an of and or to in on at for with from by is are was were be been this that these those it its his her their our your my we you they he she i so but then than just very really about into over under after before when where what which who whom how why all any some more most other such only own same too can will would could should may might must not no nor here there now also even still yet well like said says say'.split(' '));
 const OPENERS = new Set('later then today yesterday tomorrow first second third next finally meanwhile anyway honestly basically actually literally obviously suddenly eventually remember imagine look listen think picture consider everyone everybody nobody somebody someone people because since although though while once after before during back right okay yeah wow'.split(' '));
 const words = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9$' ]+/g, ' ').split(/\s+/).filter((w) => w && !STOPQ.has(w));
+// "crashes" ~ "crash", "falling" ~ "fall": enough stemming to match titles and captions.
+const stem = (w) => (w.length > 4 ? w.replace(/(ing|ed|es|s)$/, '') : w);
+
+// Real footage only. Anything that says it's generated, faked, recreated or reimagined is out: a pulled clip is
+// evidence, and evidence can't be synthetic. (A vision of the future is made on purpose and labelled; see the
+// `future` scene.)
+export const SYNTHETIC = /\b(a\.?i\.?[- ]?(generated|made|created|video|videos|animation|animated|art|film|movie|short|recreat\w*|restor\w*|enhanc\w*|upscal\w*|colori[sz]\w*|voice|cover|version)|generated (with|by|using) a\.?i|made (with|by|using) a\.?i|deep ?fakes?|face ?swap\w*|sora|veo ?\d?|runway ?(ml|gen)|gen-?[234]\b|kling|midjourney|pika ?(labs)?|hailuo|minimax video|luma (ai|dream)|dream machine|stable (diffusion|video)|synthetic|re-?creation|re-?created|re-?enact\w*|reimagin\w*|what if\b|fan ?made|parody|spoof|satire|fake (video|footage|speech|clip)|not real|cgi (recreation|version)|speech synthesi[sz]\w*|synthesi[sz]ed (voice|speech)|text[- ]to[- ](speech|video)|tts|voice ?clon\w*|cloned voice|copypasta|impressions?|impersonat\w*|sketch|skit|snl|saturday night live|key (&|and) peele|meme|cgi|3d (render\w*|animation)|rendered|render|concept (art|video)|visuali[sz]ation|sci-?fi|ambient)\b/i;
+export const OFFICIAL = /\b(official|archives?|library|libraries|museum|university|college|institute|nasa|esa|c-?span|pbs|bbc|reuters|associated press|ap archive|nbc|cbs|abc news|cnn|fox news|sky news|bloomberg|cnbc|the guardian|new york times|nytimes|washington post|wsj|wall street journal|british path[eé]|path[eé]|national geographic|smithsonian|white house|united nations|\bun\b|ted|tedx|world economic forum|nobel|history channel|periscope films|critical past|nara)\b/i;
+const GEN_ERA = Date.UTC(2023, 0, 1) / 1000;   // before this, video generators couldn't fake a real event
+
+/** Why a video looks synthetic, or '' if it doesn't. Checks title, channel, description and tags. */
+export function syntheticWhy(v, query = '') {
+  const text = [v.title, v.channel || v.uploader, v.description, ...(v.tags || [])].filter(Boolean).join(' \n ');
+  const m = text.match(SYNTHETIC);
+  if (m) return `looks generated or staged ("${m[0]}")`;
+  // "AI" in the title of footage that should be real is too risky, unless the search itself is about AI.
+  if (/\bA\.?I\.?(?![a-z])/.test(v.title || '') && !/\b(ai|a\.i\.|artificial intelligence)\b/i.test(query)) return 'says "AI" in the title';
+  return '';
+}
 
 /**
  * rankVideos(entries, query, { exclude, need }) -> entries sorted best first, each with `score` and `why`.
  * entries: yt-dlp flat search results ({ id, title, duration, view_count, channel, live_status, url }).
+ * Order of what counts: on topic, then real (verified/official/older), then popular.
  */
 export function rankVideos(entries, query, { exclude = [], need = 4 } = {}) {
   const q = new Set(words(query));
@@ -42,21 +62,31 @@ export function rankVideos(entries, query, { exclude = [], need = 4 } = {}) {
     if (e.duration && e.duration < need + 6) { skip('too short to cut from'); continue; }
     if (e.duration && e.duration > 4 * 3600) { skip('over 4 hours'); continue; }
     if (ex.some((x) => ch.toLowerCase().includes(x) || title.toLowerCase().includes(x))) { skip('excluded channel'); continue; }
-    const t = new Set(words(title + ' ' + ch));
-    const hit = [...q].filter((w) => t.has(w)).length / Math.max(1, q.size);
+    const fake = syntheticWhy(e, query);
+    if (fake) { skip(fake); continue; }
+    const t = new Set(words(title + ' ' + ch).map(stem));
+    const hit = [...q].filter((w) => t.has(stem(w))).length / Math.max(1, q.size);
     const views = Math.log10((e.view_count || 0) + 10);
-    // Match first (a popular video about the wrong thing is worse than a smaller one about the right thing).
-    const score = +(hit * 6 + views).toFixed(3);
-    out.push({ ...e, score, why: `${Math.round(hit * 100)}% of the search in the title, ${e.view_count ?? '?'} views` });
+    const verified = e.channel_is_verified ? 1.5 : 0, official = OFFICIAL.test(ch) ? 1.5 : 0;
+    const old = e.timestamp && e.timestamp < GEN_ERA ? 0.5 : 0;
+    // On topic first (a popular video about the wrong thing is worse than a smaller one about the right thing),
+    // then real sources, then views.
+    const score = +(hit * 8 + verified + official + old + views * 0.6).toFixed(3);
+    out.push({ ...e, score, why: [`${Math.round(hit * 100)}% of the search in the title`, verified && 'verified channel', official && 'official source', old && 'uploaded before 2023', `${e.view_count ?? '?'} views`].filter(Boolean).join(', ') });
   }
   return out.sort((a, b) => b.score - a.score);
 }
 
 /**
- * pickWindow(video, dur, { heatmap, captions, say }) -> { from, to, how }
+ * pickWindow(video, dur, { heatmap, captions, say, want }) -> { from, to, how }
  * heatmap: [{ start_time, end_time, value }] (yt-dlp); captions: [{ start, end, text }] (deduped VTT cues).
+ * The moment that matches what was asked for comes first; the most-replayed moment only when nothing in the
+ * video points at it (or the whole video is the thing, e.g. a single famous hand):
+ *   1. `say`: words spoken in the clip, found in its captions.
+ *   2. `want`: what the clip should show ("he falls off the bike"), found in a chapter title, else in the captions.
+ *   3. the most-replayed moment.   4. a third of the way in.
  */
-export function pickWindow(video, dur, { heatmap = video?.heatmap, captions = null, say = '' } = {}) {
+export function pickWindow(video, dur, { heatmap = video?.heatmap, captions = null, say = '', want = '', chapters = video?.chapters } = {}) {
   const D = video?.duration || 0;
   const fit = (from, how) => {
     const f = Math.max(0, Math.min(from, Math.max(0, D - dur - 0.5)));
@@ -74,7 +104,28 @@ export function pickWindow(video, dur, { heatmap = video?.heatmap, captions = nu
     }
     if (best) return fit(best.at - 0.4, `captions say "${say}" at ${Math.round(best.at)} s`);
   }
-  // 2. The most-replayed moment (smoothed so one spike next to a dip loses to a broad peak), skipping intros/outros.
+  // 2. What it should show: a chapter whose title says it, else captions that describe it.
+  if (want) {
+    const ask = words(want).filter((w) => w.length > 2);
+    const cover = (text) => { const t = new Set(words(text).map(stem)); return ask.filter((w) => t.has(stem(w))).length / Math.max(1, ask.length); };
+    let ch = null;
+    for (const c of chapters || []) { const h = cover(c.title); if (h >= 0.5 && h > (ch?.h ?? 0)) ch = { h, at: c.start_time, end: c.end_time }; }
+    if (ch) {
+      // Inside the chapter, its most-replayed part if there is one; else just after it starts.
+      const H = (heatmap || []).filter((x) => x.start_time >= ch.at && x.end_time <= ch.end);
+      const peak = H.length ? H.reduce((a, b) => (b.value > a.value ? b : a)) : null;
+      return fit(peak ? (peak.start_time + peak.end_time) / 2 - dur * 0.4 : ch.at + 1, `chapter "${(chapters.find((c) => c.start_time === ch.at) || {}).title}"${peak ? ', its most replayed part' : ''}`);
+    }
+    if (captions?.length && ask.length >= 2) {
+      let best = null;
+      for (let i = 0; i < captions.length; i++) {
+        const h = Math.max(cover(captions[i].text), 0.9 * cover(captions.slice(i, i + 3).map((c) => c.text).join(' ')));
+        if (h >= 0.6 && h > (best?.h ?? 0)) best = { h, at: captions[i].start };
+      }
+      if (best) return fit(best.at - 0.4, `captions describe it at ${Math.round(best.at)} s`);
+    }
+  }
+  // 3. The most-replayed moment (smoothed so one spike next to a dip loses to a broad peak), skipping intros/outros.
   const H = (heatmap || []).filter((h) => h.end_time > h.start_time);
   if (H.length >= 10 && D) {
     const lo = Math.max(D * 0.04, 8), hi = D * 0.97;
@@ -88,7 +139,7 @@ export function pickWindow(video, dur, { heatmap = video?.heatmap, captions = nu
     // Start a little before the peak's middle: the rewatched moment lands inside the clip, not at its edge.
     if (best) return fit(best.mid - dur * 0.4, `most replayed moment, around ${Math.round(best.mid)} s`);
   }
-  // 3. No data: a third of the way in (past the intro, usually into the action).
+  // 4. No data: a third of the way in (past the intro, usually into the action).
   return fit(D ? D / 3 : 0, 'no replay data: a third of the way in');
 }
 
