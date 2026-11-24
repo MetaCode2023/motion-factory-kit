@@ -184,7 +184,9 @@ if (voiceLines.length) {
     } else {
       words = M_estimate(line.text); dur = words.length ? words[words.length - 1].e : 0;
     }
-    if (start < cursor - 0.05) warn(`voice line ${i + 1} starts at ${start.toFixed(2)}s but line ${i} is still talking until ${cursor.toFixed(2)}s. Move it to at: ${(cursor + 0.2).toFixed(1)} or shorten line ${i}.`);
+    // compare speech with speech: a cut file may open with a little room tone before its first word
+    const spoken = start + (line.file && words.length ? Math.max(0, words[0].s) : 0);
+    if (spoken < cursor - 0.05) warn(`voice line ${i + 1} starts at ${start.toFixed(2)}s but line ${i} is still talking until ${cursor.toFixed(2)}s. Move it to at: ${(cursor + 0.2).toFixed(1)} or shorten line ${i}.`);
     if (start + dur > V.duration) warn(`voice line ${i + 1} runs to ${(start + dur).toFixed(2)}s, past the video's ${V.duration}s. Lengthen duration or shorten the line.`);
     placed.push({ start, dur, file, words: words.map((w) => ({ w: w.w, s: +(w.s + start).toFixed(3), e: +(w.e + start).toFixed(3) })) });
     cursor = start + dur;

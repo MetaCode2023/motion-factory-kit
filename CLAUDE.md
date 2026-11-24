@@ -206,6 +206,13 @@ works for one ad (`node make.mjs scenes/templates/x.html`) or a spreadsheet of t
 `M.beats` / `M.bpm`, and `M.cues(VOICE)` gives each narration line's real `{ start, end }` (estimated in preview).
 Prefer voice-first timing for narrated pieces: cuts at `CUES[i].start`, duration `CUES[last].end + 1.5`.
 
+## Real video B-roll (`docs/VIDEO-SOURCES.md`)
+
+For space, science, body or nature beats, pull real clips (NASA, ESO, ESA/Hubble, ESA/Webb, Pexels) before
+reaching for stills with fake camera moves or generated footage. The doc lists each source's download URL pattern,
+licence line and the rules (contact sheet first, pre-trim to 30 fps, never alter science footage, credit every shot).
+Worked example: `scenes/mine/dead-stars/` (shot list with source-time speed ramps, match cuts, synthesized score).
+
 ## What a build hands over
 
 `out/<name>.mp4` (+ `-v2`, `.4x5`...), `.cover.jpg` (the frame at `M.setup({ cover })`, default 0.7 s), `.srt`
