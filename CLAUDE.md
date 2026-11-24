@@ -251,6 +251,9 @@ M.setup({ ...,
 - Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`.
   One effect per beat at most: `hit` on the hook, `whoosh` on cuts, `success`/`chime` on the payoff,
   `pop` on badges, `notify` with `B.notification`, `type` with typed text, `coin` on prices.
+- A voice line can be a file: `{ at, text, file: 'vo/03.wav' }`. Put its word timings next to it (`vo/03.words.json`,
+  `[{ w, s, e }]` from the file's start, e.g. from `tools/transcribe.py`) for exact cues and overlap checks.
+  Two characters, one generated take each, cut into timed lines: `scenes/mine/order-42/prep.py`.
 - Narration needs `ELEVENLABS_API_KEY` (voice: `ELEVENLABS_VOICE_ID` or `--voice <id>`). Without it the video
   still gets music + effects, and captions use estimated timing. Run `node make.mjs <scene> --voice-only`
   to get each line's real start/end, then set cut times to match.

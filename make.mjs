@@ -167,7 +167,16 @@ if (voiceLines.length) {
     if (useVoice && line.file) {
       file = findSound('vo', line.file) || resolve(dirname(scene), line.file);
       if (!existsSync(file)) throw new Error(`voice file not found: ${line.file}`);
-      dur = seconds(file); words = spreadWords(line.text, dur);
+      dur = seconds(file);
+      // Real word timings, if the file has them next to it (<file>.words.json: [{ w, s, e }] from the file's
+      // start, e.g. written by tools/transcribe.py). Otherwise spread the text over the file's length.
+      const side = file.replace(/\.[^.\/\\]+$/, '') + '.words.json';
+      if (existsSync(side)) {
+        const j = JSON.parse(readFileSync(side, 'utf8'));
+        words = Array.isArray(j) ? j : j.words;
+        // the file may run on (room tone, an echo tail): the line ends with its last word, for overlap checks
+        dur = Math.min(dur, (words[words.length - 1]?.e ?? dur) + 0.15);
+      } else words = spreadWords(line.text, dur);
     } else if (useVoice && KEY) {
       const r = await tts(line.text);
       file = r.file; words = r.words; dur = seconds(file);

@@ -13,6 +13,24 @@ import os
 import sys
 
 
+def _load(audio: str):
+    """Decode with ffmpeg to 16 kHz mono float32. faster-whisper's own decoder (PyAV) breaks when the
+    installed `av` version doesn't match it (TypeError: open() got an unexpected keyword 'metadata_errors');
+    passing samples avoids PyAV entirely. Falls back to the path if ffmpeg or numpy is missing."""
+    import shutil
+    import subprocess
+    ff = os.environ.get("FFMPEG") or shutil.which("ffmpeg")
+    try:
+        import numpy as np  # type: ignore
+        if not ff:
+            return audio
+        raw = subprocess.run([ff, "-v", "error", "-i", audio, "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        return np.frombuffer(raw, dtype=np.float32).copy()
+    except Exception:  # noqa: BLE001
+        return audio
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         print(__doc__)
@@ -25,7 +43,7 @@ def main() -> None:
         print(json.dumps({"error": f"faster-whisper not installed ({e.__class__.__name__})"}))
         return
     model = WhisperModel(model_name, device="auto", compute_type="int8")
-    segments, _info = model.transcribe(audio, word_timestamps=True, vad_filter=True)
+    segments, _info = model.transcribe(_load(audio), word_timestamps=True, vad_filter=True)
     words = []
     for seg in segments:
         for w in seg.words or []:
