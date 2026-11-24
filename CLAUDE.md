@@ -206,6 +206,13 @@ works for one ad (`node make.mjs scenes/templates/x.html`) or a spreadsheet of t
 `M.beats` / `M.bpm`, and `M.cues(VOICE)` gives each narration line's real `{ start, end }` (estimated in preview).
 Prefer voice-first timing for narrated pieces: cuts at `CUES[i].start`, duration `CUES[last].end + 1.5`.
 
+## Real video B-roll (`docs/VIDEO-SOURCES.md`)
+
+For space, science, body or nature beats, pull real clips (NASA, ESO, ESA/Hubble, ESA/Webb, Pexels) before
+reaching for stills with fake camera moves or generated footage. The doc lists each source's download URL pattern,
+licence line and the rules (contact sheet first, pre-trim to 30 fps, never alter science footage, credit every shot).
+Worked example: `scenes/mine/dead-stars/` (shot list with source-time speed ramps, match cuts, synthesized score).
+
 ## What a build hands over
 
 `out/<name>.mp4` (+ `-v2`, `.4x5`...), `.cover.jpg` (the frame at `M.setup({ cover })`, default 0.7 s), `.srt`
@@ -251,6 +258,9 @@ M.setup({ ...,
 - Effects in `sounds/sfx/`: `whoosh tap tick pop hit chime success error type notify riser coin`.
   One effect per beat at most: `hit` on the hook, `whoosh` on cuts, `success`/`chime` on the payoff,
   `pop` on badges, `notify` with `B.notification`, `type` with typed text, `coin` on prices.
+- A voice line can be a file: `{ at, text, file: 'vo/03.wav' }`. Put its word timings next to it (`vo/03.words.json`,
+  `[{ w, s, e }]` from the file's start, e.g. from `tools/transcribe.py`) for exact cues and overlap checks.
+  Two characters, one generated take each, cut into timed lines: `scenes/mine/order-42/prep.py`.
 - Narration needs `ELEVENLABS_API_KEY` (voice: `ELEVENLABS_VOICE_ID` or `--voice <id>`). Without it the video
   still gets music + effects, and captions use estimated timing. Run `node make.mjs <scene> --voice-only`
   to get each line's real start/end, then set cut times to match.

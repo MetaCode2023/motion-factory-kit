@@ -167,7 +167,16 @@ if (voiceLines.length) {
     if (useVoice && line.file) {
       file = findSound('vo', line.file) || resolve(dirname(scene), line.file);
       if (!existsSync(file)) throw new Error(`voice file not found: ${line.file}`);
-      dur = seconds(file); words = spreadWords(line.text, dur);
+      dur = seconds(file);
+      // Real word timings, if the file has them next to it (<file>.words.json: [{ w, s, e }] from the file's
+      // start, e.g. written by tools/transcribe.py). Otherwise spread the text over the file's length.
+      const side = file.replace(/\.[^.\/\\]+$/, '') + '.words.json';
+      if (existsSync(side)) {
+        const j = JSON.parse(readFileSync(side, 'utf8'));
+        words = Array.isArray(j) ? j : j.words;
+        // the file may run on (room tone, an echo tail): the line ends with its last word, for overlap checks
+        dur = Math.min(dur, (words[words.length - 1]?.e ?? dur) + 0.15);
+      } else words = spreadWords(line.text, dur);
     } else if (useVoice && KEY) {
       const r = await tts(line.text);
       file = r.file; words = r.words; dur = seconds(file);
@@ -175,7 +184,9 @@ if (voiceLines.length) {
     } else {
       words = M_estimate(line.text); dur = words.length ? words[words.length - 1].e : 0;
     }
-    if (start < cursor - 0.05) warn(`voice line ${i + 1} starts at ${start.toFixed(2)}s but line ${i} is still talking until ${cursor.toFixed(2)}s. Move it to at: ${(cursor + 0.2).toFixed(1)} or shorten line ${i}.`);
+    // compare speech with speech: a cut file may open with a little room tone before its first word
+    const spoken = start + (line.file && words.length ? Math.max(0, words[0].s) : 0);
+    if (spoken < cursor - 0.05) warn(`voice line ${i + 1} starts at ${start.toFixed(2)}s but line ${i} is still talking until ${cursor.toFixed(2)}s. Move it to at: ${(cursor + 0.2).toFixed(1)} or shorten line ${i}.`);
     if (start + dur > V.duration) warn(`voice line ${i + 1} runs to ${(start + dur).toFixed(2)}s, past the video's ${V.duration}s. Lengthen duration or shorten the line.`);
     placed.push({ start, dur, file, words: words.map((w) => ({ w: w.w, s: +(w.s + start).toFixed(3), e: +(w.e + start).toFixed(3) })) });
     cursor = start + dur;

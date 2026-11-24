@@ -1,0 +1,349 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>You Are Made of Dead Stars</title>
+<script src="../../../brand.js"></script>
+<script src="../../../kit/motion.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<script>
+// YOU ARE MADE OF DEAD STARS. One idea: the atoms in you were made inside stars that died.
+// Hand -> early universe -> a star's furnace -> iron -> supernova -> gold ring -> neutron stars colliding ->
+// a second of black -> the atoms drift -> they became you -> the same hand (the last frame is the first frame).
+//
+// Design rules (PLAN.md):
+//  1. Real video only. Every shot is a moving clip (Pexels, NASA, ESO, ESA/Hubble). No still with a fake move.
+//  2. One camera: every cut is a zoom-through (outgoing pushes in, incoming arrives from wide), with a sub thump.
+//  3. Match cuts: palm -> cosmic web, blood cell -> red giant (R Doradus, real ALMA data), ring -> neutron stars.
+//  4. Colour tells the story: cold blue, amber, red, white flash, gold, warm skin.
+//  5. The science is visible: a periodic table fills in element by element as each is made, and returns lit as you.
+//  6. Captions: 2-4 words, big, centred; IRON, GOLD, YOU pop in their beat's colour.
+// Timing: every cue comes from the real narration (timeline.js, written by prep.py). Wide cut: --data '{"wide":true}'.
+
+const D = M.data({ wide: false });
+const WIDE = !!D.wide;
+const W = WIDE ? 1920 : 1080, H = WIDE ? 1080 : 1920;
+const HOOK = M.pick(['A', 'B', 'C']);
+const TL = window.DEADSTARS, HK = TL.hooks[HOOK], OFF = HK.off;
+const C = Object.fromEntries(Object.entries(TL.cues).map(([k, v]) => [k, v + OFF]));
+const END = C.end;
+const BARLOW = '"Barlow"', COND = '"Barlow Condensed"', MONO = '"JetBrains Mono"';
+M.fonts([`600 40px ${BARLOW}`, `700 40px ${BARLOW}`, `800 40px ${COND}`, `600 40px ${COND}`, `600 40px ${MONO}`]);
+
+const COL = { cold: '#8CCBFF', fusion: '#FFB547', iron: '#FF6040', blast: '#FFFFFF', gold: '#FFD36E', drift: '#C9B8FF', you: '#FFC9A0', end: '#FFC9A0', hook: '#FFD36E' };
+const clamp = M.clamp, lerp = M.lerp;
+const ease = { out: (x) => 1 - Math.pow(1 - clamp(x), 3), inOut: (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }, in: (x) => Math.pow(clamp(x), 3) };
+const prog = (t, a, d) => clamp((t - a) / d);
+function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+
+// ---- footage (pre-trimmed to the used ranges, 30 fps: footage/dead-stars/cut, see PLAN.md for sources) ----
+const V = {};
+for (const k of ['hero', 'web', 'deep', 'sun', 'light', 'shadow', 'macro', 'blood', 'giant', 'antares', 'nova', 'kilo', 'ring', 'drift', 'reach', 'cupped']) {
+  V[k] = M.video(`../../../footage/dead-stars/cut/${k}.mp4`, { at: 0, audio: false, fps: 30 });
+}
+// Draw clip `k` at source second `src`, covering the frame, scaled by `zoom` about its focus point (fx, fy).
+function shot(c, k, src, { zoom = 1, fx = 0.5, fy = 0.5, alpha = 1 } = {}) {
+  const img = V[k].frame(src);
+  if (!img) return;
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  if (!iw) return;
+  c.save(); c.globalAlpha *= alpha;
+  if (WIDE && ih > iw) {
+    // a portrait clip in the wide cut: the whole frame, centred, over a dark, soft copy of itself
+    const sb = Math.max(W / iw, H / ih) * 1.15;
+    c.save(); c.globalAlpha *= 0.32; c.filter = 'blur(28px)';
+    c.drawImage(img, W / 2 - 0.5 * iw * sb, H / 2 - fy * ih * sb, iw * sb, ih * sb); c.restore();
+    const sf = (H / ih) * zoom;
+    c.drawImage(img, W / 2 - 0.5 * iw * sf, H / 2 - 0.5 * ih * sf, iw * sf, ih * sf);
+  } else {
+    const s = Math.max(W / iw, H / ih) * zoom;
+    c.drawImage(img, W / 2 - fx * iw * s, H / 2 - fy * ih * s, iw * s, ih * s);
+  }
+  c.restore();
+}
+
+// ---- the shot list (rule 1-3). src(p) maps shot progress 0..1 to the clip's seconds (speed ramps live here) ----
+const lin = (a, b) => (p) => a + (b - a) * p;
+const accel = (a, b, k = 2.2) => (p) => a + (b - a) * Math.pow(p, k);          // speeds up into the next cut
+const decel = (a, b, k = 2) => (p) => a + (b - a) * (1 - Math.pow(1 - p, k));  // snaps in, settles
+const HERO_LOOP = 7.4;        // the hero frame the film opens on and closes on (palm open)
+const SHOTS = [];
+const add = (k, a, b, src, o = {}) => SHOTS.push({ k, a, b, src, ...o });
+if (HOOK === 'C') add('ring', 0, OFF, lin(0.4, 0.4 + OFF * 0.75), { fy: 0.62, z0: 1.08, z1: 1.0, beat: 'hook' });
+else add('hero', 0, OFF, lin(HERO_LOOP, HERO_LOOP + OFF * (HOOK === 'B' ? 0.62 : 0.85)), { fy: 0.42, z0: 1.0, z1: 1.06, beat: 'hook' });
+add('web', C.t0, C.question, lin(5.6, 13.5), { z0: 1.35, z1: 1.0, beat: 'cold', match: true });
+add('deep', C.question, C.stars, lin(6.5, 10.5), { z0: 1.0, z1: 1.25, beat: 'cold' });
+add('sun', C.stars, C.crush, lin(1.2, 2.6), { z0: 1.25, z1: 1.05, beat: 'fusion', match: true });
+add('sun', C.crush, C.calcium - 0.2, lin(10.5, 16.5), { fx: 0.62, z0: 1.4, z1: 1.6, beat: 'fusion' });
+add('shadow', C.calcium - 0.2, C.ironLine, lin(1.0, 3.2), { fx: 0.45, fy: 0.55, z0: 1.12, z1: 1.0, beat: 'fusion' });
+add('blood', C.ironLine, C.nopay, lin(2.2, 4.0), { z0: 1.0, z1: 1.3, beat: 'iron' });
+add('giant', C.nopay, C.collapse, lin(1.0, 7.8), { z0: 1.55, z1: 1.75, beat: 'iron', match: true });
+add('nova', C.collapse, C.explode - 0.32, accel(0.0, 3.6, 1.6), { z0: 1.0, z1: 1.35, beat: 'iron' });
+add('black', C.explode - 0.32, C.explode, null, { beat: 'blast' });                       // the world drops out, then hits
+add('nova', C.explode, C.gold, decel(4.0, 30.0, 2.2), { z0: 1.35, z1: 1.05, beat: 'blast' });
+add('ring', C.gold, C.deadstars, lin(0.3, 2.8), { fy: 0.6, z0: 1.15, z1: 1.45, beat: 'gold' });
+add('kilo', C.deadstars, C.collide, accel(5.0, 23.6, 2.6), { z0: 1.6, z1: 1.15, beat: 'gold', match: true });
+add('kilo', C.collide, C.black, decel(24.0, 36.0, 1.6), { z0: 1.0, z1: 1.3, beat: 'gold' });
+add('black', C.black, C.black + 1.0, null, { beat: 'drift' });                            // one full second of nothing
+add('drift', C.black + 1.0, C.while, decel(0.0, 30.0, 1.4), { z0: 1.0, z1: 1.15, beat: 'drift' });
+add('reach', C.while, C.almost - 0.15, lin(1.0, 6.6), { fy: 0.55, z0: 1.12, z1: 1.0, beat: 'you' });
+add('cupped', C.almost - 0.15, C.look - 0.1, lin(0.5, 6.0), { fx: 0.55, z0: 1.05, z1: 1.18, beat: 'you' });
+add('hero', C.look - 0.1, END, lin(HERO_LOOP - (END - C.look + 0.1) * 0.85, HERO_LOOP), { fy: 0.42, z0: 1.06, z1: 1.0, beat: 'end' });
+const CUTS = SHOTS.slice(1).map((s) => s.a);
+const shotAt = (t) => SHOTS.find((s) => t >= s.a && t < s.b) || SHOTS[SHOTS.length - 1];
+const beatAt = (t) => shotAt(t).beat;
+
+function drawShot(c, s, t) {
+  if (s.k === 'black') { c.fillStyle = '#000'; c.fillRect(0, 0, W, H); return; }
+  const p = clamp((t - s.a) / Math.max(0.001, s.b - s.a));
+  let zoom = lerp(s.z0 ?? 1, s.z1 ?? 1, ease.inOut(p));
+  // rule 2, zoom-through: push into the last 0.22 s, arrive from a touch wide in the first 0.3 s
+  const out = prog(t, s.b - 0.22, 0.22), inn = 1 - prog(t, s.a, 0.3);
+  if (s.b < END - 0.01) zoom *= 1 + 0.3 * ease.in(out);
+  if (s.a > 0.01) zoom *= 1 - 0.08 * ease.out(inn) * -1;   // starts slightly pushed, settles
+  shot(c, s.k, s.src(p), { zoom, fx: s.fx ?? 0.5, fy: s.fy ?? 0.5 });
+}
+
+// ---- colour (rule 4) -----------------------------------------------------------------------------
+function grade(c, t) {
+  const b = beatAt(t);
+  const tint = { hook: [255, 190, 140, 0.10], cold: [70, 140, 255, 0.22], fusion: [255, 150, 40, 0.18], iron: [255, 70, 40, 0.16],
+    blast: [255, 255, 255, 0.0], gold: [255, 190, 60, 0.22], drift: [120, 110, 255, 0.16], you: [255, 170, 120, 0.14], end: [255, 190, 140, 0.10] }[b];
+  c.save(); c.globalCompositeOperation = 'overlay'; c.fillStyle = `rgba(${tint[0]},${tint[1]},${tint[2]},${tint[3]})`; c.fillRect(0, 0, W, H); c.restore();
+  // vignette
+  const g = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  // cut flashes: a two-frame flash in the beat colour on each match cut, white on the explosion and collision
+  for (const s of SHOTS) {
+    if (!(s.match || s === SHOTS.find((x) => x.a === C.explode) || s.a === C.collide)) continue;
+    const big = s.a === C.explode || s.a === C.collide;
+    const a = (big ? 0.95 : 0.28) * (1 - prog(t, s.a, big ? 0.5 : 0.12)) * (t >= s.a ? 1 : 0);
+    if (a > 0.001) { c.fillStyle = big ? (s.a === C.collide ? '#FFE9B0' : '#FFFFFF') : COL[s.beat]; c.globalAlpha = a; c.fillRect(0, 0, W, H); c.globalAlpha = 1; }
+  }
+}
+
+// ---- drifting atoms: the one thread through every shot -------------------------------------------
+const DUST = (() => { const r = rng(42); return Array.from({ length: 70 }, () => ({ x: r(), y: r(), z: 0.3 + r() * 0.7, ph: r() * 6.28, s: 1 + r() * 2.5 })); })();
+function dust(c, t) {
+  const b = beatAt(t); if (b === 'blast' && t < C.explode + 0.4) return;
+  const col = COL[b] || '#FFFFFF';
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (const d of DUST) {
+    const x = ((d.x + t * 0.006 * d.z + 0.02 * Math.sin(t * 0.3 + d.ph)) % 1) * W;
+    const y = ((d.y - t * 0.012 * d.z + 10) % 1) * H;
+    const r = d.s * d.z * (WIDE ? 1.6 : 2.0);
+    const a = 0.25 + 0.25 * Math.sin(t * 1.3 + d.ph);
+    const g = c.createRadialGradient(x, y, 0, x, y, r * 4);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.globalAlpha = a * d.z; c.fillStyle = g; c.beginPath(); c.arc(x, y, r * 4, 0, 6.283); c.fill();
+  }
+  c.restore();
+}
+
+// ---- the periodic table (rule 5) -------------------------------------------------------------------
+// [symbol, column 1-18, row 1-7]; lanthanides/actinides left out (the table only has to read as "the table").
+const PT = 'H 1 1|He 18 1|Li 1 2|Be 2 2|B 13 2|C 14 2|N 15 2|O 16 2|F 17 2|Ne 18 2|Na 1 3|Mg 2 3|Al 13 3|Si 14 3|P 15 3|S 16 3|Cl 17 3|Ar 18 3|K 1 4|Ca 2 4|Sc 3 4|Ti 4 4|V 5 4|Cr 6 4|Mn 7 4|Fe 8 4|Co 9 4|Ni 10 4|Cu 11 4|Zn 12 4|Ga 13 4|Ge 14 4|As 15 4|Se 16 4|Br 17 4|Kr 18 4|Rb 1 5|Sr 2 5|Y 3 5|Zr 4 5|Nb 5 5|Mo 6 5|Tc 7 5|Ru 8 5|Rh 9 5|Pd 10 5|Ag 11 5|Cd 12 5|In 13 5|Sn 14 5|Sb 15 5|Te 16 5|I 17 5|Xe 18 5|Cs 1 6|Ba 2 6|Hf 4 6|Ta 5 6|W 6 6|Re 7 6|Os 8 6|Ir 9 6|Pt 10 6|Au 11 6|Hg 12 6|Tl 13 6|Pb 14 6|Bi 15 6|Po 16 6|At 17 6|Rn 18 6|Fr 1 7|Ra 2 7|Rf 4 7|Db 5 7|Sg 6 7|Bh 7 7|Hs 8 7|Mt 9 7|Ds 10 7|Rg 11 7|Cn 12 7|Nh 13 7|Fl 14 7|Mc 15 7|Lv 16 7|Ts 17 7|Og 18 7'
+  .split('|').map((s) => { const [sym, col, row] = s.split(' '); return { sym, col: +col, row: +row }; });
+// When each element lights, and in which colour. Key ones get a pop (bigger + label).
+const LIT = {};
+const light = (syms, at, col, key = false) => syms.split(' ').forEach((s, i) => { if (!LIT[s]) LIT[s] = { at: at + (key ? 0 : i * 0.06), col, key }; });
+light('H', C.hydrogen, COL.cold, true); light('He', C.helium, COL.cold, true); light('Li', C.helium + 0.4, COL.cold);
+light('C', C.carbon, COL.fusion, true); light('O', C.oxygen, COL.fusion, true);
+light('N Ne Na Mg Al Si P S', C.crush + 0.3, COL.fusion); light('Ca', C.calcium, COL.fusion, true);
+light('Cl Ar K Sc Ti V Cr Mn', C.nopay, COL.fusion); light('Fe', C.iron, COL.iron, true);
+light('Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr', C.explode + 0.15, '#FFFFFF');
+light('Au', C.collide, COL.gold, true);
+light('Pt Ag Ir Os I Xe Pd Rh Ru Te Ba Hg Pb Bi Sn Sb Cs Y Zr Nb Mo Cd In W Re Ta Hf Tl Po At Rn Ra Fr', C.collide + 0.12, COL.gold);
+const BODY = ['O', 'C', 'H', 'N', 'Ca', 'P', 'K', 'S', 'Na', 'Cl', 'Mg', 'Fe', 'Zn', 'Cu', 'I', 'Se', 'Mn', 'Co', 'Mo'];
+const KEYCAP = { H: 'HYDROGEN', He: 'HELIUM', C: 'CARBON', O: 'OXYGEN', Ca: 'CALCIUM', Fe: 'IRON', Au: 'GOLD' };
+function table(c, t) {
+  const show1 = prog(t, C.t0 + 0.6, 0.5) * (1 - prog(t, C.black - 0.6, 0.5));
+  const show2 = prog(t, C.you - 0.1, 0.5) * (1 - prog(t, C.look - 0.2, 0.4));
+  const show = Math.max(show1, show2);
+  if (show <= 0.001) return;
+  const asYou = t >= C.you - 0.2;
+  const cw = WIDE ? 40 : 52, ch = WIDE ? 34 : 42, gap = 3;
+  const tw = 18 * cw, x0 = (W - tw) / 2, y0 = WIDE ? 70 : 250;
+  c.save(); c.globalAlpha = show * 0.95;
+  c.fillStyle = 'rgba(0,0,0,0.45)'; M.roundRect(c, x0 - 14, y0 - 14, tw + 28, 7 * ch + 28, 16); c.fill();
+  for (const e of PT) {
+    const x = x0 + (e.col - 1) * cw, y = y0 + (e.row - 1) * ch;
+    let L = LIT[e.sym], a = 0, col = '#FFFFFF', pop = 0;
+    if (asYou) {
+      const i = BODY.indexOf(e.sym);
+      if (i >= 0) { a = prog(t, C.you - 0.1 + i * 0.05, 0.25); col = COL.you; }
+      if (e.sym === 'H' && t >= C.older) { col = COL.cold; pop = Math.sin(clamp((t - C.older) / 1.2) * Math.PI); }
+    } else if (L && t >= L.at) { a = prog(t, L.at, 0.18); col = L.col; if (L.key) pop = Math.sin(clamp((t - L.at) / 0.9) * Math.PI); }
+    c.save();
+    const sc = 1 + pop * 0.9;
+    c.translate(x + cw / 2, y + ch / 2); c.scale(sc, sc);
+    c.globalAlpha = show * (0.22 + 0.78 * a);
+    c.fillStyle = a > 0 ? col : 'rgba(255,255,255,0.18)';
+    if (a > 0) { c.shadowColor = col; c.shadowBlur = 18 * a; }
+    M.roundRect(c, -cw / 2 + gap / 2, -ch / 2 + gap / 2, cw - gap, ch - gap, 5);
+    if (a > 0) { c.globalAlpha = show * a * 0.9; c.fill(); } else { c.fill(); }
+    c.shadowBlur = 0;
+    c.globalAlpha = show * (0.35 + 0.65 * a);
+    c.fillStyle = a > 0.5 ? '#14100A' : '#FFFFFF';
+    c.font = `700 ${WIDE ? 15 : 19}px ${BARLOW}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(e.sym, 0, 1);
+    c.restore();
+  }
+  // the key element's name under the table while it pops
+  const keyNow = !asYou && Object.entries(LIT).filter(([s, L]) => L.key && t >= L.at && t < L.at + 1.3).pop();
+  const label = asYou ? (t >= C.older ? ['YOUR HYDROGEN: 13.8 BILLION YEARS OLD', COL.cold] : ['YOU', COL.you]) : keyNow ? [KEYCAP[keyNow[0]], keyNow[1].col] : null;
+  if (label) {
+    const la = asYou ? 1 : Math.sin(clamp((t - keyNow[1].at) / 1.3) * Math.PI);
+    c.globalAlpha = show * clamp(la * 1.6);
+    c.font = `600 ${WIDE ? 22 : 28}px ${COND}`; c.fillStyle = label[1]; c.textAlign = 'center'; c.textBaseline = 'top';
+    c.letterSpacing = '6px';
+    c.fillText(label[0], W / 2, y0 + 7 * ch + 22);
+  }
+  c.restore();
+}
+
+// ---- captions (rule 6) -----------------------------------------------------------------------------
+const WORDS = [];
+TL.lines.forEach((l) => l.words.forEach((w, i) => WORDS.push({ w: w.w, s: w.s + OFF, e: w.e + OFF, beat: l.beat, last: i === l.words.length - 1 })));
+const CHUNKS = [];
+{
+  let cur = [];
+  const flush = () => { if (cur.length) CHUNKS.push(cur); cur = []; };
+  WORDS.forEach((w, i) => {
+    const nx = WORDS[i + 1];
+    cur.push(w);
+    const len = cur.map((x) => x.w).join(' ').length;
+    const isKey = /^[A-Z]{2,}/.test(w.w);
+    if (w.last || /[,.?!]$/.test(w.w) || cur.length >= 4 || len >= 16 || (isKey && cur.length >= 2) || (nx && nx.s - w.e > 0.35) || (nx && /^[A-Z]{3,}/.test(nx.w) && cur.length >= 2)) flush();
+  });
+  flush();
+}
+function captions(c, t) {
+  const k = CHUNKS.findIndex((ch, i) => t >= ch[0].s - 0.05 && t < (CHUNKS[i + 1] ? Math.min(CHUNKS[i + 1][0].s - 0.05, ch[ch.length - 1].e + 0.7) : ch[ch.length - 1].e + 0.7));
+  if (k < 0) return;
+  const ch = CHUNKS[k];
+  const size = WIDE ? 64 : 86, y = WIDE ? H * 0.80 : 1150;
+  const parts = ch.map((w) => {
+    const key = /^[A-Z]{2,}/.test(w.w.replace(/^'/, '')) && w.w.replace(/[^A-Za-z]/g, '').toUpperCase() === w.w.replace(/[^A-Za-z]/g, '');
+    return { ...w, key, txt: key ? w.w.replace(/\.\.\.$/, '') : w.w.replace(/\.\.\.$/, '').toLowerCase().replace(/^i$/, 'I').replace(/^(\w)/, (m) => (w === ch[0] ? m.toUpperCase() : m)) };
+  });
+  c.save(); c.textBaseline = 'middle';
+  const fontFor = (p) => p.key ? `800 ${size * 1.35}px ${COND}` : `700 ${size}px ${BARLOW}`;
+  const widths = parts.map((p) => { c.font = fontFor(p); return c.measureText(p.txt).width * (p.key ? 1.22 : 1); });   // room for the pop
+  const gapAfter = (i) => size * 0.28 + ((parts[i].key || (parts[i + 1] && parts[i + 1].key)) ? size * 0.22 : 0);
+  const total = widths.reduce((a, b) => a + b, 0) + parts.slice(0, -1).reduce((a, _, i) => a + gapAfter(i), 0);
+  const fit = Math.min(1, W * (WIDE ? 0.74 : 0.62) / total);   // keep clear of the app's right rail
+  c.translate(W / 2, y); c.scale(fit, fit); c.translate(-W / 2, -y);
+  let x = W / 2 - total / 2;
+  parts.forEach((p, i) => {
+    const on = t >= p.s - 0.04;
+    const pa = prog(t, p.s - 0.04, 0.12);
+    c.font = fontFor(p);
+    const cx = x + widths[i] / 2;
+    c.save(); c.translate(cx, y);
+    const sc = p.key ? 1 + 0.2 * Math.sin(clamp((t - p.s) / 0.35) * Math.PI) * (t >= p.s ? 1 : 0) : 1 + 0.08 * (1 - pa);
+    c.scale(sc, sc);
+    c.globalAlpha = on ? 0.5 + 0.5 * pa : 0.5;
+    c.shadowColor = 'rgba(0,0,0,0.85)'; c.shadowBlur = 18; c.shadowOffsetY = 3;
+    c.fillStyle = p.key ? COL[p.beat] : '#FFFFFF';
+    if (p.key && on) { c.shadowColor = COL[p.beat]; c.shadowBlur = 30; }
+    c.textAlign = 'center';
+    c.save(); c.shadowBlur = 0; c.lineJoin = 'round'; c.lineWidth = size * 0.1; c.strokeStyle = 'rgba(0,0,0,0.6)'; c.strokeText(p.txt, 0, 0); c.restore();
+    c.fillText(p.txt, 0, 0);
+    c.restore();
+    x += widths[i] + (i < parts.length - 1 ? gapAfter(i) : 0);
+  });
+  c.restore();
+}
+
+// ---- on-screen text: the hook (before the voice), the dense-star number, the screenshot line, the end ----
+function fitLines(c, lines, font, maxW) { c.font = font; return Math.min(1, ...lines.map((l) => maxW / c.measureText(l).width)); }
+function block(c, lines, y, size, { color = '#FFFFFF', accent = COL.gold, a = 1, weight = 800, fam = COND, maxW = 0.86 } = {}) {
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle';
+  const k = fitLines(c, lines.map((l) => l.replace(/\*/g, '')), `${weight} ${size}px ${fam}`, W * maxW);
+  const s = size * k; c.font = `${weight} ${s}px ${fam}`;
+  lines.forEach((l, i) => {
+    const segs = l.split('*'); const total = c.measureText(l.replace(/\*/g, '')).width; let x = W / 2 - total / 2;
+    segs.forEach((seg, j) => {
+      c.fillStyle = j % 2 ? accent : color; c.shadowColor = j % 2 ? accent : 'rgba(0,0,0,0.85)'; c.shadowBlur = j % 2 ? 26 : 20;
+      c.textAlign = 'left';
+      c.save(); c.shadowBlur = 0; c.lineJoin = 'round'; c.lineWidth = s * 0.09; c.strokeStyle = 'rgba(0,0,0,0.55)'; c.strokeText(seg, x, y + i * s * 1.02); c.restore();
+      c.fillText(seg, x, y + i * s * 1.02); x += c.measureText(seg).width;
+    });
+  });
+  c.restore();
+}
+const HOOK_TEXT = { A: ['THIS HAND IS', '*13 BILLION*', 'YEARS OLD.'], B: ['THIS HAND IS', '*13 BILLION*', 'YEARS OLD.'], C: ['THE GOLD IN YOUR RING', 'CAME FROM', '*TWO DEAD STARS.*'] };
+function hookText(c, t, a) {
+  const y = WIDE ? H * 0.30 : 430, size = WIDE ? 110 : 150;
+  block(c, HOOK_TEXT[HOOK], y, size, { a });
+}
+function overlays(c, t) {
+  // hook: on screen at frame 0, before the voice; B opens on the dare
+  if (HOOK === 'B' && t < 1.05) block(c, ["DON'T LOOK", 'AT YOUR *HAND.*'], WIDE ? H * 0.42 : 820, WIDE ? 130 : 170, { a: 1 - prog(t, 0.9, 0.15), maxW: WIDE ? 0.86 : 0.7 });
+  else if (t < OFF) hookText(c, t, (HOOK === 'B' ? prog(t, 1.05, 0.12) : 1) * (1 - prog(t, OFF - 0.35, 0.3)));
+  // a sugar cube of it weighs a mountain: the number counts up live
+  if (t >= C.dense && t < C.collide) {
+    const a = prog(t, C.dense, 0.2) * (1 - prog(t, C.collide - 0.15, 0.15));
+    const n = Math.round(1e9 * ease.out(prog(t, C.dense + 0.2, 2.4)));
+    const y = WIDE ? H * 0.26 : 640;
+    block(c, ['1 SUGAR CUBE OF NEUTRON STAR', `*${n.toLocaleString('en-US')} TONS*`], y, WIDE ? 64 : 76, { a, weight: 700 });
+  }
+  // the screenshot line, over the kilonova bloom
+  if (t >= C.collideEnd + 0.05 && t < C.black) {
+    const a = prog(t, C.collideEnd + 0.05, 0.25) * (1 - prog(t, C.black - 0.2, 0.2));
+    block(c, ['THE GOLD IN YOUR RING', 'CAME FROM TWO DEAD STARS', '*COLLIDING.*'], WIDE ? H * 0.42 : 820, WIDE ? 84 : 96, { a, maxW: WIDE ? 0.86 : 0.7 });
+  }
+  // the end: share + part 2 while the hand turns back, then the hook fades in on the last frames (the loop)
+  if (t >= C.lookEnd + 0.55 && t < END) {
+    const a = prog(t, C.lookEnd + 0.55, 0.3) * (1 - prog(t, END - 0.75, 0.3));
+    c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = `700 ${WIDE ? 38 : 46}px ${BARLOW}`; c.fillStyle = '#FFFFFF'; c.shadowColor = 'rgba(0,0,0,0.9)'; c.shadowBlur = 16;
+    c.fillText('Send this to someone made of stardust.', W / 2, WIDE ? H * 0.80 : 1300);
+    c.font = `600 ${WIDE ? 28 : 34}px ${COND}`; c.fillStyle = COL.gold; c.letterSpacing = '3px';
+    c.fillText('PART 2: THE ATOMS IN YOU OLDER THAN THE SUN', W / 2, WIDE ? H * 0.87 : 1368);
+    c.restore();
+    hookText(c, t, prog(t, END - 0.45, 0.42));
+  }
+}
+
+function draw(ctx, t) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const s = shotAt(t);
+  drawShot(ctx, s, t);
+  if (s.k !== 'black') { dust(ctx, t); grade(ctx, t); }
+  if (!(t >= C.black && t < C.black + 1.0) && !(t >= C.explode - 0.32 && t < C.explode)) { table(ctx, t); overlays(ctx, t); if (t >= OFF && !(t >= C.collideEnd + 0.05 && t < C.black)) captions(ctx, t); }
+}
+
+// ---- sound -----------------------------------------------------------------------------------------
+const SND = '../../../footage/dead-stars/snd/';
+const VOICE = [
+  { at: HK.at, text: HK.text, file: HK.file.replace('../../../', '') },
+  ...TL.lines.map((l) => ({ at: l.at + OFF, text: l.text, file: l.file.replace('../../../', '') })),
+];
+const thumps = SHOTS.filter((s) => s.match).map((s) => ({ at: s.a - 0.02, name: 'footage/dead-stars/snd/thump.wav', volume: 0.7 }));
+const pings = Object.values(LIT).filter((L) => L.key).map((L) => ({ at: L.at, name: 'footage/dead-stars/snd/ping.wav', volume: 0.32 }));
+const cutsSfx = SHOTS.filter((s) => !s.match && s.k !== 'black' && s.a > 0.1 && s.a !== C.explode && s.a !== C.collide).map((s) => ({ at: s.a - 0.01, name: 'footage/dead-stars/snd/thump.wav', volume: 0.3 }));
+
+M.setup({
+  width: W, height: H, fps: 30, duration: END,
+  cuts: CUTS,
+  background: '#000',
+  draw,
+  voice: VOICE,
+  music: { track: `footage/dead-stars/snd/score-${HOOK}.wav`, volume: 0.9 },
+  sfx: [...thumps, ...cutsSfx, ...pings],
+  captions: false,
+  look: 'cinematic',
+  cover: 0.0,
+  post: {
+    caption: "What's the oldest thing you own? (It's you.) The calcium in your bones and the iron in your blood were made inside stars that exploded; most of the gold in your ring came from two dead stars colliding. Sources in the first comment. Footage: NASA, ESO, ESA/Hubble, Pexels.",
+    hashtags: ['#space', '#astrophysics', '#stardust', '#science', '#universe'],
+  },
+});
+</script>
+</body>
+</html>
