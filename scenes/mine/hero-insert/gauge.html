@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hero insert: gauge</title>
+<script src="../../../brand.js"></script>
+<script src="../../../kit/motion.js"></script>
+<script src="../../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// Hero insert: one physical object that IS the idea, one part that moves (the needle), a shared stage
+// (deep navy, blue-violet rim light behind the object, reflective floor) and the type lockup
+// (overline, gradient number, bold label). The number is the needle's value, so they can't disagree.
+const W = 1920, H = 1080, END = 6;
+const FONT = '"Plus Jakarta Sans"';
+const f = (w, px) => `${w} ${px}px ${FONT}`;
+M.fonts([f(400, 40), f(600, 40), f(800, 40)]);
+const cl = M.clamp, lerp = M.lerp;
+const out = (t, a, d) => M.ease.outCubic(cl((t - a) / d));
+const io = (t, a, d) => M.ease.inOutCubic(cl((t - a) / d));
+
+// spoken-word timings (from the voice when there is one): "close to fifty-five" ... "a hundred percent signal"
+const T = { in: 0, v55: 0.5, v100: 2.6, word100: 2.6 };
+const GX = 640, GY = 520, R = 300;               // gauge centre and radius
+const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25;  // 0 at lower left, 100 at lower right (270 deg sweep)
+
+function value(t) {
+  // needle: fast to ~55, a small mechanical settle, then on the word "100" it drives to the stop
+  const a = io(t, T.v55, 1.1) * 55;
+  const b = io(t, T.v100, 1.2) * 45;
+  const jitter = t > T.v55 + 1.1 && t < T.v100 ? Math.sin(t * 23) * 0.25 : 0;  // a live instrument, barely
+  return a + b + jitter;
+}
+const ang = (v) => A0 + (A1 - A0) * v / 100;
+
+function stage(c, t) {
+  c.fillStyle = '#04050C'; c.fillRect(0, 0, W, H);
+  // rim light behind the object: blue -> violet
+  const g = c.createRadialGradient(GX + 40, GY - 40, 60, GX, GY, 900);
+  g.addColorStop(0, 'rgba(92,84,255,0.42)'); g.addColorStop(0.35, 'rgba(60,46,170,0.18)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const g2 = c.createRadialGradient(W * 0.85, H * 0.1, 0, W * 0.85, H * 0.1, 900);
+  g2.addColorStop(0, 'rgba(180,60,200,0.16)'); g2.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g2; c.fillRect(0, 0, W, H);
+  // floor: a faint horizon and a reflection band
+  const fy = GY + R + 130;
+  const fl = c.createLinearGradient(0, fy, 0, H);
+  fl.addColorStop(0, 'rgba(120,120,255,0)'); fl.addColorStop(0.08, 'rgba(120,120,255,0.06)'); fl.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = fl; c.fillRect(0, fy, W, H - fy);
+}
+
+function gauge(c, t, alpha = 1) {
+  const v = value(t);
+  c.save(); c.globalAlpha = alpha;
+  // stand
+  const sy = GY + R + 10;
+  c.beginPath(); c.moveTo(GX - 110, sy - 40); c.lineTo(GX + 110, sy - 40); c.lineTo(GX + 170, sy + 110); c.lineTo(GX - 170, sy + 110); c.closePath();
+  let g = c.createLinearGradient(GX - 170, 0, GX + 170, 0);
+  g.addColorStop(0, '#2A2C38'); g.addColorStop(0.45, '#9EA2B8'); g.addColorStop(0.55, '#C9CCDD'); g.addColorStop(1, '#22242E');
+  c.fillStyle = g; c.fill();
+  c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(GX - 170, sy + 100, 340, 10);
+  // bezel: brushed metal ring
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.7)'; c.shadowBlur = 80; c.shadowOffsetY = 30;
+  c.beginPath(); c.arc(GX, GY, R + 34, 0, Math.PI * 2); c.fillStyle = '#111'; c.fill();
+  c.restore();
+  g = c.createConicGradient(-Math.PI / 4, GX, GY);
+  [['#F2F3FA', 0], ['#5D6072', 0.14], ['#C7CADB', 0.3], ['#2B2D38', 0.48], ['#A9ACC0', 0.64], ['#3A3C4A', 0.82], ['#F2F3FA', 1]].forEach(([col, s]) => g.addColorStop(s, col));
+  c.beginPath(); c.arc(GX, GY, R + 34, 0, Math.PI * 2); c.arc(GX, GY, R + 4, 0, Math.PI * 2, true); c.fillStyle = g; c.fill();
+  // inner bevel
+  c.beginPath(); c.arc(GX, GY, R + 4, 0, Math.PI * 2); c.lineWidth = 6; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.stroke();
+  // face
+  g = c.createRadialGradient(GX - 60, GY - 90, 20, GX, GY, R);
+  g.addColorStop(0, '#2A2D3A'); g.addColorStop(0.7, '#14151D'); g.addColorStop(1, '#08080D');
+  c.beginPath(); c.arc(GX, GY, R, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  // ticks + numbers
+  for (let i = 0; i <= 50; i++) {
+    const a = ang(i * 2), major = i % 5 === 0;
+    const r1 = R - 22, r2 = r1 - (major ? 34 : 16);
+    c.beginPath(); c.moveTo(GX + Math.cos(a) * r1, GY + Math.sin(a) * r1); c.lineTo(GX + Math.cos(a) * r2, GY + Math.sin(a) * r2);
+    c.lineWidth = major ? 4 : 2; c.strokeStyle = major ? 'rgba(235,236,245,0.9)' : 'rgba(235,236,245,0.45)'; c.stroke();
+  }
+  c.font = f(600, 34); c.fillStyle = 'rgba(235,236,245,0.85)'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let n = 0; n <= 100; n += 20) { const a = ang(n), r = R - 92; c.fillText(String(n), GX + Math.cos(a) * r, GY + Math.sin(a) * r); }
+  c.font = f(800, 34); c.fillStyle = 'rgba(235,236,245,0.7)'; c.fillText('SIGNAL', GX, GY + 120);
+  c.font = f(600, 26); c.fillStyle = 'rgba(235,236,245,0.45)'; c.fillText('%', GX, GY + 162);
+  // the value arc: fills behind the needle, pink at the top end
+  if (v > 0.5) {
+    const ag = c.createConicGradient(A0 - 0.08, GX, GY);
+    ag.addColorStop(0, 'rgba(90,110,255,0.9)'); ag.addColorStop(0.4, 'rgba(160,90,255,0.95)'); ag.addColorStop(0.77, 'rgba(255,90,170,1)'); ag.addColorStop(0.9, 'rgba(255,90,170,1)'); ag.addColorStop(1, 'rgba(90,110,255,0.9)');
+    c.beginPath(); c.arc(GX, GY, R - 12, A0, ang(v)); c.lineWidth = 10; c.lineCap = 'round'; c.strokeStyle = ag; c.stroke();
+  }
+  // needle with a soft shadow on the face
+  const a = ang(v);
+  c.save();
+  c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 12; c.shadowOffsetX = 6; c.shadowOffsetY = 10;
+  c.translate(GX, GY); c.rotate(a);
+  c.beginPath(); c.moveTo(-56, -7); c.lineTo(R - 48, -1.2); c.lineTo(R - 48, 1.2); c.lineTo(-56, 7); c.closePath();
+  c.fillStyle = '#FF6FA8'; c.fill();
+  c.restore();
+  // hub
+  g = c.createRadialGradient(GX - 8, GY - 8, 2, GX, GY, 26);
+  g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.5, '#A7AABD'); g.addColorStop(1, '#3A3C4A');
+  c.beginPath(); c.arc(GX, GY, 24, 0, Math.PI * 2); c.fillStyle = g; c.fill();
+  // glass: one soft highlight across the upper left, a thin rim glint
+  c.save();
+  c.beginPath(); c.arc(GX, GY, R, 0, Math.PI * 2); c.clip();
+  g = c.createLinearGradient(GX - R, GY - R, GX + R * 0.2, GY + R * 0.2);
+  g.addColorStop(0, 'rgba(255,255,255,0.16)'); g.addColorStop(0.45, 'rgba(255,255,255,0.04)'); g.addColorStop(0.46, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(GX - R, GY - R, 2 * R, 2 * R);
+  c.restore();
+  c.restore();
+}
+
+function reflection(c, t) {
+  // the object mirrored on the floor, faded
+  const fy = GY + R + 120;
+  c.save();
+  c.beginPath(); c.rect(0, fy, W, H - fy); c.clip();
+  c.translate(0, 2 * fy); c.scale(1, -1);
+  gauge(c, t, 0.13);
+  c.restore();
+  const fade = c.createLinearGradient(0, fy, 0, fy + 260);
+  fade.addColorStop(0, 'rgba(4,5,12,0)'); fade.addColorStop(1, 'rgba(4,5,12,1)');
+  c.fillStyle = fade; c.fillRect(0, fy, W, H - fy);
+}
+
+function lockup(c, t) {
+  const x = 1110;
+  const v = Math.round(cl(value(t), 0, 100));
+  const k = out(t, 0.15, 0.5);
+  c.save(); c.globalAlpha = k;
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  // overline, letter-spaced
+  c.font = f(600, 34); c.fillStyle = 'rgba(214,200,255,0.85)';
+  'CLOSE TO'.split('').reduce((xx, ch) => { c.fillText(ch, xx, 360); return xx + c.measureText(ch).width + 9; }, x);
+  // the number: blue -> violet -> pink gradient, tabular so it doesn't wobble while counting
+  c.font = f(800, 250);
+  const g = c.createLinearGradient(x, 380, x + 620, 600);
+  g.addColorStop(0, '#6EA8FF'); g.addColorStop(0.5, '#9A7BFF'); g.addColorStop(1, '#FF6FA8');
+  c.fillStyle = g;
+  const s = `${v}%`;
+  c.fillText(s, x - 8, 600);
+  // label lands with the word, then stays still
+  const lk = out(t, T.word100 + 0.9, 0.45);
+  c.globalAlpha = k * lk;
+  c.font = f(800, 128); c.fillStyle = '#FFFFFF';
+  c.fillText('SIGNAL', x, 740 + (1 - lk) * 18);
+  c.restore();
+}
+
+function caption(c, t) {
+  const words = [['were', 2.0], ['close', 2.15], ['to', 2.4], ['100%', 2.6], ['signal.', 3.1]];
+  if (t < 1.9) return;
+  c.font = f(600, 40); c.textBaseline = 'middle';
+  const full = words.map((w) => w[0]).join(' ');
+  let x = W / 2 - c.measureText(full).width / 2;
+  for (const [w, s] of words) {
+    c.fillStyle = t >= s ? '#FFFFFF' : 'rgba(255,255,255,0.4)';
+    c.textAlign = 'left'; c.fillText(w, x, 1000); x += c.measureText(w + ' ').width;
+  }
+}
+
+M.setup({
+  width: W, height: H, fps: 30, duration: END, background: '#04050C',
+  look: 'cinematic', motionBlur: { samples: 6, around: true },
+  sfx: [{ at: T.v100, name: 'riser', volume: 0.25 }, { at: T.v100 + 1.2, name: 'tick', volume: 0.5 }],
+  cover: 4.5,
+  draw(ctx, t) {
+    stage(ctx, t);
+    // the camera settles in, it doesn't drift over a frozen picture: a 2% push that ends when the needle lands
+    const z = 1.02 - 0.02 * out(t, 0, 3.8);
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-W / 2, -H / 2);
+    reflection(ctx, t);
+    gauge(ctx, t);
+    lockup(ctx, t);
+    ctx.restore();
+    caption(ctx, t);
+    FX.vignette(ctx, { strength: 0.4 });
+  },
+});
+</script>
+</body>
+</html>

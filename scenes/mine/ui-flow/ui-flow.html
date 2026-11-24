@@ -1,0 +1,355 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>UI flow</title>
+<script src="../../../brand.js"></script>
+<script src="../../../kit/motion.js"></script>
+<script src="../../../kit/fx.js"></script>
+</head>
+<body>
+<script>
+// Product-UI motion study: one dark stage, one element at a time, a real cursor drives every step,
+// critically damped motion (no bounce), a soft 3D tilt on the card hand-off, blue -> green colour arc,
+// and a physical wipe into the end line. Everything is drawn in code (original app, no real brand).
+const W = 1080, H = 1920, END = 12.6;
+const FONT = '"Plus Jakarta Sans"';
+const f = (w, px) => `${w} ${px}px ${FONT}`;
+M.fonts([f(400, 40), f(600, 40), f(800, 40)]);
+
+const BLUE = [77, 132, 255], GREEN = [52, 211, 127];
+const rgb = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const mix = (a, b, p) => a.map((v, i) => Math.round(v + (b[i] - v) * p));
+const cl = M.clamp, lerp = M.lerp;
+// critically damped spring: fast, settles without overshoot
+const spring = (p) => { p = cl(p); const w = 7; return p >= 1 ? 1 : 1 - (1 + w * p) * Math.exp(-w * p) + p * (w + 1) * Math.exp(-w) * 0; };
+const sp = (t, a, d) => spring((t - a) / d);
+const io = (t, a, d) => M.ease.inOutCubic(cl((t - a) / d));
+const out = (t, a, d) => M.ease.outCubic(cl((t - a) / d));
+
+// ---- timeline -------------------------------------------------------------------------------
+const T = {
+  click1: 1.25, menu: 1.32, click2: 2.55, dialog: 2.62, type: 3.45, click3: 5.45, upload: 5.55,
+  bars: 6.05, done: 8.75, wipe: 10.05, line: 10.45,
+};
+const TEXT = 'My project';
+const CHAR = 0.1;
+
+// cursor keyframes: [time, x, y]
+const CUR = [
+  [0, 980, 1700], [0.25, 980, 1700], [1.1, 560, 978], [1.45, 560, 978], [2.35, 430, 1072], [2.7, 430, 1072],
+  [3.35, 700, 1150], [4.55, 700, 1150], [5.3, 770, 1205], [5.75, 770, 1205], [6.7, 1000, 1640], [99, 1000, 1640],
+];
+const CLICKS = [T.click1, T.click2, T.click3];
+
+function cursorAt(t) {
+  for (let i = 0; i < CUR.length - 1; i++) {
+    const [t0, x0, y0] = CUR[i], [t1, x1, y1] = CUR[i + 1];
+    if (t <= t1) {
+      const p = M.ease.inOutCubic(cl((t - t0) / (t1 - t0)));
+      // a slight arc, as a hand moves
+      const arc = Math.sin(p * Math.PI) * Math.hypot(x1 - x0, y1 - y0) * 0.08;
+      const nx = -(y1 - y0), ny = x1 - x0, nl = Math.hypot(nx, ny) || 1;
+      return [lerp(x0, x1, p) + nx / nl * arc, lerp(y0, y1, p) + ny / nl * arc];
+    }
+  }
+  return CUR[CUR.length - 1].slice(1);
+}
+const pressed = (t) => CLICKS.reduce((m, c) => Math.max(m, Math.max(0, 1 - Math.abs(t - c) / 0.09)), 0);
+
+// ---- drawing helpers ----------------------------------------------------------------------
+function rr(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+function panel(c, x, y, w, h, r, { alpha = 1, fill = 'rgba(24,26,32,0.92)' } = {}) {
+  c.save();
+  c.globalAlpha *= alpha;
+  c.shadowColor = 'rgba(0,0,0,0.55)'; c.shadowBlur = 90; c.shadowOffsetY = 40;
+  rr(c, x, y, w, h, r); c.fillStyle = fill; c.fill();
+  c.shadowColor = 'transparent';
+  // top-lit edge: brighter at the top, gone by the bottom
+  const g = c.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, 'rgba(255,255,255,0.16)'); g.addColorStop(0.5, 'rgba(255,255,255,0.04)'); g.addColorStop(1, 'rgba(255,255,255,0.02)');
+  c.lineWidth = 2; c.strokeStyle = g; rr(c, x + 1, y + 1, w - 2, h - 2, r - 1); c.stroke();
+  c.restore();
+}
+function txt(c, s, x, y, font, color, align = 'left') {
+  c.font = font; c.fillStyle = color; c.textAlign = align; c.textBaseline = 'middle'; c.fillText(s, x, y);
+}
+// fake perspective: rotate about the vertical axis by `ry` (radians) around (cx, cy)
+function tilt(c, cx, cy, ry, rx = 0, s = 1) {
+  c.translate(cx, cy);
+  c.transform(Math.cos(ry) * s, Math.sin(ry) * 0.18 * s, Math.sin(rx) * 0.18 * s, Math.cos(rx) * s, 0, 0);
+  c.translate(-cx, -cy);
+}
+
+function icon(c, kind, x, y, s, color) {
+  c.save(); c.translate(x, y); c.scale(s / 40, s / 40);
+  c.strokeStyle = color; c.lineWidth = 3.4; c.lineCap = 'round'; c.lineJoin = 'round';
+  c.beginPath();
+  if (kind === 'upload') { c.moveTo(0, 10); c.lineTo(0, -12); c.moveTo(-9, -4); c.lineTo(0, -13); c.lineTo(9, -4); c.moveTo(-15, 8); c.lineTo(-15, 15); c.lineTo(15, 15); c.lineTo(15, 8); }
+  if (kind === 'scan') { c.moveTo(-15, -6); c.lineTo(-15, -15); c.lineTo(-6, -15); c.moveTo(6, -15); c.lineTo(15, -15); c.lineTo(15, -6); c.moveTo(15, 6); c.lineTo(15, 15); c.lineTo(6, 15); c.moveTo(-6, 15); c.lineTo(-15, 15); c.lineTo(-15, 6); c.moveTo(-9, 0); c.lineTo(9, 0); }
+  if (kind === 'photo') { c.roundRect(-16, -10, 32, 24, 5); c.moveTo(-6, -10); c.lineTo(-3, -15); c.lineTo(3, -15); c.lineTo(6, -10); c.moveTo(7, 2); c.arc(0, 2, 7, 0, Math.PI * 2); }
+  if (kind === 'folder') { c.moveTo(-16, -11); c.lineTo(-5, -11); c.lineTo(-1, -6); c.lineTo(16, -6); c.lineTo(16, 13); c.lineTo(-16, 13); c.closePath(); }
+  if (kind === 'file') { c.moveTo(-10, -15); c.lineTo(4, -15); c.lineTo(11, -8); c.lineTo(11, 15); c.lineTo(-10, 15); c.closePath(); c.moveTo(4, -15); c.lineTo(4, -8); c.lineTo(11, -8); }
+  c.stroke(); c.restore();
+}
+
+function logo(c, x, y, s, a) {
+  // an original mark: three stacked rounded bars, offset like sheets of paper
+  c.save(); c.globalAlpha *= a; c.translate(x, y);
+  const cols = [rgb(BLUE), 'rgba(255,255,255,0.85)', 'rgba(255,255,255,0.35)'];
+  for (let i = 2; i >= 0; i--) { rr(c, -s / 2 + i * s * 0.12, -s * 0.36 + i * s * 0.2, s * 0.7, s * 0.28, s * 0.09); c.fillStyle = cols[i]; c.fill(); }
+  c.restore();
+}
+
+function cursor(c, t) {
+  if (t > 7.0) return;
+  const [x, y] = cursorAt(t);
+  const k = 1 - 0.14 * pressed(t);
+  const a = out(t, 0.2, 0.3) * (1 - out(t, 6.4, 0.5));
+  c.save(); c.globalAlpha = a; c.translate(x, y); c.scale(1.35 * k, 1.35 * k);
+  c.shadowColor = 'rgba(0,0,0,0.5)'; c.shadowBlur = 14; c.shadowOffsetY = 6;
+  c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 34); c.lineTo(8.5, 26); c.lineTo(14, 39); c.lineTo(19.5, 36.5); c.lineTo(14, 24); c.lineTo(25, 24); c.closePath();
+  c.fillStyle = '#fff'; c.fill(); c.shadowColor = 'transparent';
+  c.lineWidth = 2; c.strokeStyle = 'rgba(0,0,0,0.85)'; c.stroke();
+  c.restore();
+  // click ripple: a thin ring that expands once and fades
+  for (const ck of CLICKS) {
+    const p = cl((t - ck) / 0.45);
+    if (p <= 0 || p >= 1) continue;
+    c.save(); c.globalAlpha = (1 - p) * 0.5; c.strokeStyle = '#fff'; c.lineWidth = 2;
+    c.beginPath(); c.arc(x, y, 14 + 46 * M.ease.outCubic(p), 0, Math.PI * 2); c.stroke(); c.restore();
+  }
+}
+
+// ---- the stage ----------------------------------------------------------------------------
+function stage(c, t, fx, fy, tint) {
+  c.fillStyle = '#050609'; c.fillRect(0, 0, W, H);
+  // one soft key light that follows the focus
+  const g = c.createRadialGradient(fx, fy, 0, fx, fy, 900);
+  g.addColorStop(0, rgb(tint, 0.13)); g.addColorStop(0.45, rgb(tint, 0.04)); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+}
+
+// beat 1: the "+ New" pill
+function pill(c, t) {
+  const gone = out(t, T.menu, 0.25);
+  if (gone >= 1) return;
+  const hover = out(t, 0.95, 0.2);
+  const k = (1 - 0.04 * pressed(t)) * (1 - 0.08 * gone);
+  c.save(); c.globalAlpha = 1 - gone;
+  c.translate(540, 960); c.scale(k, k); c.translate(-540, -960);
+  // a soft blue halo under the primary action (the one glow: it marks the thing to press)
+  const halo = c.createRadialGradient(540, 975, 0, 540, 975, 260);
+  halo.addColorStop(0, rgb(BLUE, 0.28 + 0.12 * hover)); halo.addColorStop(1, rgb(BLUE, 0));
+  c.fillStyle = halo; c.fillRect(240, 760, 600, 420);
+  c.shadowColor = rgb(BLUE, 0.5); c.shadowBlur = 40; c.shadowOffsetY = 12;
+  rr(c, 380, 902, 320, 116, 58);
+  const bg = c.createLinearGradient(0, 902, 0, 1018);
+  bg.addColorStop(0, rgb(mix(BLUE, [255, 255, 255], 0.18 + 0.1 * hover))); bg.addColorStop(1, rgb(BLUE));
+  c.fillStyle = bg; c.fill(); c.shadowColor = 'transparent';
+  c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.35)'; rr(c, 381, 903, 318, 114, 57); c.stroke();
+  txt(c, '+', 468, 958, f(600, 58), '#fff', 'center');
+  txt(c, 'New', 570, 962, f(800, 48), '#fff', 'center');
+  c.restore();
+}
+
+const ITEMS = [['upload', 'Upload file'], ['scan', 'Scan document'], ['photo', 'Take a photo']];
+const MX = 230, MY = 900, MW = 620, ROW = 128;
+
+// beat 2: the menu grows out of the pill
+function menu(c, t) {
+  const o = sp(t, T.menu, 0.55);
+  if (o <= 0) return;
+  const closing = out(t, T.dialog, 0.3);
+  if (closing >= 1) return;
+  const h = 40 + ROW * 3;
+  // grows from the pill's size and place
+  const x = lerp(380, MX, o), y = lerp(902, MY, o), w = lerp(320, MW, o), hh = lerp(116, h, o);
+  c.save();
+  c.globalAlpha = cl(o * 2) * (1 - closing);
+  panel(c, x, y, w, hh, lerp(58, 36, o));
+  c.beginPath(); c.roundRect(x, y, w, hh, 36); c.clip();
+  // hover bar slides under the cursor's row
+  const hov = out(t, 2.2, 0.18);
+  if (hov > 0) { rr(c, MX + 16, MY + 20, MW - 32, ROW - 8, 24); c.fillStyle = `rgba(255,255,255,${0.07 * hov})`; c.fill(); }
+  ITEMS.forEach(([ic, label], i) => {
+    const k = out(t, T.menu + 0.12 + i * 0.06, 0.4);
+    const ry = MY + 20 + i * ROW + (ROW - 8) / 2 + (1 - k) * 24;
+    c.save(); c.globalAlpha *= k * (i === 0 ? 1 : 1 - closing * 2);
+    rr(c, MX + 44, ry - 34, 68, 68, 20); c.fillStyle = i === 0 ? rgb(BLUE, 0.18 + 0.1 * hov) : 'rgba(255,255,255,0.06)'; c.fill();
+    icon(c, ic, MX + 78, ry, 40, i === 0 ? rgb(mix(BLUE, [255, 255, 255], 0.3)) : 'rgba(255,255,255,0.75)');
+    txt(c, label, MX + 140, ry + 2, f(600, 42), 'rgba(255,255,255,0.94)');
+    c.restore();
+  });
+  c.restore();
+}
+
+// beats 3-5: one card that becomes the dialog, then the upload, then the success
+const CX = 140, CW = 800, CY = 760;
+function card(c, t) {
+  const a = sp(t, T.dialog, 0.75);
+  if (a <= 0) return;
+  // hand-off: comes forward from the menu row with a tilt that settles to flat
+  const ry = (1 - a) * -0.5, rx = (1 - a) * 0.25;
+  const s = lerp(0.82, 1, a);
+  const toUpload = sp(t, T.upload, 0.6);
+  const done = out(t, T.done, 0.4);
+  // the card's height changes as its content changes
+  const hDialog = 560, hUpload = 700;
+  const h = lerp(hDialog, hUpload, toUpload);
+  const y = lerp(CY, CY - 70, toUpload) - 260 * io(t, T.wipe - 0.6, 0.7) * 0;
+  const cy = y + h / 2;
+  c.save();
+  c.globalAlpha = cl(a * 1.6);
+  tilt(c, 540, lerp(1060, cy, a), ry, rx, s);
+  c.translate(0, lerp(300, 0, a));
+  panel(c, CX, y, CW, h, 44);
+  c.beginPath(); c.roundRect(CX, y, CW, h, 44); c.clip();
+
+  // header: icon + title (changes once per step)
+  const accent = mix(BLUE, GREEN, done);
+  rr(c, CX + 56, y + 56, 84, 84, 24); c.fillStyle = rgb(accent, 0.18); c.fill();
+  if (done < 0.5) icon(c, toUpload > 0.5 ? 'folder' : 'folder', CX + 98, y + 98, 46, rgb(mix(accent, [255, 255, 255], 0.3)));
+  else checkMark(c, t, CX + 98, y + 98);
+  const title = toUpload < 0.5 ? 'New folder' : TEXT;
+  const sub = toUpload < 0.5 ? 'Name it, then upload' : (done < 0.5 ? 'Uploading 3 files' : 'All 3 files saved');
+  const swap = toUpload < 0.5 ? 1 : out(t, T.upload + 0.05, 0.3);
+  c.globalAlpha *= 1;
+  txt(c, title, CX + 170, y + 82, f(800, 46), `rgba(255,255,255,${0.96 * swap})`);
+  const subSwap = done > 0 ? out(t, T.done + 0.1, 0.3) : swap;
+  txt(c, sub, CX + 170, y + 128, f(400, 34), done > 0.5 ? rgb(GREEN, subSwap) : `rgba(255,255,255,${0.55 * subSwap})`);
+
+  // dialog body: text field + buttons
+  const db = 1 - out(t, T.upload, 0.22);
+  if (db > 0) {
+    c.save(); c.globalAlpha *= db;
+    const fy = y + 200;
+    const focus = out(t, T.type - 0.25, 0.25);
+    rr(c, CX + 56, fy, CW - 112, 128, 28); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill();
+    c.lineWidth = 3; c.strokeStyle = focus > 0 ? rgb(BLUE, 0.25 + 0.6 * focus) : 'rgba(255,255,255,0.12)'; c.stroke();
+    const n = Math.floor(cl((t - T.type) / CHAR, 0, TEXT.length));
+    const typed = TEXT.slice(0, n);
+    if (n === 0) txt(c, 'Folder name', CX + 96, fy + 64, f(400, 44), 'rgba(255,255,255,0.3)');
+    txt(c, typed, CX + 96, fy + 64, f(600, 46), '#fff');
+    c.font = f(600, 46);
+    const cx2 = CX + 96 + c.measureText(typed).width + 6;
+    const typing = t > T.type && t < T.type + TEXT.length * CHAR + 0.1;
+    if (focus > 0.5 && (typing || Math.floor(t * 2.2) % 2 === 0)) { c.fillStyle = rgb(BLUE); c.fillRect(cx2, fy + 34, 4, 60); }
+    // buttons
+    const by = y + h - 160;
+    rr(c, CX + 56, by, 330, 104, 30); c.fillStyle = 'rgba(255,255,255,0.07)'; c.fill();
+    txt(c, 'Cancel', CX + 221, by + 53, f(600, 40), 'rgba(255,255,255,0.8)', 'center');
+    const ready = out(t, T.type + TEXT.length * CHAR, 0.25);
+    const hov = out(t, 5.2, 0.15);
+    const k = 1 - 0.04 * pressed(t) * (t > 5 ? 1 : 0);
+    c.save(); c.translate(CX + 579, by + 52); c.scale(k, k); c.translate(-(CX + 579), -(by + 52));
+    rr(c, CX + 414, by, 330, 104, 30);
+    c.fillStyle = rgb(mix([60, 64, 76], mix(BLUE, [255, 255, 255], 0.12 * hov), ready)); c.fill();
+    txt(c, 'Upload', CX + 579, by + 53, f(800, 40), `rgba(255,255,255,${0.45 + 0.55 * ready})`, 'center');
+    c.restore();
+    c.restore();
+  }
+
+  // upload body: three files with progress
+  if (toUpload > 0) {
+    const FILES = [['Brief.pdf', '2.4 MB', 0.0, 1.5], ['Moodboard.png', '8.1 MB', 0.25, 2.0], ['Cut_v3.mp4', '214 MB', 0.45, 2.45]];
+    FILES.forEach(([name, size, d, dur], i) => {
+      const k = out(t, T.upload + 0.15 + i * 0.07, 0.45);
+      const ry = y + 210 + i * 150 + (1 - k) * 30;
+      c.save(); c.globalAlpha *= k;
+      rr(c, CX + 40, ry, CW - 80, 128, 26); c.fillStyle = 'rgba(255,255,255,0.04)'; c.fill();
+      icon(c, 'file', CX + 98, ry + 64, 40, 'rgba(255,255,255,0.7)');
+      txt(c, name, CX + 150, ry + 44, f(600, 38), 'rgba(255,255,255,0.94)');
+      // progress: uneven, like real uploads
+      const raw = cl((t - T.bars - d) / dur);
+      const p = raw < 1 ? M.ease.inOutCubic(raw) * 0.97 + 0.03 * raw : 1;
+      const pct = Math.round(p * 100);
+      const fin = out(t, T.bars + d + dur, 0.25);
+      txt(c, pct === 100 ? size : `${pct}%`, CX + CW - 76, ry + 44, f(600, 32), pct === 100 ? 'rgba(255,255,255,0.55)' : rgb(BLUE), 'right');
+      const bx = CX + 150, bw = CW - 80 - 150 - 36, byy = ry + 86;
+      rr(c, bx, byy, bw, 12, 6); c.fillStyle = 'rgba(255,255,255,0.09)'; c.fill();
+      if (p > 0) { rr(c, bx, byy, Math.max(12, bw * p), 12, 6); c.fillStyle = rgb(mix(BLUE, GREEN, fin)); c.fill(); }
+      c.restore();
+    });
+    // the overall bar at the bottom of the card
+    const total = cl((t - T.bars) / 2.9);
+    const by = y + h - 50;
+    rr(c, CX + 56, by, CW - 112, 6, 3); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill();
+    rr(c, CX + 56, by, Math.max(6, (CW - 112) * M.ease.inOutCubic(total)), 6, 3); c.fillStyle = rgb(mix(BLUE, GREEN, done), 0.9); c.fill();
+  }
+  c.restore();
+}
+
+function checkMark(c, t, x, y) {
+  const p = out(t, T.done, 0.45);
+  c.save();
+  c.beginPath(); c.arc(x, y, 30, 0, Math.PI * 2); c.fillStyle = rgb(GREEN); c.globalAlpha *= out(t, T.done, 0.25); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = '#0B1A12'; c.lineWidth = 7; c.lineCap = 'round'; c.lineJoin = 'round';
+  // draw the tick as a growing stroke
+  const pts = [[-13, 1], [-4, 10], [14, -9]];
+  const L1 = Math.hypot(9, 9), L2 = Math.hypot(18, 19), L = L1 + L2, d = p * L;
+  c.beginPath(); c.moveTo(x + pts[0][0], y + pts[0][1]);
+  if (d <= L1) c.lineTo(x + pts[0][0] + 9 * d / L1, y + pts[0][1] + 9 * d / L1);
+  else { c.lineTo(x + pts[1][0], y + pts[1][1]); const q = (d - L1) / L2; c.lineTo(x + pts[1][0] + 18 * q, y + pts[1][1] - 19 * q); }
+  if (p > 0.02) c.stroke();
+  c.restore();
+}
+
+// beat 6: a white field rises from the check (physical wipe), then the line
+function finale(c, t) {
+  const p = io(t, T.wipe, 0.7);
+  if (p <= 0) return;
+  const ox = CX + 98, oy = 760 - 70 + 98;
+  c.save();
+  c.beginPath(); c.arc(ox, oy, 2400 * p, 0, Math.PI * 2); c.fillStyle = '#F4F3EF'; c.fill();
+  c.restore();
+  const k = out(t, T.line, 0.7);
+  logo(c, 540, 820 - (1 - k) * 20, 110, out(t, T.line, 0.5));
+  c.save(); c.globalAlpha = k;
+  txt(c, 'Save everything.', 540, 1010 + (1 - k) * 28, f(800, 92), '#0D0F14', 'center');
+  c.restore();
+  const k2 = out(t, T.line + 0.5, 0.6);
+  c.save(); c.globalAlpha = k2;
+  txt(c, 'Upload once. Find it anywhere.', 540, 1110 + (1 - k2) * 20, f(400, 42), 'rgba(13,15,20,0.55)', 'center');
+  c.restore();
+}
+
+function header(c, t) {
+  // brand mark at the top of the stage while the UI works
+  const a = 1 - out(t, T.wipe - 0.2, 0.3);
+  logo(c, 474, 420, 64, a);
+  c.save(); c.globalAlpha = a * 0.92; txt(c, 'Folio', 528, 422, f(800, 52), '#fff'); c.restore();
+}
+
+M.setup({
+  width: W, height: H, fps: 30, duration: END, background: '#050609',
+  look: 'cinematic', motionBlur: { samples: 6, around: true },
+  music: { track: 'calm', volume: 0.22 },
+  sfx: [
+    { at: T.click1, name: 'tap', volume: 0.6 }, { at: T.click2, name: 'tap', volume: 0.6 },
+    { at: T.type, name: 'type', volume: 0.35 }, { at: T.click3, name: 'tap', volume: 0.6 },
+    { at: T.done, name: 'success', volume: 0.55 }, { at: T.wipe, name: 'whoosh', volume: 0.35 },
+  ],
+  cover: 4.4,
+  draw(ctx, t) {
+    // focus point the light and camera follow
+    const focus = t < T.dialog ? [540, 1000] : [540, lerp(1040, 1000, out(t, T.upload, 0.6))];
+    const tint = mix(BLUE, GREEN, out(t, T.done, 0.6));
+    stage(ctx, t, focus[0], focus[1], tint);
+    // slow push: the camera keeps moving, never jumps
+    const z = 1 + 0.05 * io(t, 0, T.wipe);
+    ctx.save(); ctx.translate(540, 1000); ctx.scale(z, z); ctx.translate(-540, -1000);
+    header(ctx, t);
+    pill(ctx, t);
+    menu(ctx, t);
+    card(ctx, t);
+    cursor(ctx, t);
+    ctx.restore();
+    finale(ctx, t);
+    if (t < T.wipe + 0.3) FX.vignette(ctx, { strength: 0.45 });
+  },
+});
+</script>
+</body>
+</html>
