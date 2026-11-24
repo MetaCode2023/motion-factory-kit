@@ -1,0 +1,707 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Order #42</title>
+<script src="../../../brand.js"></script>
+<script src="../../../kit/motion.js"></script>
+<script src="timeline.js"></script>
+</head>
+<body>
+<script>
+// ORDER #42. A guy at a drive-thru speaker is asked "anything else?" and, in the pause, falls through his own
+// eye, into his neurons, out to the stars and the start of time. A honk snaps him back: "No. That's everything."
+//
+// Design rules (scenes/mine/order-42/PLAN.md):
+//  A. The circle: every cut in the trip goes through a circle (grille -> pupil -> neuron -> star -> galaxy).
+//  B. The readout: a dot-matrix readout low in frame. 11:47 before the trip, the scale during it, 11:47 after.
+//  C. Type: the real world talks in 5x7 dot-matrix LED. In the trip, words leave the grid and their letters
+//     drift apart the way galaxies do (farther from centre = faster). On the honk, dot-matrix again.
+//  D. Colour: sodium amber + menu purple -> indigo -> nebula -> flat fluorescent -> night, with one gold glint.
+// Timing: every cue comes from the real voice takes (timeline.js, written by prep.py).
+
+const W = 1080, H = 1920;
+const O = window.ORDER42, Q = O.cues, LINES = O.lines;
+const END = Q.end;
+const AMBER = '#FFB547', PURPLE = '#7B3CFF', GREEN = '#7DFFB2', WARM = '#FFEBD0', GOLD = '#FFD27A', CYAN = '#7FE7FF';
+const BARLOW = '"Barlow"', COND = '"Barlow Condensed"', MONO = '"JetBrains Mono"';
+M.fonts([`600 40px ${BARLOW}`, `700 40px ${BARLOW}`, `800 40px ${COND}`, `600 40px ${MONO}`]);
+
+const IMG = {
+  eye: M.image('../../../assets/broll/taco/eye.jpg'),
+  neurons: M.image('../../../assets/broll/taco/neurons.jpg'),
+  pillars: M.image('../../../assets/broll/taco/pillars.jpg'),
+  galaxy: M.image('../../../assets/broll/taco/galaxy.jpg'),
+  deep: M.image('../../../assets/broll/taco/deepfield.jpg'),
+};
+
+// ---- small tools -------------------------------------------------------------------------------
+const clamp = M.clamp, lerp = M.lerp;
+const ease = { out: (x) => 1 - Math.pow(1 - clamp(x), 3), inOut: (x) => { x = clamp(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }, in: (x) => Math.pow(clamp(x), 3) };
+const prog = (t, a, d) => clamp((t - a) / d);
+function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; }; }
+const line = (n) => LINES[n - 1];
+const wordAt = (n, prefix) => line(n).words.find((w) => w.w.toUpperCase().startsWith(prefix)).s;
+function glowDot(c, x, y, r, color, a = 1) {
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
+  c.save(); c.globalAlpha *= a; c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.restore();
+}
+function coverAt(c, img, cx, cy, zoom, fx, fy, { rot = 0, alpha = 1 } = {}) {
+  // Draw img so that its point (fx, fy) (0..1) sits at (cx, cy), scaled to cover the frame times `zoom`.
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  if (!iw) return;
+  const s = Math.max(W / iw, H / ih) * zoom;
+  c.save(); c.globalAlpha *= alpha; c.translate(cx, cy); c.rotate(rot);
+  c.drawImage(img, -fx * iw * s, -fy * ih * s, iw * s, ih * s);
+  c.restore();
+}
+
+// ---- 5x7 dot-matrix type (rule C) -----------------------------------------------------------------
+const GLYPH_ROWS = {
+  A: '.###. #...# #...# ##### #...# #...# #...#',
+  B: '####. #...# #...# ####. #...# #...# ####.',
+  C: '.###. #...# #.... #.... #.... #...# .###.',
+  D: '####. #...# #...# #...# #...# #...# ####.',
+  E: '##### #.... #.... ####. #.... #.... #####',
+  F: '##### #.... #.... ####. #.... #.... #....',
+  G: '.###. #...# #.... #.### #...# #...# .####',
+  H: '#...# #...# #...# ##### #...# #...# #...#',
+  I: '.###. ..#.. ..#.. ..#.. ..#.. ..#.. .###.',
+  J: '..### ...#. ...#. ...#. ...#. #..#. .##..',
+  K: '#...# #..#. #.#.. ##... #.#.. #..#. #...#',
+  L: '#.... #.... #.... #.... #.... #.... #####',
+  M: '#...# ##.## #.#.# #.#.# #...# #...# #...#',
+  N: '#...# #...# ##..# #.#.# #..## #...# #...#',
+  O: '.###. #...# #...# #...# #...# #...# .###.',
+  P: '####. #...# #...# ####. #.... #.... #....',
+  Q: '.###. #...# #...# #...# #.#.# #..#. .##.#',
+  R: '####. #...# #...# ####. #.#.. #..#. #...#',
+  S: '.#### #.... #.... .###. ....# ....# ####.',
+  T: '##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..',
+  U: '#...# #...# #...# #...# #...# #...# .###.',
+  V: '#...# #...# #...# #...# #...# .#.#. ..#..',
+  W: '#...# #...# #...# #.#.# #.#.# #.#.# .#.#.',
+  X: '#...# #...# .#.#. ..#.. .#.#. #...# #...#',
+  Y: '#...# #...# .#.#. ..#.. ..#.. ..#.. ..#..',
+  Z: '##### ....# ...#. ..#.. .#... #.... #####',
+  '0': '.###. #...# #..## #.#.# ##..# #...# .###.',
+  '1': '..#.. .##.. ..#.. ..#.. ..#.. ..#.. .###.',
+  '2': '.###. #...# ....# ...#. ..#.. .#... #####',
+  '3': '##### ...#. ..#.. ...#. ....# #...# .###.',
+  '4': '...#. ..##. .#.#. #..#. ##### ...#. ...#.',
+  '5': '##### #.... ####. ....# ....# #...# .###.',
+  '6': '..##. .#... #.... ####. #...# #...# .###.',
+  '7': '##### ....# ...#. ..#.. .#... .#... .#...',
+  '8': '.###. #...# #...# .###. #...# #...# .###.',
+  '9': '.###. #...# #...# .#### ....# ...#. .##..',
+  '.': '..... ..... ..... ..... ..... .##.. .##..',
+  ',': '..... ..... ..... ..... .##.. ..#.. .#...',
+  '?': '.###. #...# ....# ...#. ..#.. ..... ..#..',
+  '!': '..#.. ..#.. ..#.. ..#.. ..#.. ..... ..#..',
+  "'": '..#.. ..#.. .#... ..... ..... ..... .....',
+  '$': '..#.. .#### #.#.. .###. ..#.# ####. ..#..',
+  '#': '.#.#. .#.#. ##### .#.#. ##### .#.#. .#.#.',
+  ':': '..... .##.. .##.. ..... .##.. .##.. .....',
+  '-': '..... ..... ..... ##### ..... ..... .....',
+  '/': '..... ....# ...#. ..#.. .#... #.... .....',
+  ' ': '..... ..... ..... ..... ..... ..... .....',
+};
+const GLYPH = Object.fromEntries(Object.entries(GLYPH_ROWS).map(([k, v]) => [k, v.replace(/ /g, '')]));
+// Draw `str` as LED dots; returns its width. `lit(i)` (0..1) per character lets text type on.
+function dotText(c, str, x, y, pitch, color, { align = 'center', lit = () => 1, ghost = 0, colorAt = null, jitter = null } = {}) {
+  const chars = [...str.toUpperCase()];
+  const w = chars.length * 6 * pitch - pitch;
+  let x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+  const r = pitch * 0.4;
+  chars.forEach((ch, i) => {
+    const g = GLYPH[ch] || GLYPH[' '];
+    const a = lit(i);
+    const col = colorAt ? colorAt(i) : color;
+    for (let k = 0; k < 35; k++) {
+      const on = g[k] === '#';
+      if (!on && !ghost) continue;
+      const px = x0 + (i * 6 + (k % 5)) * pitch, py = y + Math.floor(k / 5) * pitch - 3.5 * pitch;
+      const j = jitter ? jitter(i, k) : [0, 0];
+      c.globalAlpha = on ? a : ghost;
+      c.fillStyle = on ? col : '#ffffff';
+      c.beginPath(); c.arc(px + j[0], py + j[1], r, 0, Math.PI * 2); c.fill();
+    }
+  });
+  c.globalAlpha = 1;
+  return w;
+}
+
+// ---- captions (rule C): dot-matrix in the real world, drifting letters in the trip -------------------
+const WORDS = [];
+LINES.forEach((l) => l.words.forEach((w, i) => WORDS.push({ ...w, who: l.who, n: l.n, last: i === l.words.length - 1 })));
+// chunks: up to 3 words / 15 characters, break after punctuation or a pause
+const CHUNKS = [];
+{
+  let cur = null;
+  WORDS.forEach((w, i) => {
+    const p = WORDS[i - 1];
+    const brk = !cur || p.n !== w.n || cur.words.length >= 3 || /[.,!?]$/.test(p.w) || w.s - p.e > 0.4 || (cur.words.map((x) => x.w).join(' ') + ' ' + w.w).length > 15;
+    if (brk) CHUNKS.push(cur = { words: [], who: w.who, n: w.n });
+    cur.words.push(w);
+  });
+  CHUNKS.forEach((c, i) => {
+    c.s = c.words[0].s;
+    const e = c.words[c.words.length - 1].e;
+    const nx = CHUNKS[i + 1];
+    c.e = nx && nx.words[0].s - e < 0.7 ? nx.words[0].s : e + 0.45;
+  });
+}
+const isKey = (w) => /[A-Z]{2,}/.test(w.replace(/[^A-Za-z]/g, '')) && w.replace(/[^A-Za-z]/g, '') === w.replace(/[^A-Za-z]/g, '').toUpperCase() && !/^(I|I'M)$/.test(w);
+const inTrip = (t) => t >= Q.trip && t < Q.honk;
+
+function captionsWorld(c, t) {
+  const ch = CHUNKS.find((k) => t >= k.s && t < k.e && !inTrip(k.s));
+  if (!ch || ch.n === 1) return;   // line 1 is the hook headline
+  const txt = ch.words.map((w) => w.w).join(' ');
+  const pitch = txt.length > 12 ? 10 : 12;
+  const y = 1190;
+  const spk = ch.who === 'spk';
+  // panel behind for legibility
+  const w = txt.length * 6 * pitch;
+  c.save();
+  c.fillStyle = 'rgba(6,5,10,0.72)';
+  M.roundRect(c, W / 2 - w / 2 - 28, y - 7 * pitch, w + 56, 14 * pitch, 18); c.fill();
+  // character -> word map, for colour and type-on
+  const map = []; ch.words.forEach((wd, wi) => { [...wd.w].forEach(() => map.push(wi)); if (wi < ch.words.length - 1) map.push(-1); });
+  dotText(c, txt, W / 2, y, pitch, spk ? GREEN : WARM, {
+    lit: (i) => { const wd = ch.words[map[i]] || ch.words[Math.max(0, map[i - 1] ?? 0)]; return t >= wd.s - 0.02 ? 1 : 0.12; },
+    colorAt: (i) => { const wd = ch.words[map[i]]; return wd && isKey(wd.w) ? (spk ? '#D7FFE9' : AMBER) : spk ? GREEN : WARM; },
+    ghost: 0.05,
+  });
+  c.restore();
+}
+
+// The hook: the whole first line as a dot-matrix headline, on screen from frame 0
+function hookHeadline(c, t) {
+  const a = 1 - prog(t, line(1).end + 0.2, 0.35);
+  if (a <= 0) return;
+  const rows = [['NOBODY TELLS YOU', [0, 1, 2]], ['ENLIGHTENMENT', [3]], ['HAPPENS IN A', [4, 5, 6]], ['TACO BELL', [7, 8]], ['DRIVE-THRU.', [9]]];
+  const words = line(1).words;
+  c.save(); c.globalAlpha = a;
+  c.fillStyle = 'rgba(6,5,10,0.84)'; M.roundRect(c, 70, 400, 940, 520, 24); c.fill();
+  rows.forEach(([r, ids], i) => {
+    const key = i === 1 || i === 4;
+    // each word lights up as it's spoken (readable, dimmer, from frame 0)
+    const map = []; r.split(' ').forEach((wd, wi) => { [...wd].forEach(() => map.push(ids[wi])); map.push(ids[wi]); });
+    dotText(c, r, W / 2, 470 + i * 96, key ? 11 : 10, key ? AMBER : WARM, { ghost: 0.05, lit: (ci) => (t >= words[map[ci]].s - 0.03 ? 1 : 0.55) });
+  });
+  c.restore();
+}
+function captionsTrip(c, t) {
+  const ch = CHUNKS.find((k) => t >= k.s && t < k.e && inTrip(k.s));
+  if (!ch) return;
+  const y = 1180;
+  // layout: each word gets a size (keys 1.9x), letters spaced wide
+  const base = 62;
+  const items = ch.words.map((wd) => ({ wd, key: isKey(wd.w), str: wd.w.toUpperCase() }));
+  let total = 0;
+  items.forEach((it) => {
+    it.size = it.key ? base * 1.7 : base;
+    c.font = `${it.key ? 700 : 600} ${it.size}px ${BARLOW}`;
+    it.track = it.size * 0.16;
+    it.ws = [...it.str].map((l) => c.measureText(l).width + it.track);
+    it.w = it.ws.reduce((a, b) => a + b, 0);
+    total += it.w;
+  });
+  total += (items.length - 1) * base * 0.55;
+  let scale = Math.min(1, 900 / total);
+  let x = W / 2 - (total * scale) / 2;
+  c.save();
+  c.textBaseline = 'middle'; c.textAlign = 'left';
+  items.forEach((it) => {
+    const age = Math.max(0, t - it.wd.s);
+    const a = clamp((t - it.wd.s + 0.05) / 0.25) * clamp((ch.e - t) / 0.3 + 0.0);
+    c.font = `${it.key ? 700 : 600} ${it.size * scale}px ${BARLOW}`;
+    let lx = x;
+    [...it.str].forEach((l, li) => {
+      const cx = lx + it.ws[li] * scale / 2;
+      // Hubble flow: velocity proportional to distance from the centre
+      const dx = (cx - W / 2) * 0.05 * age, dy = (rng(li * 31 + it.str.length)() - 0.5) * 6 * age;
+      c.globalAlpha = a;
+      c.shadowColor = 'rgba(0,0,0,0.85)'; c.shadowBlur = 18;
+      c.fillStyle = it.key ? (t > Q.universe ? GOLD : CYAN) : '#F4F1FF';
+      c.fillText(l, lx + dx, y + dy + (it.key ? 0 : 4));
+      lx += it.ws[li] * scale;
+    });
+    x += it.w * scale + base * 0.55 * scale;
+  });
+  c.restore();
+}
+
+// ---- the readout (rule B) --------------------------------------------------------------------------
+function readout(c, t) {
+  let str = '11:47', col = GREEN;
+  if (inTrip(t)) {
+    col = t > Q.universe ? GOLD : CYAN;
+    if (t < Q.neurons) str = 'WHO?';
+    else if (t < Q.stars) str = M.count(86000000000, ease.out(prog(t, wordAt(8, '86'), 1.6)));
+    else if (t < Q.years) str = t < wordAt(9, 'STARS') ? 'FE 26 . C 6' : 'STARDUST';
+    else if (t < Q.universe) str = M.count(13.8, ease.out(prog(t, Q.years, 1.6)), { decimals: 1 }) + ' BN YRS';
+    else str = '1 UNIVERSE';
+  }
+  const y = 1392;
+  c.save();
+  const blink = !inTrip(t) && Math.floor(t * 1.0) % 2 ? 0.25 : 1;   // the colon blinks like a car clock
+  const pitch = 7;
+  const w = dotText(c, str.replace(':', ' '), W / 2, y, pitch, col, { ghost: 0 });
+  if (str.includes(':')) dotText(c, ':', W / 2, y, pitch, col, { lit: () => blink });
+  c.restore();
+}
+
+// ---- the real world: windshield POV at night -----------------------------------------------------------
+const R0 = rng(7);
+const BOKEH = Array.from({ length: 26 }, () => ({ x: R0() * W, y: 200 + R0() * 700, r: 14 + R0() * 40, col: [AMBER, '#FF6A3D', PURPLE, '#FFE0A0'][Math.floor(R0() * 4)], a: 0.25 + R0() * 0.5 }));
+const DROPS = Array.from({ length: 90 }, () => ({ x: R0() * W, y: 120 + R0() * 1250, r: 2 + R0() * R0() * 11, slide: R0() < 0.08 ? 20 + R0() * 40 : 0, ph: R0() * 10 }));
+const GRILLE = { x: 250, y: 1000, r: 118 };
+
+function sky(c) {
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#05040d'); g.addColorStop(0.35, '#130b2a'); g.addColorStop(0.6, '#2a1430'); g.addColorStop(0.72, '#4a2418'); g.addColorStop(1, '#120a08');
+  c.fillStyle = g; c.fillRect(-400, -400, W + 800, H + 800);
+  glowDot(c, 540, 1180, 900, 'rgba(255,140,50,0.35)');   // sodium haze over the lot
+}
+function menuBoard(c, t, flat) {
+  c.save();
+  c.filter = 'blur(5px)';                                 // out of focus: we're looking at the speaker
+  glowDot(c, 810, 820, 520, flat ? 'rgba(160,120,255,0.25)' : 'rgba(123,60,255,0.55)');
+  const g = c.createLinearGradient(620, 560, 1000, 1080);
+  g.addColorStop(0, '#8E5BFF'); g.addColorStop(1, '#3A1590');
+  c.fillStyle = g; M.roundRect(c, 630, 560, 380, 520, 18); c.fill();
+  // menu rows: light strips and picture squares, no words, no marks
+  const r = rng(3);
+  for (let i = 0; i < 7; i++) {
+    const y = 610 + i * 64;
+    c.fillStyle = 'rgba(255,240,220,0.55)'; c.fillRect(660, y, 70, 44);
+    c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(750, y + 8, 120 + r() * 80, 10);
+    c.fillStyle = 'rgba(255,255,255,0.3)'; c.fillRect(750, y + 26, 80 + r() * 60, 8);
+    c.fillStyle = 'rgba(255,214,140,0.7)'; c.fillRect(950, y + 10, 34, 14);
+  }
+  c.fillStyle = '#16121c'; c.fillRect(800, 1080, 40, 400);   // its post
+  c.restore();
+}
+function carAhead(c, t) {
+  c.save();
+  c.filter = 'blur(3px)';
+  c.fillStyle = '#0b0910';
+  M.roundRect(c, 420, 990, 520, 250, 60); c.fill();
+  c.fillStyle = '#16121e'; M.roundRect(c, 470, 930, 420, 120, 50); c.fill();
+  const brake = 0.75 + 0.25 * Math.sin(t * 0.7);
+  [[470, 1090], [890, 1090]].forEach(([x, y]) => { glowDot(c, x, y, 90, 'rgba(255,30,40,0.55)', brake); c.fillStyle = '#ff2a35'; M.roundRect(c, x - 34, y - 12, 68, 24, 8); c.fill(); });
+  c.restore();
+}
+function speakerPost(c, t, listening) {
+  c.save();
+  // post body
+  const g = c.createLinearGradient(80, 0, 430, 0);
+  g.addColorStop(0, '#0d0b12'); g.addColorStop(0.8, '#1d1828'); g.addColorStop(1, '#3a2a5a');
+  c.fillStyle = g; M.roundRect(c, 70, 640, 360, 1100, 30); c.fill();
+  c.strokeStyle = 'rgba(160,120,255,0.35)'; c.lineWidth = 3; c.beginPath(); c.moveTo(428, 680); c.lineTo(428, 1700); c.stroke();
+  // order screen
+  c.fillStyle = '#050407'; M.roundRect(c, 100, 690, 300, 170, 14); c.fill();
+  c.strokeStyle = '#2b2436'; c.lineWidth = 4; c.stroke();
+  // grille: the circle
+  const { x, y, r } = GRILLE;
+  c.fillStyle = '#0a090d'; c.beginPath(); c.arc(x, y, r + 14, 0, Math.PI * 2); c.fill();
+  const ring = listening;
+  c.strokeStyle = `rgba(255,181,71,${0.25 + 0.75 * ring})`; c.lineWidth = 6;
+  c.shadowColor = AMBER; c.shadowBlur = 30 * ring;
+  c.beginPath(); c.arc(x, y, r + 8, 0, Math.PI * 2); c.stroke();
+  c.shadowBlur = 0;
+  c.fillStyle = '#17141d'; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#050407';
+  for (let yy = -r; yy <= r; yy += 16) for (let xx = -r; xx <= r; xx += 16) if (xx * xx + yy * yy < (r - 10) ** 2) { c.beginPath(); c.arc(x + xx, y + yy, 4.2, 0, Math.PI * 2); c.fill(); }
+  // highlight from the menu board
+  const hl = c.createRadialGradient(x + 60, y - 70, 10, x + 60, y - 70, 160);
+  hl.addColorStop(0, 'rgba(170,130,255,0.25)'); hl.addColorStop(1, 'rgba(0,0,0,0)');
+  c.fillStyle = hl; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+  c.restore();
+}
+function orderScreen(c, t) {
+  // what the speaker shows: the order, then "ANYTHING ELSE?" which starts to stretch (time dilating)
+  const L3 = line(3), L4 = line(4), L12 = line(12), L14 = line(14);
+  let rows = [];
+  if (t >= L3.words[6].s && t < Q.trip) rows = ['1 #4 COMBO', t >= L3.words[10].s ? '1 LG BAJA' : ''];
+  if (t >= L4.at - 0.05 && t < Q.trip) rows = ['ANYTHING', 'ELSE?'];
+  if (t >= Q.honk) rows = t >= L14.at ? ['TOTAL', '$8.47'] : t >= L12.at ? ['SIR?', 'ANYTHING', 'ELSE?'] : ['1 #4 COMBO', '1 LG BAJA'];
+  if (!rows.length) { dotText(c, 'WELCOME', 250, 775, 5.2, GREEN, { lit: () => 0.5 }); return; }
+  const stretch = t >= L4.at && t < Q.trip ? ease.in(prog(t, L4.at + 0.8, Q.trip - L4.at - 0.8)) : 0;
+  rows.forEach((s, i) => {
+    const y = 740 + i * 46 + (rows.length === 3 ? -10 : 10);
+    dotText(c, s, 250, y, 4.6, GREEN, { ghost: 0.04, jitter: stretch ? (ci, k) => [((ci - s.length / 2) * 6 + (k % 5) - 2.5) * 4.6 * stretch * 1.4, 0] : null });
+  });
+}
+function windshield(c, t, flat) {
+  // rain on the glass, catching the light
+  c.save();
+  DROPS.forEach((d) => {
+    const y = d.y + (d.slide ? ((t * d.slide + d.ph * 30) % 300) : 0);
+    c.globalAlpha = flat ? 0.35 : 0.6;
+    const g = c.createRadialGradient(d.x - d.r * 0.3, y - d.r * 0.3, 0, d.x, y, d.r);
+    g.addColorStop(0, 'rgba(255,230,200,0.9)'); g.addColorStop(0.5, 'rgba(160,120,255,0.25)'); g.addColorStop(1, 'rgba(0,0,0,0.0)');
+    c.fillStyle = g; c.beginPath(); c.arc(d.x, y, d.r, 0, Math.PI * 2); c.fill();
+  });
+  c.restore();
+}
+function cabin(c, t, flare) {
+  // rear-view mirror (top centre) and the dashboard (bottom): the frame of the POV
+  c.save();
+  c.fillStyle = '#050408'; c.fillRect(530, 0, 20, 250);
+  c.fillStyle = '#0a0910'; M.roundRect(c, 330, 230, 420, 140, 40); c.fill();
+  c.strokeStyle = '#1c1826'; c.lineWidth = 6; c.stroke();
+  c.save(); M.roundRect(c, 345, 245, 390, 110, 32); c.clip();
+  c.fillStyle = '#120f1c'; c.fillRect(345, 245, 390, 110);
+  // headlights of the car behind, in the mirror
+  [[480, 305], [600, 305]].forEach(([x, y]) => glowDot(c, x, y, 40 + 300 * flare, `rgba(255,250,235,${0.35 + 0.65 * flare})`));
+  c.restore();
+  // flare floods the cabin
+  if (flare > 0) glowDot(c, 540, 300, 1500, `rgba(255,250,240,${0.55 * flare})`);
+  // dashboard
+  const g = c.createLinearGradient(0, 1320, 0, H);
+  g.addColorStop(0, '#0d0b12'); g.addColorStop(1, '#030205');
+  c.fillStyle = g;
+  c.beginPath(); c.moveTo(-50, 1350); c.quadraticCurveTo(540, 1290, 1130, 1350); c.lineTo(1130, H + 50); c.lineTo(-50, H + 50); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(255,170,90,0.25)'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(-50, 1350); c.quadraticCurveTo(540, 1290, 1130, 1350); c.stroke();
+  // the clock housing
+  c.fillStyle = '#020203'; M.roundRect(c, 400, 1350, 280, 84, 14); c.fill();
+  c.restore();
+}
+
+function world(c, t, { flat = false } = {}) {
+  // camera: a slow push toward the speaker, faster after "anything else?"
+  let z = 1, fx = GRILLE.x, fy = GRILLE.y, sx = GRILLE.x, sy = GRILLE.y;
+  if (!flat) {
+    const p1 = ease.inOut(prog(t, 4.6, 7)), p2 = ease.in(prog(t, Q.else + 0.6, Q.trip - Q.else - 0.6));
+    z = 1 + 0.05 * prog(t, 0, 4.6) + 0.2 * p1 + 0.9 * p2 + 0.14 * (1 - ease.out(prog(t, 0, 1.3)));   // settle in from frame 0
+    sx = lerp(GRILLE.x, 540, 0.25 * p1 + 0.75 * p2); sy = lerp(GRILLE.y, 900, 0.2 * p1 + 0.8 * p2);
+  } else {
+    z = 1.06 - 0.04 * prog(t, Q.honk, 5);
+  }
+  const drift = flat ? 0 : 1;
+  c.save();
+  c.translate(sx + Math.sin(t * 0.6) * 3 * drift, sy + Math.cos(t * 0.45) * 3 * drift);
+  c.scale(z, z); c.translate(-fx, -fy);
+  sky(c);
+  c.save(); c.filter = 'blur(8px)'; BOKEH.forEach((b) => glowDot(c, b.x, b.y, b.r * 2, b.col, b.a * (flat ? 0.5 : 1))); c.restore();
+  menuBoard(c, t, flat);
+  carAhead(c, t);
+  const talking = LINES.some((l) => l.who === 'spk' && t >= l.at && t <= l.end + 0.1);
+  speakerPost(c, t, talking ? 0.6 + 0.4 * Math.abs(Math.sin(t * 22)) : 0.15);
+  orderScreen(c, t);
+  c.restore();
+  // the glass and the cabin don't zoom with the world (we're inside the car)
+  const fade = flat ? 1 : 1 - prog(t, Q.else + 1.5, 2.5);
+  c.save(); c.globalAlpha = fade;
+  windshield(c, t, flat);
+  const flare = flat ? Math.exp(-Math.max(0, t - Q.honk) * 1.6) * (t >= Q.honk ? 1 : 0) : 0;
+  cabin(c, t, flare);
+  c.restore();
+  // everything but the grille's circle sinks into the dark while "anything else?" hangs
+  if (!flat) {
+    const d = ease.inOut(prog(t, Q.else + 1.0, Q.trip - Q.else - 1.0));
+    if (d > 0) {
+      const gx = sx, gy = sy, gr = (GRILLE.r + 14) * z;
+      c.save(); c.fillStyle = `rgba(0,0,0,${0.92 * d})`;
+      c.beginPath(); c.rect(0, 0, W, H); c.arc(gx, gy, gr, 0, Math.PI * 2, true); c.fill('evenodd'); c.restore();
+    }
+  }
+  return { gx: sx, gy: sy, gr: (GRILLE.r + 14) * z };
+}
+
+// ---- the trip -------------------------------------------------------------------------------------
+// iris: the next scale appears inside a circle that grows from (x, y, r0) to cover the frame
+function iris(c, t, at, dur, x, y, r0, draw) {
+  const p = ease.inOut(prog(t, at, dur));
+  const r = lerp(r0, 1500, p);
+  c.save(); c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.clip(); draw(c); c.restore();
+  // a thin rim of light on the circle while it opens
+  if (p > 0 && p < 1) { c.save(); c.strokeStyle = `rgba(255,236,200,${0.6 * (1 - p)})`; c.lineWidth = 4; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.stroke(); c.restore(); }
+}
+const EYE = { fx: 533 / 1024, fy: 427 / 768 };
+function eyeShot(c, t, t0, { glint = 0, night = false } = {}) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const p = t - t0;
+  const z = night ? 1.25 + 0.03 * p : 1.0 * Math.exp(0.235 * Math.max(0, p));   // exponential push into the pupil
+  coverAt(c, IMG.eye, W / 2, 860, z, EYE.fx, EYE.fy);
+  // grade: indigo for the trip, night purple at the end
+  c.save(); c.globalCompositeOperation = 'color'; c.fillStyle = night ? 'rgba(120,70,220,0.55)' : 'rgba(70,60,200,0.45)'; c.fillRect(0, 0, W, H); c.restore();
+  if (!night) {
+    // in the pupil: the reflection of the speaker's amber ring, the circle we came through
+    const rr = 80 * z, ra = clamp(1.4 - z / 5);
+    if (ra > 0) { c.save(); c.globalAlpha = ra * 0.8; c.strokeStyle = AMBER; c.lineWidth = Math.max(2, 3 * z); c.shadowColor = AMBER; c.shadowBlur = 20; c.beginPath(); c.arc(W / 2 + 18 * z, 860 - 14 * z, rr, 0, Math.PI * 2); c.stroke(); c.restore(); }
+  }
+  if (glint > 0) {
+    // the glint: a four-point gold star crossing the pupil (the only cosmic colour that survives)
+    const gx = W / 2 - 40 + 90 * glint, gy = 820 - 30 * glint, s = 70 * Math.sin(Math.PI * clamp(glint * 1.15));
+    c.save(); c.translate(gx, gy); c.globalCompositeOperation = 'lighter';
+    glowDot(c, 0, 0, s * 1.6, 'rgba(255,210,122,0.8)');
+    c.fillStyle = '#FFF4D6';
+    c.beginPath(); c.moveTo(0, -s); c.quadraticCurveTo(0, 0, s, 0); c.quadraticCurveTo(0, 0, 0, s); c.quadraticCurveTo(0, 0, -s, 0); c.quadraticCurveTo(0, 0, 0, -s); c.fill();
+    c.restore();
+  }
+}
+// neurons: the real micrograph (soft, it's small) with crisp firing pulses drawn along the dendrites
+const NR = rng(11);
+const SPIKES = Array.from({ length: 34 }, () => ({ x0: 0.38 + NR() * 0.24, y0: 0.15 + NR() * 0.6, ang: -Math.PI / 2 + (NR() - 0.5) * 1.6, len: 0.08 + NR() * 0.2, at: NR() * 6, sp: 0.6 + NR() }));
+function neuronShot(c, t) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const p = t - Q.neurons;
+  const z = 1.05 + 0.05 * p + 1.6 * ease.in(prog(t, Q.stars - 1.4, 1.4));
+  c.save(); c.filter = 'blur(1.5px)';
+  coverAt(c, IMG.neurons, W / 2, 1000, z, 291 / 500, 300 / 398);
+  c.restore();
+  c.save(); c.globalCompositeOperation = 'lighter';
+  coverAt(c, IMG.neurons, W / 2, 1000, z, 291 / 500, 300 / 398, { alpha: 0.35 });   // bloom
+  // firing: pulses run along dendrites, faster as the line goes on
+  SPIKES.forEach((s, i) => {
+    const per = 1.4 / s.sp, ph = ((p + s.at) % per) / per;
+    const x = W * (s.x0 + Math.cos(s.ang) * s.len * ph), y = H * (s.y0 + Math.sin(s.ang) * s.len * ph);
+    glowDot(c, x, y, 26, 'rgba(255,190,255,0.9)', Math.sin(Math.PI * ph));
+    glowDot(c, x, y, 7, '#ffffff', Math.sin(Math.PI * ph));
+  });
+  c.restore();
+  // hide the micrograph's credit line in the corner (credited properly at the end)
+  const vg = c.createRadialGradient(W / 2, 900, 300, W / 2, 900, 1200);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.85)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, H);
+}
+function elementTile(c, t, at, x, y, num, sym, name, col) {
+  const k = ease.out(prog(t, at, 0.45));
+  if (k <= 0) return;
+  c.save(); c.globalAlpha = k; c.translate(x, y + (1 - k) * 30);
+  c.fillStyle = 'rgba(8,6,16,0.7)'; c.strokeStyle = col; c.lineWidth = 3;
+  M.roundRect(c, -90, -100, 180, 200, 14); c.fill(); c.stroke();
+  c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'top';
+  c.font = `600 26px ${MONO}`; c.fillText(String(num), -72, -84);
+  c.textAlign = 'center'; c.font = `800 92px ${COND}`; c.fillText(sym, 0, -46);
+  c.font = `600 22px ${MONO}`; c.fillText(name, 0, 56);
+  c.restore();
+}
+function pillarShot(c, t) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const p = prog(t, Q.stars, Q.years - Q.stars);
+  coverAt(c, IMG.pillars, W / 2, 960, 1.08 + 0.22 * ease.inOut(p), 0.5, 0.62 - 0.22 * ease.inOut(p));
+  // a few stars ignite: each a new circle of light
+  const r = rng(21);
+  for (let i = 0; i < 14; i++) {
+    const x = r() * W, y = 200 + r() * 1100, at = Q.stars + r() * 9;
+    const k = Math.sin(Math.PI * clamp((t - at) / 1.2));
+    if (k > 0) { glowDot(c, x, y, 60, 'rgba(255,230,190,0.8)', k); glowDot(c, x, y, 8, '#fff', k); }
+  }
+  elementTile(c, t, wordAt(9, 'IRON'), 250, 470, 26, 'Fe', 'IRON', '#FF8A5C');
+  elementTile(c, t, wordAt(9, 'CARBON'), 830, 470, 6, 'C', 'CARBON', CYAN);
+  // dissolve into the next scale at the end
+  const out = ease.in(prog(t, Q.years - 0.9, 0.9));
+  if (out > 0) { c.fillStyle = `rgba(0,0,0,${out})`; c.fillRect(0, 0, W, H); }
+}
+function icon(c, kind, x, y, r, t) {
+  // the four circles of "Stars. Planets. Oceans. Brains."
+  c.save(); c.translate(x, y);
+  if (kind === 'star') { glowDot(c, 0, 0, r * 1.6, 'rgba(255,220,150,0.9)'); c.fillStyle = '#FFF6E0'; c.beginPath(); c.arc(0, 0, r * 0.45, 0, Math.PI * 2); c.fill(); }
+  else {
+    const col = { planet: ['#E08B5A', '#5A2A18'], ocean: ['#4FA8FF', '#0B2A6B'], brain: ['#FFB3C8', '#8A3A5A'] }[kind];
+    const g = c.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r);
+    g.addColorStop(0, col[0]); g.addColorStop(1, col[1]);
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 3;
+    if (kind === 'planet') { c.beginPath(); c.ellipse(0, 0, r * 1.6, r * 0.38, -0.3, 0.1, Math.PI - 0.1); c.stroke(); }
+    if (kind === 'ocean') { c.fillStyle = 'rgba(80,200,120,0.75)'; c.beginPath(); c.ellipse(-r * 0.2, -r * 0.1, r * 0.35, r * 0.5, 0.4, 0, Math.PI * 2); c.fill(); c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(-r * 0.8, r * 0.3, r * 1.2, 5); }
+    if (kind === 'brain') { for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(-r * 0.7, i * r * 0.28); c.bezierCurveTo(-r * 0.2, i * r * 0.28 - 14, r * 0.2, i * r * 0.28 + 14, r * 0.7, i * r * 0.28); c.stroke(); } c.beginPath(); c.moveTo(0, -r); c.lineTo(0, r); c.stroke(); }
+  }
+  c.restore();
+}
+function galaxyShot(c, t) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const p = t - Q.years;
+  coverAt(c, IMG.galaxy, W / 2, 820, 1.55 - 0.05 * p, 0.5, 0.5, { rot: p * 0.035 });
+  const kinds = [['STARS', 'star'], ['PLANETS', 'planet'], ['OCEANS', 'ocean'], ['BRAINS', 'brain']];
+  kinds.forEach(([w, k], i) => {
+    const at = wordAt(10, w);
+    const a = ease.out(prog(t, at - 0.05, 0.4));
+    if (a <= 0) return;
+    const x = 195 + i * 230, y = 1480 - 470;
+    c.save(); c.globalAlpha = a; c.translate(x, y); c.scale(0.6 + 0.4 * a, 0.6 + 0.4 * a);
+    icon(c, k, 0, 0, 62, t);
+    c.restore();
+  });
+  const out = ease.in(prog(t, Q.universe - 0.8, 0.8));
+  if (out > 0) { c.fillStyle = `rgba(0,0,0,${out})`; c.fillRect(0, 0, W, H); }
+}
+function deepShot(c, t) {
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const p = t - Q.universe;
+  const wonder = wordAt(11, 'WONDER');
+  const collapse = ease.in(prog(t, wonder + 0.2, Q.honk - wonder - 0.25));
+  c.save();
+  c.translate(W / 2, 860); c.scale(1 - 0.985 * collapse, 1 - 0.985 * collapse); c.translate(-W / 2, -860);
+  coverAt(c, IMG.deep, W / 2, 860, 2.4 - 0.12 * p, 0.66, 0.74);
+  c.restore();
+  // the peak: one bright bloom on UNIVERSE
+  const bloom = Math.exp(-Math.max(0, t - Q.peak) * 1.4) * (t >= Q.peak ? 1 : 0);
+  if (bloom > 0) { c.save(); c.globalCompositeOperation = 'lighter'; glowDot(c, W / 2, 860, 1300, `rgba(255,220,160,${0.5 * bloom})`); c.restore(); }
+  if (collapse > 0) { glowDot(c, W / 2, 860, 30 + 60 * collapse, 'rgba(255,210,122,0.9)', collapse); }
+  // Carl Sagan, small, while the universe is on screen
+  const qa = clamp((t - (Q.peak + 0.6)) / 0.6) * (1 - collapse);
+  if (qa > 0) {
+    c.save(); c.globalAlpha = qa; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.shadowColor = '#000'; c.shadowBlur = 14;
+    c.fillStyle = '#F4F1FF'; c.font = `600 52px ${BARLOW}`;
+    c.fillText('"We are a way for the cosmos', W / 2, 400); c.fillText('to know itself."', W / 2, 466);
+    c.fillStyle = 'rgba(244,241,255,0.75)'; c.font = `600 28px ${MONO}`; c.fillText('CARL SAGAN, COSMOS (1980)', W / 2, 536);
+    c.restore();
+  }
+}
+
+function trip(c, t, from) {
+  // the chain of scales, each opening through a circle in the one before
+  if (t < Q.neurons) {
+    iris(c, t, Q.trip, 0.9, from.gx, from.gy, from.gr, (cc) => eyeShot(cc, t, Q.trip));
+    return;
+  }
+  // pupil -> neurons: the pupil is the circle
+  if (t < Q.stars) {
+    eyeShot(c, t, Q.trip);
+    iris(c, t, Q.neurons - 0.35, 0.8, W / 2, 860, 60, (cc) => neuronShot(cc, t));
+    return;
+  }
+  if (t < Q.years) { neuronShot(c, t); iris(c, t, Q.stars - 0.3, 0.8, W / 2, 1000, 40, (cc) => pillarShot(cc, t)); return; }
+  if (t < Q.universe) { pillarShot(c, t); iris(c, t, Q.years - 0.3, 0.9, W / 2, 820, 30, (cc) => galaxyShot(cc, t)); return; }
+  galaxyShot(c, t); iris(c, t, Q.universe - 0.3, 0.9, W / 2, 820, 30, (cc) => deepShot(cc, t));
+}
+
+// ---- after the honk: the pickup window, the receipt, the glint -------------------------------------------
+function pickupWindow(c, t) {
+  const p = ease.out(prog(t, Q.window, 1.4));
+  // the car rolls forward: the world slides left, the window arrives from the right
+  c.save();
+  c.translate(-700 * p, 0);
+  world(c, t, { flat: true });
+  c.restore();
+  c.save(); c.translate(1080 - 700 * p, 0);
+  // the building: dark siding, a lit pickup window with a sill, a sliding pane and a blurred kitchen behind
+  c.fillStyle = '#17151d'; c.fillRect(0, 160, 900, 1560);
+  for (let i = 0; i < 26; i++) { c.fillStyle = i % 2 ? '#1b1922' : '#15131a'; c.fillRect(0, 160 + i * 60, 900, 60); }
+  c.fillStyle = '#0b0a0e'; c.fillRect(60, 500, 600, 680);
+  const g = c.createLinearGradient(0, 520, 0, 1160);
+  g.addColorStop(0, '#EFFFF5'); g.addColorStop(1, '#AFCDBD');
+  c.fillStyle = g; c.fillRect(80, 520, 560, 640);
+  c.save(); c.filter = 'blur(10px)';
+  c.fillStyle = 'rgba(150,170,160,0.8)'; c.fillRect(110, 600, 200, 30); c.fillRect(380, 640, 220, 26);
+  c.fillStyle = 'rgba(90,110,100,0.7)'; c.fillRect(140, 700, 120, 160); c.fillRect(420, 690, 150, 200);
+  c.fillStyle = 'rgba(255,190,120,0.5)'; c.fillRect(300, 760, 80, 60);
+  c.restore();
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(360, 520, 10, 640);           // the sliding pane's edge
+  glowDot(c, 360, 540, 420, 'rgba(230,255,240,0.35)');
+  c.fillStyle = '#9aa39e'; c.fillRect(50, 1160, 620, 26);                          // sill
+  c.fillStyle = 'rgba(40,60,50,0.25)'; c.fillRect(80, 860, 560, 12);
+  // a hand passing a plain paper bag (no marks)
+  const hb = ease.out(prog(t, Q.window + 1.0, 0.8));
+  c.save(); c.translate(-160 * hb, 0);
+  c.fillStyle = '#C9A57A'; M.roundRect(c, 240, 880, 220, 260, 10); c.fill();
+  c.fillStyle = '#B08D63'; c.fillRect(240, 880, 220, 30);
+  c.restore();
+  c.restore();
+  // fluorescent cast over everything
+  c.save(); c.globalCompositeOperation = 'saturation'; c.fillStyle = `rgba(128,128,128,${0.55 * p})`; c.fillRect(0, 0, W, H); c.restore();
+}
+function receipt(c, t) {
+  const p = prog(t, Q.receipt, 1.3);
+  if (p <= 0) return;
+  const rows = ['ORDER #42', '', '1 #4 COMBO', '1 LG BAJA', '', 'TOTAL $8.47', '', 'THANK YOU'];
+  const shown = Math.ceil(ease.out(p) * rows.length);
+  const h = 70 + shown * 62;
+  c.save(); c.translate(W / 2, 330);
+  c.shadowColor = 'rgba(0,0,0,0.5)'; c.shadowBlur = 30;
+  c.fillStyle = '#F7F3EA'; c.fillRect(-250, 0, 500, h);
+  c.shadowBlur = 0;
+  rows.slice(0, shown).forEach((s, i) => dotText(c, s, 0, 70 + i * 62, i === 0 ? 7 : 5, i === 0 ? '#1a1a1a' : '#333', {}));
+  c.restore();
+}
+
+// ---- finishing: grain + vignette --------------------------------------------------------------------
+const GRAIN = Array.from({ length: 4 }, (_, k) => {
+  const cv = document.createElement('canvas'); cv.width = 270; cv.height = 480;
+  const g = cv.getContext('2d'); const r = rng(100 + k); const id = g.createImageData(270, 480);
+  for (let i = 0; i < id.data.length; i += 4) { const v = Math.floor(r() * 255); id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0); return cv;
+});
+function finish(c, t) {
+  const amt = inTrip(t) ? 0.07 : 0.045;
+  c.save(); c.globalAlpha = amt; c.globalCompositeOperation = 'overlay';
+  c.drawImage(GRAIN[Math.floor(t * 30) % 4], 0, 0, W, H); c.restore();
+  const v = c.createRadialGradient(W / 2, H / 2, 500, W / 2, H / 2, 1250);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.55)');
+  c.fillStyle = v; c.fillRect(0, 0, W, H);
+}
+
+// ---- the frame ------------------------------------------------------------------------------------
+function draw(ctx, t) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  if (t < Q.trip) {
+    world(ctx, t);
+    hookHeadline(ctx, t);
+    captionsWorld(ctx, t);
+  } else if (t < Q.honk) {
+    // the grille's last screen position, so the first iris opens exactly from it
+    const from = { gx: 540, gy: 900, gr: (GRILLE.r + 14) * 2.15 };
+    trip(ctx, t, from);
+    captionsTrip(ctx, t);
+  } else if (t < Q.window) {
+    // the snap: a hard cut, a shake on the honk, the lights of the car behind
+    const sh = Math.exp(-(t - Q.honk) * 6) * 18;
+    ctx.save(); ctx.translate(Math.sin(t * 90) * sh, Math.cos(t * 77) * sh);
+    world(ctx, t, { flat: true });
+    ctx.restore();
+    captionsWorld(ctx, t);
+  } else if (t < Q.glint) {
+    pickupWindow(ctx, t);
+    receipt(ctx, t);
+    captionsWorld(ctx, t);
+  } else {
+    eyeShot(ctx, t, Q.glint, { night: true, glint: prog(t, Q.glint + 0.6, 1.3) });
+    const k = ease.out(prog(t, Q.glint + 0.2, 0.5));
+    ctx.save(); ctx.globalAlpha = k; dotText(ctx, 'ORDER #42', W / 2, 1240, 10, GOLD); ctx.restore();
+  }
+  readout(ctx, t);
+  finish(ctx, t);
+}
+
+const VOICE = LINES.map((l) => ({ at: l.at, text: l.text.replace(/[A-Z]{2,}/g, (m) => m), file: l.file }));
+const SPKS = LINES.filter((l) => l.who === 'spk');
+M.setup({
+  width: W, height: H, fps: 30, duration: END,
+  cuts: [Q.trip, Q.neurons, Q.stars, Q.years, Q.universe, Q.honk, Q.window, Q.glint],
+  background: '#000',
+  draw,
+  voice: VOICE,
+  music: { track: 'assets/broll/taco/snd/music.wav', volume: 0.55 },
+  sfx: [
+    ...SPKS.map((l) => ({ at: Math.max(0, l.at - 0.18), name: 'assets/broll/taco/snd/crackle.wav', volume: 0.45 })),
+    { at: Q.neurons - 0.4, name: 'whoosh', volume: 0.25 },
+    { at: Q.stars - 0.35, name: 'whoosh', volume: 0.25 },
+    { at: wordAt(9, 'IRON') - 0.05, name: 'tap', volume: 0.35 },
+    { at: wordAt(9, 'CARBON') - 0.05, name: 'tap', volume: 0.35 },
+    { at: Q.years - 0.35, name: 'whoosh', volume: 0.3 },
+    ...['STARS', 'PLANETS', 'OCEANS', 'BRAINS'].map((w) => ({ at: wordAt(10, w) - 0.04, name: 'pop', volume: 0.3 })),
+    { at: Q.universe - 2.2, name: 'riser', volume: 0.35 },
+    { at: Q.honk, name: 'assets/broll/taco/snd/honk.wav', volume: 0.9 },
+    { at: Q.honk + 0.05, name: 'assets/broll/taco/snd/scratch.wav', volume: 0.55 },
+    { at: Q.receipt, name: 'assets/broll/taco/snd/printer.wav', volume: 0.5 },
+    { at: Q.glint + 0.6, name: 'assets/broll/taco/snd/ting.wav', volume: 0.6 },
+  ],
+  captions: false,
+  cover: 0.6,
+  post: {
+    caption: 'Nobody tells you enlightenment happens in a drive-thru. Order #42 🌌 Images: NASA/ESA/CSA/STScI (Webb), Hubble, geckzilla, Sam Bald, tati01691 (CC BY / BY-SA).',
+    hashtags: ['#tacobell', '#existentialcrisis', '#universe', '#drivethru', '#relatable'],
+  },
+});
+</script>
+</body>
+</html>
