@@ -232,10 +232,10 @@ function captions(c, t) {
   });
   c.save(); c.textBaseline = 'middle';
   const fontFor = (p) => p.key ? `800 ${size * 1.35}px ${COND}` : `700 ${size}px ${BARLOW}`;
-  const widths = parts.map((p) => { c.font = fontFor(p); return c.measureText(p.txt).width; });
+  const widths = parts.map((p) => { c.font = fontFor(p); return c.measureText(p.txt).width * (p.key ? 1.22 : 1); });   // room for the pop
   const gapAfter = (i) => size * 0.28 + ((parts[i].key || (parts[i + 1] && parts[i + 1].key)) ? size * 0.22 : 0);
   const total = widths.reduce((a, b) => a + b, 0) + parts.slice(0, -1).reduce((a, _, i) => a + gapAfter(i), 0);
-  const fit = Math.min(1, W * 0.74 / total);   // keep clear of the app's right rail
+  const fit = Math.min(1, W * (WIDE ? 0.74 : 0.62) / total);   // keep clear of the app's right rail
   c.translate(W / 2, y); c.scale(fit, fit); c.translate(-W / 2, -y);
   let x = W / 2 - total / 2;
   parts.forEach((p, i) => {
@@ -244,13 +244,15 @@ function captions(c, t) {
     c.font = fontFor(p);
     const cx = x + widths[i] / 2;
     c.save(); c.translate(cx, y);
-    const sc = p.key ? 1 + 0.35 * Math.sin(clamp((t - p.s) / 0.35) * Math.PI) * (t >= p.s ? 1 : 0) : 1 + 0.08 * (1 - pa);
+    const sc = p.key ? 1 + 0.2 * Math.sin(clamp((t - p.s) / 0.35) * Math.PI) * (t >= p.s ? 1 : 0) : 1 + 0.08 * (1 - pa);
     c.scale(sc, sc);
     c.globalAlpha = on ? 0.5 + 0.5 * pa : 0.5;
     c.shadowColor = 'rgba(0,0,0,0.85)'; c.shadowBlur = 18; c.shadowOffsetY = 3;
     c.fillStyle = p.key ? COL[p.beat] : '#FFFFFF';
     if (p.key && on) { c.shadowColor = COL[p.beat]; c.shadowBlur = 30; }
-    c.textAlign = 'center'; c.fillText(p.txt, 0, 0);
+    c.textAlign = 'center';
+    c.save(); c.shadowBlur = 0; c.lineJoin = 'round'; c.lineWidth = size * 0.1; c.strokeStyle = 'rgba(0,0,0,0.6)'; c.strokeText(p.txt, 0, 0); c.restore();
+    c.fillText(p.txt, 0, 0);
     c.restore();
     x += widths[i] + (i < parts.length - 1 ? gapAfter(i) : 0);
   });
@@ -259,9 +261,9 @@ function captions(c, t) {
 
 // ---- on-screen text: the hook (before the voice), the dense-star number, the screenshot line, the end ----
 function fitLines(c, lines, font, maxW) { c.font = font; return Math.min(1, ...lines.map((l) => maxW / c.measureText(l).width)); }
-function block(c, lines, y, size, { color = '#FFFFFF', accent = COL.gold, a = 1, weight = 800, fam = COND } = {}) {
+function block(c, lines, y, size, { color = '#FFFFFF', accent = COL.gold, a = 1, weight = 800, fam = COND, maxW = 0.86 } = {}) {
   c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle';
-  const k = fitLines(c, lines.map((l) => l.replace(/\*/g, '')), `${weight} ${size}px ${fam}`, W * 0.86);
+  const k = fitLines(c, lines.map((l) => l.replace(/\*/g, '')), `${weight} ${size}px ${fam}`, W * maxW);
   const s = size * k; c.font = `${weight} ${s}px ${fam}`;
   lines.forEach((l, i) => {
     const segs = l.split('*'); const total = c.measureText(l.replace(/\*/g, '')).width; let x = W / 2 - total / 2;
@@ -281,7 +283,7 @@ function hookText(c, t, a) {
 }
 function overlays(c, t) {
   // hook: on screen at frame 0, before the voice; B opens on the dare
-  if (HOOK === 'B' && t < 1.05) block(c, ["DON'T LOOK", 'AT YOUR *HAND.*'], WIDE ? H * 0.42 : 820, WIDE ? 130 : 170, { a: 1 - prog(t, 0.9, 0.15) });
+  if (HOOK === 'B' && t < 1.05) block(c, ["DON'T LOOK", 'AT YOUR *HAND.*'], WIDE ? H * 0.42 : 820, WIDE ? 130 : 170, { a: 1 - prog(t, 0.9, 0.15), maxW: WIDE ? 0.86 : 0.7 });
   else if (t < OFF) hookText(c, t, (HOOK === 'B' ? prog(t, 1.05, 0.12) : 1) * (1 - prog(t, OFF - 0.35, 0.3)));
   // a sugar cube of it weighs a mountain: the number counts up live
   if (t >= C.dense && t < C.collide) {
@@ -293,7 +295,7 @@ function overlays(c, t) {
   // the screenshot line, over the kilonova bloom
   if (t >= C.collideEnd + 0.05 && t < C.black) {
     const a = prog(t, C.collideEnd + 0.05, 0.25) * (1 - prog(t, C.black - 0.2, 0.2));
-    block(c, ['THE GOLD IN YOUR RING', 'CAME FROM TWO DEAD STARS', '*COLLIDING.*'], WIDE ? H * 0.42 : 820, WIDE ? 84 : 96, { a });
+    block(c, ['THE GOLD IN YOUR RING', 'CAME FROM TWO DEAD STARS', '*COLLIDING.*'], WIDE ? H * 0.42 : 820, WIDE ? 84 : 96, { a, maxW: WIDE ? 0.86 : 0.7 });
   }
   // the end: share + part 2 while the hand turns back, then the hook fades in on the last frames (the loop)
   if (t >= C.lookEnd + 0.55 && t < END) {

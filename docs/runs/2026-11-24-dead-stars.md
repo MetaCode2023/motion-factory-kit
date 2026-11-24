@@ -25,7 +25,11 @@ upgrade: `scenes/mine/dead-stars/PLAN.md`. Fact check: `/mnt/project-files/dead-
    that lights element by element on its word, captions in 2-4 word chunks with IRON/GOLD/YOU popping in the
    beat colour, the end shot running the hero clip *into* the frame the video opened on (seamless loop).
 6. Checked stills and the cuts sheet, fixed (a NASA clip's title card and interview, caption spacing, end text
-   under the last caption), rendered.
+   under the last caption), rendered. Four more passes for the report's right-rail FIXes: the dare and the
+   screenshot line were fitted to 86% width (now 70% when they sit beside the rail), captions to 62%, and a
+   popping key word grew past its slot and covered the next word ("You HYDROGEN"); key words now get their pop
+   room in the layout. Captions also got an outline after one washed out on the supernova flash. All four
+   cuts pass every check.
 
 ## Self-grade
 | | Grade | Why |
@@ -48,4 +52,6 @@ upgrade: `scenes/mine/dead-stars/PLAN.md`. Fact check: `/mnt/project-files/dead-
    word's time). The per-line gap still has to be ≥ 0.15 s to stay silent.
 4. **A native 16:9 mode for scenes** (`M.data({ wide })` here) beats `--formats 16:9` (blurred pillarbox) for a
    YouTube cut; worth a kit helper for W/H/safe zones.
-5. Merge the open branches (#5, #7, #20...) so main has caption emphasis, LESSONS and the voice-file fix.
+5. **Pop room in kit captions:** any caption style that scales a word up should reserve that width, and the
+   fit should count the pop, or the word overlaps its neighbour and slides under the app's buttons.
+6. Merge the open branches (#5, #7, #20...) so main has caption emphasis, LESSONS and the voice-file fix.
