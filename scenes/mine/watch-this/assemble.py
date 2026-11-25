@@ -331,6 +331,9 @@ def captions(img, t):
         for _, (ca, _cb) in CUTS.items():
             if b - 0.05 < ca < hold:
                 hold = ca
+        for other, (oa, _ob, _v) in T.items():               # …or into the next line
+            if other != name and cap_words.get(other) and b - 0.05 < oa - 0.05 < hold:
+                hold = oa - 0.05
         if not cap_words.get(name) or not (a - 0.05 <= t < hold):
             continue
         # one sentence (or at most 6 words) on screen at a time
@@ -415,6 +418,52 @@ def end_card(img, t):
 
 
 AMB = {'s1': 0.3, 's2': 0.45, 's3': 0.35, 's4': 0.4, 's5': 0.4, 's6': 0.45, 's7': 0.6}
+# ---------------------------------------------------------------- the opening title (top third, first 3 s only)
+TYPE = os.path.join(HERE, 'type')
+T_OUT = 3.0                                                  # the title is gone before the narrator's first word lands
+
+
+def _serif(size, italic=False, wght=500):
+    f = ImageFont.truetype(os.path.join(TYPE, 'CormorantGaramond-Italic[wght].ttf' if italic
+                                        else 'CormorantGaramond[wght].ttf'), size)
+    f.set_variation_by_axes([wght])
+    return f
+
+
+F_T1, F_T2 = _serif(112, wght=600), _serif(70, italic=True, wght=500)
+TITLE = [('You get 18 summers', F_T1, 288), ('with your kid.', F_T1, 400), ('Most parents spend them like this.', F_T2, 540)]
+SCRIM = (np.clip(1 - yy / 820, 0, 1) ** 1.3 * 0.5)[..., None]
+WARM = np.array([1.0, 0.955, 0.87], np.float32)
+
+
+def title(x, t):
+    """A film title, not a caption: it sits in the picture (under the grain), blooms in and dissolves out of focus."""
+    if t > T_OUT + 0.7:
+        return x
+    out = float(np.clip((t - T_OUT) / 0.6, 0, 1))
+    mask = Image.new('L', (W, H), 0)
+    d = ImageDraw.Draw(mask)
+    for li, (text, font, y) in enumerate(TITLE):
+        if li < 2:                                           # the hook is readable at frame 0
+            d.text((W / 2, y), text, font=font, fill=255, anchor='mm')
+            continue
+        k = float(np.clip((t - 1.25) / 0.9, 0, 1))          # the turn: one slow, quiet fade after the kid's first "Dad!"
+        k = k * k * (3 - 2 * k)
+        if k > 0:
+            d.text((W / 2, y + (1 - k) * 6), text, font=font, fill=int(255 * k), anchor='mm')
+    if out > 0:
+        mask = mask.filter(ImageFilter.GaussianBlur(22 * out))
+    rise = 0.78 + 0.22 * float(np.clip(t / 0.7, 0, 1))      # readable at frame 0, then it eases up to full
+    a = np.asarray(mask, np.float32)[..., None] / 255 * (1 - out) ** 1.5 * rise
+    soft = np.asarray(mask.filter(ImageFilter.GaussianBlur(26)), np.float32)[..., None] / 255
+    shade = np.asarray(mask.filter(ImageFilter.GaussianBlur(9)), np.float32)[..., None] / 255
+    settle = 0.3 + 0.5 * float(np.clip(1 - t / 1.2, 0, 1)) ** 2          # the light settles over the first second
+    x = x * (1 - SCRIM * (1 - out))
+    x = x * (1 - 0.5 * shade * (1 - out))
+    x = x + soft * WARM * settle * (1 - out) * 0.55
+    return x * (1 - a) + WARM * 0.97 * a
+
+
 SHOT_IN = {'s1': 0.0, 's2': 0.0, 's3': 0.0, 's4': 0.0, 's5': 0.0, 's6': 0.0, 's7': 0.0}
 
 
@@ -444,6 +493,7 @@ def render(stills=None):
                 u = (t - a) * FPS * min(1.0, 2 * L / ((b - a) * FPS))
                 u = u if u <= L else 2 * L - u
                 x = grade(sample(clip, u), shot)
+                x = title(x, t)
             else:
                 x = grade(sample(clip, SHOT_IN[shot] * FPS + (t - a) * FPS * speed), shot)
             # one shared settle: every shot eases in 1.5% over its length (locked camera, barely breathing)
