@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HyperFrames · DOM workflow demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, sans-serif; }
+  #queue-tour {
+    position: relative; width: 960px; height: 540px; overflow: hidden;
+    padding: 62px 70px; background: #111d29; color: #ebf7f3;
+  }
+  h1 { margin: 0 0 26px; font-size: 44px; letter-spacing: -1px; }
+  .workspace { display: grid; grid-template-columns: 190px 1fr; gap: 18px; }
+  nav, .queue {
+    padding: 24px; border: 1px solid #496368;
+    border-radius: 12px; background: #1a3037;
+  }
+  nav { color: #b1c7c9; }
+  nav strong { display: block; color: #a7f4d5; margin-bottom: 17px; }
+  .queue { display: grid; gap: 13px; }
+  .row { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+  .row + .row { border-top: 1px solid #3f5a60; }
+  .control { position: relative; padding: 10px 15px; border-radius: 7px; background: #a7f4d5; color: #12262a; font-weight: bold; }
+  #selection { position: absolute; inset: -6px;
+    border: 2px solid #e9ffc8; border-radius: 9px; pointer-events: none;
+    animation: select 0.9s ease-out both; }
+  #confirmation { position: absolute; left: 278px; top: 372px; width: 612px;
+    padding: 25px; border-radius: 14px; background: #e6f6ed; color: #1a3336;
+    box-shadow: 0 16px 55px #0008; animation: rise 0.65s ease-out both; }
+  #confirmation strong { display: block; font-size: 24px; margin-bottom: 7px; }
+  @keyframes select { from { opacity: 0; transform: scale(1.17); } to { opacity: 1; transform: scale(1); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+  <main id="queue-tour" data-composition-id="queue-tour" data-start="0" data-duration="5" data-no-timeline data-width="960" data-height="540">
+    <h1>Review the render queue</h1>
+    <div class="workspace">
+      <nav><strong>Queue</strong>Completed</nav>
+      <section class="queue" aria-label="Render queue">
+        <div class="row"><span>Studio walkthrough</span><span class="control">Review<span id="selection" class="clip" data-start="0.45" data-duration="1.35" data-track-index="1" aria-hidden="true"></span></span></div>
+        <div class="row"><span>Field notes</span><span>Rendering</span></div>
+        <div class="row"><span>Motion study</span><span>Queued</span></div>
+      </section>
+    </div>
+    <section id="confirmation" class="clip" data-start="1.8" data-duration="3.2" data-track-index="2">
+      <strong>Ready for review</strong>
+      Open the rendered video from the queue.
+    </section>
+  </main>
+</body>
+</html>
