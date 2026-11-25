@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>River, cinematic: the last card as a measurement, shot like film</title>
+<script type="importmap">{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }</script>
+</head>
+<body>
+<script type="module">
+// A 16-second cinematic test for The Physics of Poker: "until the river turns, it is every card at once; then you look."
+// Four shots with hard cuts, a 2.39:1 letterbox, one overhead practical light with a visible shaft and dust,
+// real lens depth of field with rack focus, bloom, a teal/warm grade, grain, and motion blur on the flip.
+// Data: dur, board ("Ks 9h 4d Jc"), river ("Qs"), ghosts (the faces it might be), lines (three title strings).
+import { stage, THREE, card, poseCard, chip, camPath, ease, clamp, lerp, rng, prog } from './kit3d.js';
+import { cinema, fonts, lightShaft, dust, softDot } from './cinema.js';
+
+await fonts();
+const S = await stage({ dur: 16, board: 'Ks 9h 4d Jc', river: 'Qs', ghosts: 'Ah 7d Qh 2c Th 5s Kd 8c 3h Jd',
+  lines: ['BEFORE THE RIVER TURNS', 'IT IS EVERY CARD AT ONCE', 'THE PHYSICS OF POKER'] }, { fov: 32 });
+const { D, scene, camera, renderer } = S;
+const list = (v) => (Array.isArray(v) ? v : String(v).split(/[\s,]+/).filter(Boolean));
+
+// ---- look -------------------------------------------------------------------------------------------
+scene.background = new THREE.Color('#020304');
+scene.fog = new THREE.FogExp2('#020304', 0.045);
+scene.children.filter((o) => o.isLight).forEach((l) => scene.remove(l));   // light it ourselves
+scene.add(new THREE.HemisphereLight('#3a5a66', '#050607', 0.08));
+const LAMP = [0.9, 6.2, 0.1];
+const key = new THREE.SpotLight('#FFD3A1', 160, 0, 0.5, 0.75, 2);
+key.position.set(...LAMP); key.target.position.set(0.9, 0, -0.2); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.00015; key.shadow.radius = 6; key.shadow.camera.near = 2; key.shadow.camera.far = 12;
+scene.add(key, key.target);
+const rimCool = new THREE.DirectionalLight('#5FB7D6', 0.35); rimCool.position.set(-6, 2.5, -7); scene.add(rimCool);
+const ghostLight = new THREE.PointLight('#57D8FF', 0, 3.2, 2); ghostLight.position.set(1.72, 0.5, 0.05); scene.add(ghostLight);
+const reveal = new THREE.PointLight('#FFC07A', 0, 4, 2); reveal.position.set(1.9, 0.9, 0.5); scene.add(reveal);
+
+const C = cinema(S, { aperture: 20, maxBlur: 28, bloom: { strength: 0.7, radius: 0.6, threshold: 1.5 }, exposure: 1.05, fps: 24 });
+
+// ---- set --------------------------------------------------------------------------------------------
+// Felt with real nap (so focus has texture to resolve), a leather rail with a sheen that catches the lamp.
+function feltTex() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1024; const c = cv.getContext('2d');
+  c.fillStyle = '#0E4A35'; c.fillRect(0, 0, 1024, 1024);
+  const R = rng(11); for (let i = 0; i < 60000; i++) { const v = R(); c.fillStyle = v > 0.5 ? `rgba(120,200,160,${0.05 * R()})` : `rgba(0,0,0,${0.12 * R()})`; c.fillRect(R() * 1024, R() * 1024, 1 + R() * 2, 1 + R() * 2); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(5, 5); t.anisotropy = 8; return t;
+}
+const felt = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.2, 128), new THREE.MeshStandardMaterial({ map: feltTex(), roughness: 1 }));
+felt.scale.set(6.2, 1, 3.6); felt.position.y = -0.1; felt.receiveShadow = true; scene.add(felt);
+const rail = new THREE.Mesh(new THREE.TorusGeometry(1, 0.07, 24, 160), new THREE.MeshStandardMaterial({ color: '#1A0F0A', roughness: 0.32, metalness: 0.1 }));
+rail.rotation.x = Math.PI / 2; rail.scale.set(6.25, 3.65, 3.4); rail.position.y = 0.04; rail.castShadow = true; rail.receiveShadow = true; scene.add(rail);
+const betLine = new THREE.Mesh(new THREE.TorusGeometry(1, 0.004, 8, 160), new THREE.MeshBasicMaterial({ color: '#C9B98F', transparent: true, opacity: 0.22 }));
+betLine.rotation.x = Math.PI / 2; betLine.scale.set(4.6, 2.55, 1); betLine.position.y = 0.003; scene.add(betLine);
+
+// The board: flop + turn face up, the river face down until it is looked at.
+const X = (i) => -1.72 + i * 0.86;
+const BOARD = [...list(D.board).slice(0, 4), D.river];
+const cards = BOARD.map((s) => { const c = card(s, { back: '#7A1E22' }); c.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); scene.add(c); return c; });
+const RIVER = cards[4];
+const opp = ['2c', '2d'].map((s) => { const c = card(s, { back: '#7A1E22' }); scene.add(c); return c; });
+
+// Chips: a tall foreground stack for the low shot (it sits out of focus in front of the lens), the pot behind.
+const R = rng(5), COLS = ['#B3262C', '#1F3F8F', '#111216', '#E9E2D0', '#1D6B47'];
+function stack(x, z, n, col, jit = 0.012) { for (let k = 0; k < n; k++) { const c = chip(col, { r: 0.2, h: 0.034 }); c.position.set(x + (R() - 0.5) * jit, 0.017 + k * 0.035, z + (R() - 0.5) * jit); c.rotation.y = R() * 6; scene.add(c); } }
+stack(3.33, 1.02, 9, COLS[0]); stack(3.62, 0.74, 5, COLS[2]);
+for (let s = 0; s < 6; s++) stack(-0.9 + s * 0.42 + (R() - 0.5) * 0.1, -1.3 + (R() - 0.5) * 0.3, 3 + Math.floor(R() * 8), COLS[s % COLS.length]);
+// A glass of whisky near the rail: a practical highlight for the background bokeh.
+const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.36, 48, 1, true), new THREE.MeshPhysicalMaterial({ color: '#ffffff', roughness: 0.05, metalness: 0, transmission: 0, transparent: true, opacity: 0.25, clearcoat: 1 }));
+glass.position.set(-2.6, 0.18, -2.2); scene.add(glass);
+const whisky = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.14, 0.14, 48), new THREE.MeshStandardMaterial({ color: '#B8651B', emissive: '#5A2A06', emissiveIntensity: 0.6, roughness: 0.2 }));
+whisky.position.set(-2.6, 0.08, -2.2); scene.add(whisky);
+
+// Distant practicals: warm and cool points far behind the table; out of focus they become round bokeh.
+const PR = rng(21), dotTex = softDot(64);
+for (let i = 0; i < 46; i++) {
+  const a = PR() * Math.PI * 2, r = 11 + PR() * 9, y = 0.8 + PR() * 4.2, warm = PR() < 0.72;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.06 + PR() * 0.07, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(warm ? '#FFB066' : '#6FD3FF').multiplyScalar(4 + PR() * 9) }));
+  m.position.set(Math.cos(a) * r, y, Math.sin(a) * r); scene.add(m);
+}
+// The lamp: a visible shade and a hot bulb (in shot, top of frame on the wide).
+const shade = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.42, 48, 1, true), new THREE.MeshStandardMaterial({ color: '#1C2A22', roughness: 0.4, metalness: 0.6, side: THREE.DoubleSide }));
+shade.position.set(LAMP[0], LAMP[1] + 0.05, LAMP[2]); scene.add(shade);
+const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color('#FFD9A8').multiplyScalar(14) }));
+bulb.position.set(LAMP[0], LAMP[1] - 0.12, LAMP[2]); scene.add(bulb);
+
+// ---- fx layer: the shaft, the dust, the ghosts ---------------------------------------------------------
+const shaft = lightShaft({ apex: [LAMP[0], LAMP[1] - 0.1, LAMP[2]], height: 6.1, radius: 3.3, strength: 0.07 }); C.fx.add(shaft);
+const motes = dust({ count: 1400, box: [[-2.4, 0.04, -2.6], [4.2, 5.6, 2.6]], apex: LAMP, angle: 0.5, size: 4 }); C.fx.add(motes);
+
+// Superposition: the faces the river could still be, hovering over it, flickering in and out.
+const GH = list(D.ghosts);
+const ghosts = GH.map((s, i) => {
+  const map = card(s).children[1].material.map;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.9), new THREE.MeshBasicMaterial({ map, color: '#8FE6FF', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  C.fx.add(m); return m;
+});
+
+// ---- timing (seconds) ---------------------------------------------------------------------------------
+const CUT = [0, 4.6, 9.2, 12.4];          // hard cuts
+const T_COLLAPSE = 9.6, T_FLIP = 10.45, FLIP_DUR = 1.25, T_FACE = T_FLIP + FLIP_DUR * 0.5, T_LAND = T_FLIP + FLIP_DUR;
+const shotOf = (t) => (t < CUT[1] ? 0 : t < CUT[2] ? 1 : t < CUT[3] ? 2 : 3);
+const RV = [X(4), 0.03, 0];
+
+// Each shot: a slow, eased move (no bounce), and a focus pull in metres.
+const shots = [
+  { cam: camPath([{ t: CUT[0], pos: [3.95, 0.3, 2.25], look: [1.6, 0.12, -0.05] }, { t: CUT[1], pos: [3.45, 0.34, 2.02], look: [1.66, 0.1, -0.05] }]),
+    focus: (t, d) => lerp(d.near, d.far, ease.inOutCubic(clamp((t - 1.3) / 1.6))), aperture: 34 },
+  { cam: camPath([{ t: CUT[1], pos: [3.2, 2.35, 3.05], look: [1.72, 0.32, 0] }, { t: CUT[2], pos: [2.62, 1.6, 2.15], look: [1.72, 0.34, 0] }]),
+    focus: (t, d) => d.far, aperture: 26 },
+  { cam: camPath([{ t: CUT[2], pos: [2.78, 0.95, 1.55], look: [1.72, 0.1, 0] }, { t: CUT[3], pos: [2.55, 0.8, 1.3], look: [1.72, 0.1, 0] }]),
+    focus: (t, d) => d.far, aperture: 30 },
+  { cam: camPath([{ t: CUT[3], pos: [0.2, 2.0, 5.6], look: [0.2, 0.2, 0] }, { t: D.dur, pos: [0.2, 3.1, 6.6], look: [0.2, 0.05, -0.2] }]),
+    focus: (t, d) => d.far, aperture: 16 },
+];
+const dist = (p) => camera.position.distanceTo(new THREE.Vector3(...p));
+
+C.run({
+  sfx: [],
+  samples: (t) => (t > T_FLIP - 0.05 && t < T_LAND + 0.1 ? 5 : 1),
+  update(t) {
+    const s = shotOf(t), sh = shots[s];
+    sh.cam(camera, t);
+    C.aperture = sh.aperture;
+    C.focus = sh.focus(t, { near: dist([3.33, 0.2, 1.02]), far: dist(RV) });
+    // board
+    cards.forEach((c, i) => { if (i < 4) poseCard(c, { x: X(i), z: 0, flip: 1, yaw: [0.02, -0.03, 0.015, -0.02][i], lift: 0 }); });
+    const f = ease.inOutCubic(clamp((t - T_FLIP) / FLIP_DUR));
+    poseCard(RIVER, { x: X(4), z: 0, y: 0.03, flip: f, lift: 0.12, yaw: 0.04 });
+    opp.forEach((c, i) => poseCard(c, { x: -0.36 + i * 0.72, z: -2.4, flip: 0, yaw: (i - 0.5) * 0.25, lift: 0 }));
+    // ghosts: drift above the card (shot 2 onward), then fall into it and go out just before it turns
+    const appear = prog(t, CUT[1] + 0.3, 1.6, ease.inOutCubic), fall = ease.inOutCubic(clamp((t - T_COLLAPSE) / 0.55));
+    ghosts.forEach((g, i) => {
+      const a = (i / ghosts.length) * Math.PI * 2 + t * 0.18, r = 0.34 + 0.12 * Math.sin(i * 1.7);
+      const hx = X(4) + Math.cos(a) * r * 0.9, hy = 0.32 + 0.22 * ((i % 4) / 3) + 0.03 * Math.sin(t * 0.9 + i), hz = Math.sin(a) * r * 0.6;
+      g.position.set(lerp(hx, RV[0], fall), lerp(hy, 0.04, fall), lerp(hz, 0, fall));
+      g.rotation.set(lerp(-1.05 + 0.25 * Math.sin(i), -Math.PI / 2, fall), lerp(0.5 * Math.sin(a), 0, fall), lerp(0.2 * Math.cos(i * 2.3), 0.04, fall));
+      const flick = 0.55 + 0.45 * Math.sin(t * (2.2 + (i % 5) * 0.7) + i * 2.1) * Math.sin(t * 0.83 + i);
+      g.material.opacity = appear * (1 - fall) * clamp(flick) * 0.2;
+    });
+    ghostLight.intensity = 3.2 * appear * (1 - fall) + 1.6 * clamp(1 - Math.abs(t - T_COLLAPSE - 0.5) / 0.3);
+    // the reveal: a warm swell the instant the face is seen, settling to a glow
+    const rv = clamp((t - T_FACE + 0.05) / 0.12) * (0.45 + 0.55 * Math.exp(-Math.max(0, t - T_FACE) * 1.6));
+    reveal.intensity = 2.5 * rv;
+    C.exposure = 1.05 + 0.12 * clamp(1 - Math.abs(t - T_FACE - 0.05) / 0.22);
+    C.bloom.strength = 0.7 + 0.35 * clamp(1 - Math.abs(t - T_FACE - 0.05) / 0.3);
+    // the lamp breathes a little (a real bulb is never perfectly still)
+    key.intensity = 160 * (1 + 0.015 * Math.sin(t * 7.1) * Math.sin(t * 2.3));
+    shaft.material.uniforms.uTime.value = t; motes.userData.update(t, C);
+    // fade from black at the head, to black at the tail
+    C.fade = 1 - clamp(t / 0.8) * clamp((D.dur - t) / 0.9);
+  },
+  hud(c, t) {
+    C.letterbox(c, 1);
+    const [l1, l2, l3] = D.lines;
+    C.title(c, l1, 960, 870, { t, at: 1.5, dur: 2.7, size: 40, track: 0.42 });
+    C.title(c, l2, 960, 870, { t, at: CUT[1] + 1.4, dur: 3.0, size: 40, track: 0.42 });
+    C.title(c, l3, 960, 300, { t, at: CUT[3] + 0.9, dur: D.dur - CUT[3] - 0.9, size: 92, track: 0.36, fadeIn: 1.4, fadeOut: 0.9, drift: 0 });
+  },
+});
+</script>
+</body>
+</html>
