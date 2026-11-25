@@ -317,7 +317,11 @@ F_N_S = ImageFont.truetype(FONT.format('Regular'), 26)
 
 def captions(img, t):
     for name, (a, b, _) in T.items():
-        if not cap_words.get(name) or not (a - 0.05 <= t <= b + 0.35):
+        hold = b + 0.35                                      # a caption never hangs across a picture cut
+        for _, (ca, _cb) in CUTS.items():
+            if b - 0.05 < ca < hold:
+                hold = ca
+        if not cap_words.get(name) or not (a - 0.05 <= t < hold):
             continue
         # one sentence (or at most 6 words) on screen at a time
         groups, cur = [], []
@@ -350,7 +354,7 @@ def captions(img, t):
         y0 = 1330 - (len(lines) - 1) * 64
         ov = Image.new('RGBA', img.size, (0, 0, 0, 0))
         od = ImageDraw.Draw(ov)
-        fade_out = np.clip((b + 0.35 - t) / 0.2, 0, 1) if last else 1.0
+        fade_out = np.clip((hold - t) / 0.2, 0, 1) if last else 1.0
         for li, line in enumerate(lines):
             text = ' '.join(x[0] for x in line)
             x = (W - od.textlength(text, font=font)) / 2
