@@ -13,6 +13,7 @@ M = os.path.join(HERE, 'media')
 OUT = os.path.join(HERE, 'out')
 os.makedirs(OUT, exist_ok=True)
 W, H, FPS, SR = 1080, 1920, 24, 48000
+FILES = {'s2': 's2b', 's6': 's6b', 's7': 's7b'}       # v2 re-rolls: real shallow focus, sun behind the kid, focus pulls
 TEMPO = 1.14
 FONT = '/usr/share/fonts/opentype/inter/Inter-{}.otf'
 
@@ -175,7 +176,7 @@ SEQ = [('D', 0.0, 0.0), ('P1', 0.15, 1), ('P2', 0.3, 1),
        ('P6', 0.55, 1),
        ('P7', 0.65, 1), ('P8', 0.3, 1),
        ('P9', 0.55, 1), ('P10', 2.1, 1), ('P11', 0.25, 1),
-       ('P12', 0.85, 1), ('P13', 0.35, 1)]
+       ('P12', 1.3, 1), ('P13', 0.4, 1)]
 # s1's own sound: the kid in the background calls "Dad! … Hey, Dad!" and he doesn't look up (0-3 s)
 clips['D'] = np.zeros(int(2.9 * SR), np.float32)
 cap_words['D'] = [('“Dad!', 0.0, 1.22), ('Hey,', 1.98, 2.46), ('Dad!”', 2.56, 2.96)]
@@ -184,7 +185,7 @@ for name, gap, vol in SEQ:
     t += gap
     T[name] = (t, t + len(clips[name]) / SR, vol)
     t = T[name][1]
-BLACK = T['P13'][1] + 0.6
+BLACK = T['P13'][1] + 1.1
 END = BLACK + 2.6
 
 CUTS = {  # shot: (start, end)
@@ -193,8 +194,8 @@ CUTS = {  # shot: (start, end)
     's3': (T['K9'][0] - 0.25, T['P6'][0] - 0.3),
     's4': (T['P6'][0] - 0.3, T['P7'][0] - 0.3),
     's5': (T['P7'][0] - 0.3, T['P9'][0] - 0.25),
-    's6': (T['P9'][0] - 0.25, T['P12'][0] - 0.35),
-    's7': (T['P12'][0] - 0.35, BLACK),
+    's6': (T['P9'][0] - 0.25, T['P12'][0] - 0.85),
+    's7': (T['P12'][0] - 0.85, BLACK),
 }
 
 
@@ -223,7 +224,9 @@ def build_audio():
     # each shot's own sound (yard, birds, the kid) at 1x from the cut, looped with crossfades if the shot runs long
     amb = np.zeros(n, np.float32)
     for shot, (a, b) in CUTS.items():
-        src = read_audio(os.path.join(M, f'{shot}.mp4'))
+        src = read_audio(os.path.join(M, FILES.get(shot, shot) + '.mp4'))
+        if shot == 's7':
+            src = src[:int(2.4 * SR)]                        # after that the kid calls out, over the narrator
         need = int((b - a + 0.3) * SR)
         xf = int(0.4 * SR)
         y = src.copy()
@@ -268,7 +271,8 @@ VIG = VIG[..., None]
 FLARE = np.exp(-(((xx - W * 0.92) / (W * 0.55)) ** 2 + ((yy - H * 0.16) / (H * 0.32)) ** 2))[..., None] \
     * np.array([1.0, 0.62, 0.28], np.float32)
 HAZE = np.clip(1 - yy / (H * 0.55), 0, 1)[..., None] * np.array([1.0, 0.8, 0.55], np.float32)
-GOLDEN = {'s2': 1.0, 's3': 0.8, 's4': 0.6, 's6': 0.9, 's7': 1.0}
+GOLDEN = {'s2': 0.25, 's3': 0.8, 's4': 0.6, 's6': 0.2, 's7': 0.25}   # the re-rolls carry their own sun
+CRUSH = {'s6': 0.06, 's7': 0.12}
 
 
 def grade(f, shot=None):
@@ -277,7 +281,13 @@ def grade(f, shot=None):
     red = np.clip((r - np.maximum(g, b)) / (r + 1e-3) * 2.2 - 0.6, 0, 1) * np.clip(r * 3, 0, 1)
     lum0 = 0.3 * r + 0.59 * g + 0.11 * b
     x = x + red * (x - lum0) * 0.75                          # the cap reads true red through the grade
-    x = x * (0.8 + 0.2 * np.clip(lum0 / 0.35, 0, 1))        # deeper shadows so highlights and the phone glow pop
+    c = CRUSH.get(shot, 0.2)
+    x = x * (1 - c + c * np.clip(lum0 / 0.35, 0, 1))        # deeper shadows so highlights and the phone glow pop
+    if shot == 's6':
+        x = x * 1.22                                         # the look-up take is dark; lift it a little
+    if shot == 's7':                                         # a red flare ghost grows on the railing: neutralise it
+        reg = x[1380:1800, 700:]
+        reg[..., 0] = np.minimum(reg[..., 0], np.maximum(reg[..., 1], reg[..., 2]) * 1.2 + 0.02)
     k = GOLDEN.get(shot, 0)
     if k:
         x = x + FLARE * 0.10 * k + HAZE * 0.035 * k
@@ -424,7 +434,7 @@ def render(stills=None):
         if shot:
             if shot not in cache:
                 cache.clear()
-                cache[shot] = load(os.path.join(M, f'{shot}.mp4'))
+                cache[shot] = load(os.path.join(M, FILES.get(shot, shot) + '.mp4'))
             clip = cache[shot]
             a, b = CUTS[shot]
             src_len = len(clip) - 1 - SHOT_IN[shot] * FPS
