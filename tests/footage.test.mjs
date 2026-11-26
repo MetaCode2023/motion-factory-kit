@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { Canvas } from 'skia-canvas';
@@ -71,8 +72,8 @@ test('audio: cleaning lowers street noise and levelling evens a loud and a quiet
 const hasCv = spawnSync('python3', ['-c', 'import cv2, numpy']).status === 0;
 test('faces.py follows a face moving across a horizontal clip', { skip: !hasCv && 'OpenCV not installed' }, () => {
   // the demo pack's walking interview: a drawn person crossing a 1280x720 frame
-  const clip = new URL('../examples/demo/footage/street-02.mp4', import.meta.url).pathname;
-  const r = spawnSync('python3', [new URL('../tools/faces.py', import.meta.url).pathname, ffmpegPath, clip, '2'], { encoding: 'utf8' });
+  const clip = fileURLToPath(new URL('../examples/demo/footage/street-02.mp4', import.meta.url));
+  const r = spawnSync('python3', [fileURLToPath(new URL('../tools/faces.py', import.meta.url)), ffmpegPath, clip, '2'], { encoding: 'utf8' });
   const { samples } = JSON.parse(r.stdout);
   const xs = pickTrack(samples).map((p) => p.cx);
   assert.ok(xs.length >= samples.length * 0.8, 'found the face in most samples');

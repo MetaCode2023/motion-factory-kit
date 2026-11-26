@@ -13,7 +13,7 @@
 // 16:9 template. A line said out loud, written big with the key words lit up: the thesis, a punchline,
 // or someone else's words (then set "by"). Only real quotes get "by".
 // Data: dur, text, highlight (words to light up, space separated), by, kicker, color, tint
-const D = M.data({ dur: 5, kicker: '', text: 'Every bet you make is a measurement.', highlight: 'measurement', by: '' });
+const D = M.data({ dur: 5, kicker: '', text: 'Every bet you make is a measurement.', highlight: 'measurement', by: '', width: 1560, size: 0 });   // width/size: narrower, bigger text (e.g. a split-screen visual)
 const th = LF.theme(D);
 // Light up the highlighted words as they appear in the text (with their punctuation).
 const want = new Set(String(D.highlight).toLowerCase().split(/\s+/).filter(Boolean));
@@ -24,8 +24,8 @@ function draw(c, t) {
   const end = LF.drift(c, t, D, { zoom: 0.035, x: 10, y: 6 });
   if (D.by) M.text(c, '“', 150, 380, { font: `800 300px ${LF.F.display}`, color: FX.alpha(th.color, 0.25), alpha: M.prog(t, 0, 0.4) });
   if (D.kicker) FX.text(c, t, String(D.kicker).toUpperCase(), 960, 250, { at: 0.05, mode: 'scramble', font: `600 30px ${LF.F.mono}`, color: th.color, align: 'center', maxWidth: 1600 });
-  const size = D.text.length > 90 ? 70 : D.text.length > 50 ? 86 : 104;
-  FX.text(c, t, D.text, 960, 540 - size * (D.text.length > 50 ? 1.1 : 0.6), { at: 0.15, mode: 'rise', font: `800 ${size}px ${LF.F.display}`, color: th.ink, accent: ACCENT, accentColor: th.color, align: 'center', maxWidth: 1560, stagger: 0.07 });
+  const size = +D.size || (D.text.length > 90 ? 70 : D.text.length > 50 ? 86 : 104);
+  FX.text(c, t, D.text, 960, 540 - size * (D.text.length > 50 ? 1.1 : 0.6), { at: 0.15, mode: 'rise', font: `800 ${size}px ${LF.F.display}`, color: th.ink, accent: ACCENT, accentColor: th.color, align: 'center', maxWidth: +D.width || 1560, stagger: 0.07 });
   end();
   if (D.by) FX.text(c, t, `— ${D.by}`, 960, 880, { at: 1.2, mode: 'rise', font: `600 40px ${LF.F.display}`, color: th.muted, align: 'center', maxWidth: 1400 });
   LF.vignette(c, th, 0.45);

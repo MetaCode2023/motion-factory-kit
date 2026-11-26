@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseCSV, toData } from '../tools/csv.mjs';
 import { detectBeats } from '../tools/beats.mjs';
 
@@ -46,7 +47,7 @@ test('narration cues come from make.mjs when present, estimated otherwise', () =
 });
 
 test('bundled tracks report their tempo; the estimate matches it', () => {
-  const meta = detectBeats(new URL('../sounds/music/drive.mp3', import.meta.url).pathname, 4);
+  const meta = detectBeats(fileURLToPath(new URL('../sounds/music/drive.mp3', import.meta.url)), 4);
   assert.equal(meta.bpm, 120);
   assert.equal(meta.source, 'meta');
   assert.deepEqual(meta.beats.slice(0, 3), [0, 0.5, 1]);

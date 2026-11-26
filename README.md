@@ -79,7 +79,7 @@ street-audio cleanup, face-following reframe, overlays, client review loop) lift
   effects, loudness for social, plus a cover image, a subtitles file and a drafted post caption.
 - **Self-checking**: every build writes a PASS/FIX report and a still after every cut, so Claude fixes
   problems before you see them. A GitHub check re-renders the examples on every change.
-- **Your brand in one file** (`brand.js`), **a sound library** (15 original effects and beds), a **design guide**
+- **Your brand in one file** (`brand.js`), **a sound library** (23 original effects and 4 music beds), a **design guide**
   Claude follows, and **Claude instructions** (`CLAUDE.md` + a `make-video` skill) for the whole workflow.
 
 ## Setup (5 minutes)
