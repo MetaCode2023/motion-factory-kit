@@ -31,8 +31,9 @@ test('MCP server lists its tools and answers kit_overview, check_plan and render
     assert.ok(ov.blocks.street.includes('questionCard'));
     assert.ok(existsSync(join(root, ov.production.playbook)));
     assert.deepEqual(ov.production.routes.map(({ id }) => id), [
-      'raw-footage', 'recorded-script', 'longform-footage', 'locked-edit', 'script-line', 'custom-scene',
+      'raw-footage', 'recorded-script', 'longform-footage', 'locked-edit', 'script-line', 'custom-scene', 'visual-refinement',
     ]);
+    for (const n of ['refine_init', 'refine_still', 'refine_critique', 'refine_temporal', 'refine_status', 'refine_restore', 'refine_final', 'refine_bundle']) assert.ok(names.includes(n), n);
     for (const { guide, steps } of ov.production.routes) {
       assert.ok(existsSync(join(root, guide)), guide);
       for (const step of steps) assert.ok(names.includes(step), step);
@@ -45,6 +46,9 @@ test('MCP server lists its tools and answers kit_overview, check_plan and render
     const still = await client.callTool({ name: 'render_still', arguments: { scene: 'scenes/templates/meme-caption.html', t: 1 } });
     assert.equal(still.content[0].type, 'image');
     assert.equal(still.content[0].mimeType, 'image/png');
+    const frame = JSON.parse(still.content[1].text).frame;
+    assert.match(frame.sha256, /^[0-9a-f]{64}$/);
+    assert.ok(frame.width > 0 && frame.height > 0 && frame.t === 1, 'render_still returns a refinement-contract frame record');
     const bad = await client.callTool({ name: 'look_at', arguments: { file: '../../etc/passwd' } });
     assert.ok(bad.isError || /outside the kit/.test(JSON.stringify(bad)), 'paths outside the kit are refused');
   } finally {
