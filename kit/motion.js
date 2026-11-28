@@ -290,6 +290,7 @@
   // audio: mix the clip's own sound (make.mjs). speech: the audio is someone talking, so music ducks
   // under it (default true when captions is on). captions: transcribe the speech into word captions
   // (needs ELEVENLABS_API_KEY, or pass transcript: '...' for estimated timing). volume: clip audio level. loop / hold: what happens after the file ends.
+  // key: 'alpha' keeps the clip's own transparency (a cut-out exported with an alpha channel).
   // key: 'green' | 'blue' | '#RRGGBB' removes a green/blue screen (the person floats over your scene;
   // use clip.draw with { dim: 0 }). The browser preview shows the unkeyed clip.
   // A missing file draws a labelled placeholder, so scenes can be written before the clip exists.

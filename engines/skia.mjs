@@ -157,7 +157,7 @@ export async function open(scenePath, { layout = false, textOnly = false, captio
   // Video clips (M.video): decode once into a cached JPG sequence at the scene's frame rate, then
   // hand frames to the scene synchronously, one at a time, so long clips don't fill memory.
   const clips = [];
-  // key: 'green' | 'blue' | '#RRGGBB' cuts that colour out (green screen) and keeps transparency.
+  // key: 'green' | 'blue' | '#RRGGBB' cuts that colour out (green screen) and keeps transparency; 'alpha' uses the clip's own.
   sandbox.__loadVideo = (src, fps, key = null) => {
     const abs = /^([a-z]:[\\/]|\/)/i.test(src) ? src : resolve(dirname(file), src);
     if (!existsSync(abs)) return { missing: true, src };
@@ -165,7 +165,9 @@ export async function open(scenePath, { layout = false, textOnly = false, captio
     const dir = join(CLIP_CACHE, createHash('sha1').update([abs, st.size, st.mtimeMs, fps, key || ''].join('|')).digest('hex').slice(0, 16));
     const ext = key ? 'png' : 'jpg';
     const keyColor = !key ? null : key === 'green' ? '0x00D040' : key === 'blue' ? '0x0047BB' : '0x' + String(key).replace('#', '');
-    const keyVf = key ? `,chromakey=${keyColor}:${sandbox.__keySimilarity ?? 0.16}:0.06,despill=type=${key === 'blue' ? 'blue' : 'green'},format=rgba` : '';
+    // key: 'alpha' keeps a clip's own transparency (a cut-out person exported as PNG-in-MOV or VP9 alpha).
+    const keyVf = key === 'alpha' ? ',format=rgba'
+      : key ? `,chromakey=${keyColor}:${sandbox.__keySimilarity ?? 0.16}:0.06,despill=type=${key === 'blue' ? 'blue' : 'green'},format=rgba` : '';
     const probe = spawnSync(ffmpegPath, ['-hide_banner', '-i', abs], { encoding: 'utf8' }).stderr;
     const dur = probe.match(/Duration: (\d+):(\d+):([\d.]+)/);
     const size = probe.match(/Video:.*?(\d{2,5})x(\d{2,5})/);
