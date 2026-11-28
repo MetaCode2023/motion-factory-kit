@@ -1,0 +1,77 @@
+{
+  "contract": "visual-refinement-contract",
+  "version": "1.0.0",
+  "about": "Shared by motion-factory (visual_contract.py), motion-factory-kit (refine/contract.mjs) and studio-engine (src/visual-refinement-contract.mjs). Identical bytes in all three repos; each repo's tests check its code against this file.",
+  "hashing": {
+    "canonicalJson": "UTF-8 JSON, object keys sorted by code point, no whitespace, numbers in shortest round-trip form with integral floats written as integers, -0 written as 0; non-finite numbers and undefined are refused",
+    "digest": "sha256 hex of the canonical JSON",
+    "stateHash": "sha256(canonical({v, contractHash, codeHash, paramsHash, outputHash, parent, phase}))",
+    "framesHash": "sha256(canonical([{t, sha256}, ...])) in frame order"
+  },
+  "steps": ["target-ingestion", "initial-render", "technical-check", "visual-inspection", "rubric-evaluation", "delta-identification", "code-adjustment", "hash-reverification", "approval-gate"],
+  "criteria": [
+    {
+      "id": "composition",
+      "title": "Composition & visual hierarchy",
+      "question": "Is there one clear focal point, placed with intent (thirds, leading lines, framing), with secondary elements subordinate to it and a balanced frame?",
+      "passWhen": "The eye lands on the intended subject first; nothing competes with it; the frame is balanced against the mapped reference.",
+      "failWhen": "Competing focal points, a centred-by-default subject with dead space, cramped or cropped subject, or a layout that ignores the reference's framing."
+    },
+    {
+      "id": "lighting",
+      "title": "Lighting, contrast & atmospheric depth",
+      "question": "Does the light have a source, direction and falloff (key/fill ratio, volumetric shafts, occlusion) that builds depth like the reference?",
+      "passWhen": "Motivated light with visible falloff into depth, a tonal range comparable to the reference, and occlusion that grounds forms.",
+      "failWhen": "Flat or unmotivated light, crushed or clipped tones, no atmospheric falloff, or light shafts that read as overlays rather than volume."
+    },
+    {
+      "id": "materials",
+      "title": "Material believability",
+      "question": "Do surfaces respond to light like physical materials (roughness, specular response, subsurface scattering, texture detail at the right scale)?",
+      "passWhen": "Each material reads as what it is, with consistent response to the scene light.",
+      "failWhen": "Plastic or uniform shading, texture detail at the wrong scale, or materials that ignore the scene's light."
+    },
+    {
+      "id": "spatial",
+      "title": "Scale, perspective & spatial coherence",
+      "question": "Are proportions, foreshortening, depth cues and lens behaviour (depth of field, perspective) coherent across the frame?",
+      "passWhen": "Scale is legible, depth order is unambiguous, and focus/defocus matches a plausible lens.",
+      "failWhen": "Objects at contradictory scales, flat depth, focus that contradicts depth order, or perspective that breaks between layers."
+    },
+    {
+      "id": "color",
+      "title": "Colour harmony",
+      "question": "Does the palette, saturation balance and colour temperature match the reference plates and DESIGN.md, and stay consistent across the shot?",
+      "passWhen": "Palette and temperature sit with the reference; accents are deliberate; no unintended casts.",
+      "failWhen": "Colour casts, oversaturation, default primaries, or temperature drifting from the reference."
+    },
+    {
+      "id": "narrative",
+      "title": "Narrative purpose",
+      "question": "Does the image serve the brief's tone, mood and dramatic intent?",
+      "passWhen": "A viewer would describe the mood the brief asks for without being told.",
+      "failWhen": "The image is technically fine but says something else, or nothing, about the brief."
+    },
+    {
+      "id": "originality",
+      "title": "Originality & avoidance of generic aesthetics",
+      "question": "Does the image avoid flat lighting, default procedural noise and programmer-art defaults, and carry a specific point of view?",
+      "passWhen": "Specific design choices are visible; nothing reads as a library default.",
+      "failWhen": "Even default noise, stock gradients, default colours or symmetric placeholder shapes carry the image."
+    }
+  ],
+  "critique": {
+    "required": ["critic", "outputHash", "packetHash", "criteria"],
+    "critic": {"id": "string", "context": "isolated", "sawSourceCode": false},
+    "perCriterion": {"verdict": "pass | fail", "observation": "what was seen (20+ chars)", "evidence": ["packet evidence ids"], "delta": "how it differs from the reference", "correction": "required when verdict is fail"},
+    "refused": ["numeric quality scores anywhere under criteria", "keys named score/rating/grade/stars/points/percent/quality", "superlative claims such as 'cinematic excellence'"]
+  },
+  "frames": {
+    "kind": "still | sequence",
+    "required": ["kind", "shotId", "iteration", "frames"],
+    "frame": {"t": "seconds", "path": "relative path", "sha256": "hex", "width": "int", "height": "int", "reference": "reference id or null"},
+    "sequenceOrder": "strictly increasing t"
+  },
+  "budget": {"maxIterations": 6, "maxTemporalIterations": 3, "convergenceDelta": 0.015, "patience": 2},
+  "escalation": ["budget-exhausted", "converged-without-approval", "technical-blocker", "paid-api-required", "creative-direction-shift"]
+}

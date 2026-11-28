@@ -1,0 +1,1306 @@
+{
+  "items": [
+    {
+      "kind": "reference",
+      "metric": "lumaMean",
+      "criterion": "lighting",
+      "what": "overall exposure (L*)",
+      "render": 31.28,
+      "reference": 18.37,
+      "gap": 2.152,
+      "pass": false,
+      "direction": "lower",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "tonal range p05-p95 (L*)",
+      "render": 58.43,
+      "reference": 31.27,
+      "gap": 3.395,
+      "pass": false,
+      "direction": "lower",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "falloff",
+      "criterion": "lighting",
+      "what": "surface-to-depth brightness falloff",
+      "render": 5.059,
+      "reference": 0.766,
+      "gap": 5.39,
+      "pass": false,
+      "direction": "lower",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "hist",
+      "criterion": "lighting",
+      "what": "tonal distribution",
+      "gap": 3.68,
+      "pass": false,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "blue-yellow balance / colour temperature (b*)",
+      "render": -35.2,
+      "reference": -32.64,
+      "gap": 0.512,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "aMean",
+      "criterion": "color",
+      "what": "green-magenta balance (a*)",
+      "render": 5.79,
+      "reference": 8.64,
+      "gap": 0.57,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "saturation (C*)",
+      "render": 36.5,
+      "reference": 34.24,
+      "gap": 0.377,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "hue",
+      "criterion": "color",
+      "what": "dominant hue (degrees)",
+      "gap": 0.393,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "structure",
+      "criterion": "composition",
+      "what": "coarse layout of light and colour (mean dE over a 4x4 grid)",
+      "gap": 2.69,
+      "pass": false,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "thirdsDistance",
+      "criterion": "composition",
+      "what": "focal point placement relative to the reference",
+      "render": 0.1676,
+      "reference": 0.1811,
+      "gap": 0.193,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "detail",
+      "criterion": "materials",
+      "what": "surface/texture detail (Laplacian)",
+      "render": 2.064,
+      "reference": 5.864,
+      "gap": 2.32,
+      "pass": false,
+      "direction": "raise",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "particulate density (marine snow, sparkle)",
+      "render": 3.09,
+      "reference": 7.795,
+      "gap": 1.682,
+      "pass": false,
+      "direction": "raise",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "bands",
+      "criterion": "spatial",
+      "what": "atmospheric depth profile top-to-bottom (L* per band)",
+      "gap": 3.129,
+      "pass": false,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "target",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "cool deep-water temperature",
+      "render": -35.2,
+      "target": {
+        "max": -12
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "target",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "rich, not grey",
+      "render": 36.5,
+      "target": {
+        "min": 15
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "target",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "motivated key light",
+      "render": 58.43,
+      "target": {
+        "min": 28
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "target",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "marine snow present",
+      "render": 3.09,
+      "target": {
+        "min": 1
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "target",
+      "metric": "primaryFraction",
+      "criterion": "originality",
+      "what": "no default primaries",
+      "render": 0,
+      "target": {
+        "max": 0.01
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "genericity",
+      "metric": "flatLighting",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "tonal range 58.43 L*, std 20.03: flat lighting reads as an unlit default",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "genericity",
+      "metric": "uniformNoise",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "speckle clustering 0.907: particles spread evenly like a default noise field rather than following light and depth",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "genericity",
+      "metric": "defaultPrimaries",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "0% of the frame is pure default primaries",
+      "t": 0.8,
+      "reference_id": "plate-1-establishing"
+    },
+    {
+      "kind": "reference",
+      "metric": "lumaMean",
+      "criterion": "lighting",
+      "what": "overall exposure (L*)",
+      "render": 20.06,
+      "reference": 19.19,
+      "gap": 0.145,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "tonal range p05-p95 (L*)",
+      "render": 24.72,
+      "reference": 49.89,
+      "gap": 3.146,
+      "pass": false,
+      "direction": "raise",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "falloff",
+      "criterion": "lighting",
+      "what": "surface-to-depth brightness falloff",
+      "render": 1.117,
+      "reference": 4.074,
+      "gap": 3.695,
+      "pass": false,
+      "direction": "raise",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "hist",
+      "criterion": "lighting",
+      "what": "tonal distribution",
+      "gap": 1.86,
+      "pass": false,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "blue-yellow balance / colour temperature (b*)",
+      "render": -16.78,
+      "reference": -19.73,
+      "gap": 0.59,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "aMean",
+      "criterion": "color",
+      "what": "green-magenta balance (a*)",
+      "render": -0.4,
+      "reference": -0.63,
+      "gap": 0.046,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "saturation (C*)",
+      "render": 18.74,
+      "reference": 21.45,
+      "gap": 0.452,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "hue",
+      "criterion": "color",
+      "what": "dominant hue (degrees)",
+      "gap": 0.029,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "structure",
+      "criterion": "composition",
+      "what": "coarse layout of light and colour (mean dE over a 4x4 grid)",
+      "gap": 1.156,
+      "pass": false,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "thirdsDistance",
+      "criterion": "composition",
+      "what": "focal point placement relative to the reference",
+      "render": 0.1405,
+      "reference": 0.0491,
+      "gap": 1.306,
+      "pass": false,
+      "direction": "lower",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "detail",
+      "criterion": "materials",
+      "what": "surface/texture detail (Laplacian)",
+      "render": 10.945,
+      "reference": 6.676,
+      "gap": 1.098,
+      "pass": false,
+      "direction": "lower",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "particulate density (marine snow, sparkle)",
+      "render": 43.339,
+      "reference": 11.48,
+      "gap": 2.415,
+      "pass": false,
+      "direction": "lower",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "bands",
+      "criterion": "spatial",
+      "what": "atmospheric depth profile top-to-bottom (L* per band)",
+      "gap": 0.744,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "target",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "cool deep-water temperature",
+      "render": -16.78,
+      "target": {
+        "max": -12
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "target",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "rich, not grey",
+      "render": 18.74,
+      "target": {
+        "min": 15
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "target",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "motivated key light",
+      "render": 24.72,
+      "target": {
+        "min": 28
+      },
+      "gap": 1.547,
+      "pass": false,
+      "direction": "raise",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "target",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "marine snow present",
+      "render": 43.339,
+      "target": {
+        "min": 1
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "target",
+      "metric": "primaryFraction",
+      "criterion": "originality",
+      "what": "no default primaries",
+      "render": 0,
+      "target": {
+        "max": 0.01
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "genericity",
+      "metric": "flatLighting",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "tonal range 24.72 L*, std 8.68: flat lighting reads as an unlit default",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "genericity",
+      "metric": "uniformNoise",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "speckle clustering 0.516: particles spread evenly like a default noise field rather than following light and depth",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "genericity",
+      "metric": "defaultPrimaries",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "0% of the frame is pure default primaries",
+      "t": 3.2,
+      "reference_id": "plate-2-hero"
+    },
+    {
+      "kind": "reference",
+      "metric": "lumaMean",
+      "criterion": "lighting",
+      "what": "overall exposure (L*)",
+      "render": 21.45,
+      "reference": 21.94,
+      "gap": 0.082,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "tonal range p05-p95 (L*)",
+      "render": 24.59,
+      "reference": 52.37,
+      "gap": 3.472,
+      "pass": false,
+      "direction": "raise",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "falloff",
+      "criterion": "lighting",
+      "what": "surface-to-depth brightness falloff",
+      "render": 0.923,
+      "reference": 2.301,
+      "gap": 2.608,
+      "pass": false,
+      "direction": "raise",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "hist",
+      "criterion": "lighting",
+      "what": "tonal distribution",
+      "gap": 1.763,
+      "pass": false,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "blue-yellow balance / colour temperature (b*)",
+      "render": -15.46,
+      "reference": -16.87,
+      "gap": 0.282,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "aMean",
+      "criterion": "color",
+      "what": "green-magenta balance (a*)",
+      "render": -0.36,
+      "reference": -1,
+      "gap": 0.128,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "saturation (C*)",
+      "render": 18.6,
+      "reference": 19.7,
+      "gap": 0.183,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "hue",
+      "criterion": "color",
+      "what": "dominant hue (degrees)",
+      "gap": 0.129,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "structure",
+      "criterion": "composition",
+      "what": "coarse layout of light and colour (mean dE over a 4x4 grid)",
+      "gap": 1.443,
+      "pass": false,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "thirdsDistance",
+      "criterion": "composition",
+      "what": "focal point placement relative to the reference",
+      "render": 0.097,
+      "reference": 0.129,
+      "gap": 0.457,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "detail",
+      "criterion": "materials",
+      "what": "surface/texture detail (Laplacian)",
+      "render": 2.755,
+      "reference": 4.204,
+      "gap": 0.939,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "particulate density (marine snow, sparkle)",
+      "render": 6.576,
+      "reference": 1.02,
+      "gap": 3.387,
+      "pass": false,
+      "direction": "lower",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "reference",
+      "metric": "bands",
+      "criterion": "spatial",
+      "what": "atmospheric depth profile top-to-bottom (L* per band)",
+      "gap": 0.81,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "target",
+      "metric": "bMean",
+      "criterion": "color",
+      "what": "cool deep-water temperature",
+      "render": -15.46,
+      "target": {
+        "max": -12
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "target",
+      "metric": "chroma",
+      "criterion": "color",
+      "what": "rich, not grey",
+      "render": 18.6,
+      "target": {
+        "min": 15
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "target",
+      "metric": "contrast",
+      "criterion": "lighting",
+      "what": "motivated key light",
+      "render": 24.59,
+      "target": {
+        "min": 28
+      },
+      "gap": 1.568,
+      "pass": false,
+      "direction": "raise",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "target",
+      "metric": "speckleDensity",
+      "criterion": "materials",
+      "what": "marine snow present",
+      "render": 6.576,
+      "target": {
+        "min": 1
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "target",
+      "metric": "primaryFraction",
+      "criterion": "originality",
+      "what": "no default primaries",
+      "render": 0,
+      "target": {
+        "max": 0.01
+      },
+      "gap": 0,
+      "pass": true,
+      "direction": null,
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "genericity",
+      "metric": "flatLighting",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "tonal range 24.59 L*, std 7.96: flat lighting reads as an unlit default",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "genericity",
+      "metric": "uniformNoise",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "speckle clustering 1.188: particles spread evenly like a default noise field rather than following light and depth",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    },
+    {
+      "kind": "genericity",
+      "metric": "defaultPrimaries",
+      "criterion": "originality",
+      "pass": true,
+      "gap": 0,
+      "note": "0% of the frame is pure default primaries",
+      "t": 5.4,
+      "reference_id": "plate-3-macro"
+    }
+  ],
+  "distance": 0.3,
+  "log": [
+    "[lighting] t=0.8 overall exposure (L*): render 31.28 vs reference 18.37 (gap 2.152x tolerance): lower it",
+    "[lighting] t=0.8 tonal range p05-p95 (L*): render 58.43 vs reference 31.27 (gap 3.395x tolerance): lower it",
+    "[lighting] t=0.8 surface-to-depth brightness falloff: render 5.059 vs reference 0.766 (gap 5.39x tolerance): lower it",
+    "[lighting] t=0.8 tonal distribution: differs from plate-1-establishing (gap 3.68x tolerance): bring it closer",
+    "[composition] t=0.8 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-1-establishing (gap 2.69x tolerance): bring it closer",
+    "[materials] t=0.8 surface/texture detail (Laplacian): render 2.064 vs reference 5.864 (gap 2.32x tolerance): raise it",
+    "[materials] t=0.8 particulate density (marine snow, sparkle): render 3.09 vs reference 7.795 (gap 1.682x tolerance): raise it",
+    "[spatial] t=0.8 atmospheric depth profile top-to-bottom (L* per band): differs from plate-1-establishing (gap 3.129x tolerance): bring it closer",
+    "[lighting] t=3.2 tonal range p05-p95 (L*): render 24.72 vs reference 49.89 (gap 3.146x tolerance): raise it",
+    "[lighting] t=3.2 surface-to-depth brightness falloff: render 1.117 vs reference 4.074 (gap 3.695x tolerance): raise it",
+    "[lighting] t=3.2 tonal distribution: differs from plate-2-hero (gap 1.86x tolerance): bring it closer",
+    "[composition] t=3.2 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-2-hero (gap 1.156x tolerance): bring it closer",
+    "[composition] t=3.2 focal point placement relative to the reference: render 0.1405 vs reference 0.0491 (gap 1.306x tolerance): lower it",
+    "[materials] t=3.2 surface/texture detail (Laplacian): render 10.945 vs reference 6.676 (gap 1.098x tolerance): lower it",
+    "[materials] t=3.2 particulate density (marine snow, sparkle): render 43.339 vs reference 11.48 (gap 2.415x tolerance): lower it",
+    "[lighting] t=3.2 contrast 24.72 is outside the DESIGN.md target {\"min\":28}: raise it",
+    "[lighting] t=5.4 tonal range p05-p95 (L*): render 24.59 vs reference 52.37 (gap 3.472x tolerance): raise it",
+    "[lighting] t=5.4 surface-to-depth brightness falloff: render 0.923 vs reference 2.301 (gap 2.608x tolerance): raise it",
+    "[lighting] t=5.4 tonal distribution: differs from plate-3-macro (gap 1.763x tolerance): bring it closer",
+    "[composition] t=5.4 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-3-macro (gap 1.443x tolerance): bring it closer",
+    "[materials] t=5.4 particulate density (marine snow, sparkle): render 6.576 vs reference 1.02 (gap 3.387x tolerance): lower it",
+    "[lighting] t=5.4 contrast 24.59 is outside the DESIGN.md target {\"min\":28}: raise it"
+  ],
+  "perFrame": [
+    {
+      "t": 0.8,
+      "reference": "plate-1-establishing",
+      "metrics": {
+        "width": 256,
+        "height": 144,
+        "lumaMean": 31.28,
+        "lumaStd": 20.03,
+        "p05": 10.09,
+        "p50": 25.35,
+        "p95": 68.52,
+        "contrast": 58.43,
+        "aMean": 5.79,
+        "bMean": -35.2,
+        "chroma": 36.5,
+        "hue": 279.3,
+        "saturation": 0.78,
+        "falloff": 5.059,
+        "bands": [
+          61.73,
+          55.68,
+          42.29,
+          30.08,
+          21.95,
+          14.72,
+          12.37,
+          11.4
+        ],
+        "hist": [
+          0,
+          0.00057,
+          0.02501,
+          0.20836,
+          0.1005,
+          0.06527,
+          0.04867,
+          0.0465,
+          0.04848,
+          0.04121,
+          0.03602,
+          0.03312,
+          0.03117,
+          0.02778,
+          0.03098,
+          0.02686,
+          0.03787,
+          0.0373,
+          0.0322,
+          0.02759,
+          0.02029,
+          0.02604,
+          0.02035,
+          0.01294,
+          0.00651,
+          0.00282,
+          0.00165,
+          0.00127,
+          0.00212,
+          0.00057,
+          0,
+          0
+        ],
+        "structure": [
+          [
+            53.48,
+            -0.31,
+            -41.9
+          ],
+          [
+            68.39,
+            -5.82,
+            -41.43
+          ],
+          [
+            62.8,
+            -0.27,
+            -50.26
+          ],
+          [
+            50.16,
+            4,
+            -47.4
+          ],
+          [
+            33.06,
+            9.86,
+            -41.1
+          ],
+          [
+            44.48,
+            9.72,
+            -47.2
+          ],
+          [
+            37.29,
+            13.45,
+            -48.78
+          ],
+          [
+            29.9,
+            12.62,
+            -43.88
+          ],
+          [
+            16.66,
+            6.15,
+            -26.22
+          ],
+          [
+            21.85,
+            6.54,
+            -29.46
+          ],
+          [
+            19.46,
+            8,
+            -30.39
+          ],
+          [
+            15.38,
+            6.92,
+            -26.62
+          ],
+          [
+            10.91,
+            4.86,
+            -20.81
+          ],
+          [
+            12.76,
+            6.03,
+            -23.5
+          ],
+          [
+            12.47,
+            6.11,
+            -23.54
+          ],
+          [
+            11.4,
+            4.7,
+            -20.73
+          ]
+        ],
+        "detail": 2.064,
+        "edgeDensity": 0.0122,
+        "speckleDensity": 3.09,
+        "speckleClustering": 0.907,
+        "focal": [
+          0.473,
+          0.098
+        ],
+        "thirdsDistance": 0.1676,
+        "distinctColors": 779,
+        "magentaFraction": 0,
+        "primaryFraction": 0
+      },
+      "distance": 0.363
+    },
+    {
+      "t": 3.2,
+      "reference": "plate-2-hero",
+      "metrics": {
+        "width": 256,
+        "height": 144,
+        "lumaMean": 20.06,
+        "lumaStd": 8.68,
+        "p05": 11.67,
+        "p50": 17.8,
+        "p95": 36.39,
+        "contrast": 24.72,
+        "aMean": -0.4,
+        "bMean": -16.78,
+        "chroma": 18.74,
+        "hue": 268.6,
+        "saturation": 0.693,
+        "falloff": 1.117,
+        "bands": [
+          19.76,
+          21.95,
+          22.32,
+          22.44,
+          20.61,
+          18.22,
+          17.57,
+          17.59
+        ],
+        "hist": [
+          0,
+          0.00027,
+          0.00939,
+          0.10346,
+          0.26969,
+          0.16452,
+          0.14651,
+          0.10425,
+          0.06451,
+          0.03993,
+          0.03212,
+          0.02205,
+          0.01373,
+          0.0089,
+          0.00486,
+          0.00361,
+          0.00244,
+          0.00244,
+          0.00144,
+          0.00138,
+          0.00109,
+          0.00071,
+          0.00106,
+          0.00073,
+          0.00038,
+          0.00027,
+          0.00014,
+          0.00011,
+          0.00003,
+          0,
+          0,
+          0
+        ],
+        "structure": [
+          [
+            19.53,
+            0.92,
+            -19.78
+          ],
+          [
+            25.16,
+            0.2,
+            -22.61
+          ],
+          [
+            23.97,
+            0.3,
+            -21.72
+          ],
+          [
+            14.75,
+            2.33,
+            -20.21
+          ],
+          [
+            21.14,
+            -0.74,
+            -19.3
+          ],
+          [
+            27.54,
+            1.99,
+            -5.08
+          ],
+          [
+            24.56,
+            -1.9,
+            -17.36
+          ],
+          [
+            16.29,
+            0.24,
+            -19.56
+          ],
+          [
+            20.16,
+            -2.14,
+            -18.05
+          ],
+          [
+            21.16,
+            2.51,
+            -1.44
+          ],
+          [
+            22.23,
+            -2.97,
+            -17.15
+          ],
+          [
+            14.11,
+            0.11,
+            -17.41
+          ],
+          [
+            15.78,
+            -1.36,
+            -16.57
+          ],
+          [
+            16.31,
+            -0.77,
+            -17.39
+          ],
+          [
+            22.15,
+            -3.71,
+            -18.39
+          ],
+          [
+            16.07,
+            -1.33,
+            -16.47
+          ]
+        ],
+        "detail": 10.945,
+        "edgeDensity": 0.2626,
+        "speckleDensity": 43.339,
+        "speckleClustering": 0.516,
+        "focal": [
+          0.515,
+          0.569
+        ],
+        "thirdsDistance": 0.1405,
+        "distinctColors": 635,
+        "magentaFraction": 0,
+        "primaryFraction": 0
+      },
+      "distance": 0.276
+    },
+    {
+      "t": 5.4,
+      "reference": "plate-3-macro",
+      "metrics": {
+        "width": 256,
+        "height": 144,
+        "lumaMean": 21.45,
+        "lumaStd": 7.96,
+        "p05": 11.32,
+        "p50": 19.98,
+        "p95": 35.91,
+        "contrast": 24.59,
+        "aMean": -0.36,
+        "bMean": -15.46,
+        "chroma": 18.6,
+        "hue": 268.6,
+        "saturation": 0.673,
+        "falloff": 0.923,
+        "bands": [
+          19.2,
+          20.89,
+          23.75,
+          22.76,
+          20.87,
+          20.62,
+          22.64,
+          20.88
+        ],
+        "hist": [
+          0,
+          0,
+          0.01175,
+          0.08453,
+          0.18376,
+          0.15782,
+          0.14524,
+          0.1084,
+          0.10067,
+          0.09052,
+          0.05244,
+          0.02653,
+          0.01782,
+          0.01109,
+          0.00551,
+          0.00127,
+          0.00087,
+          0.00076,
+          0.00052,
+          0.00024,
+          0.00011,
+          0.00008,
+          0.00003,
+          0.00003,
+          0,
+          0.00003,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "structure": [
+          [
+            18.82,
+            0.6,
+            -19.71
+          ],
+          [
+            24.38,
+            -0.17,
+            -23.02
+          ],
+          [
+            22.1,
+            -0.16,
+            -17.62
+          ],
+          [
+            14.89,
+            1.72,
+            -19.92
+          ],
+          [
+            22.47,
+            -1.08,
+            -19.78
+          ],
+          [
+            31.1,
+            4.2,
+            4.62
+          ],
+          [
+            22.44,
+            -0.47,
+            -11.95
+          ],
+          [
+            17.02,
+            -0.21,
+            -19.29
+          ],
+          [
+            22.48,
+            -1.59,
+            -19.19
+          ],
+          [
+            23.83,
+            3.38,
+            3.75
+          ],
+          [
+            20.97,
+            -2.04,
+            -13.59
+          ],
+          [
+            15.7,
+            -0.7,
+            -17.82
+          ],
+          [
+            24.69,
+            -1.6,
+            -19.81
+          ],
+          [
+            21.82,
+            -3.6,
+            -18.28
+          ],
+          [
+            20.59,
+            -3.54,
+            -17.41
+          ],
+          [
+            19.95,
+            -0.46,
+            -18.4
+          ]
+        ],
+        "detail": 2.755,
+        "edgeDensity": 0.0262,
+        "speckleDensity": 6.576,
+        "speckleClustering": 1.188,
+        "focal": [
+          0.414,
+          0.469
+        ],
+        "thirdsDistance": 0.097,
+        "distinctColors": 537,
+        "magentaFraction": 0,
+        "primaryFraction": 0
+      },
+      "distance": 0.26
+    }
+  ]
+}

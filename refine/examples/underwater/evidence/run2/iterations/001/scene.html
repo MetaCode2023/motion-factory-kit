@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Underwater documentary · 6 s visual refinement demo</title>
+<script src="../../kit/motion.js"></script>
+</head>
+<body>
+<script>
+// A 6-second underwater documentary shot, built for the visual refinement loop (docs/VISUAL-REFINEMENT.md).
+// One continuous move: open water with light shafts (establishing), the camera cranes up and tilts
+// down onto a turtle gliding over a caustic-lit floor (hero), then focus racks onto marine snow
+// drifting just in front of the lens (macro).
+//
+// Every look decision is a parameter (M.data), so the loop can tune it without rewriting code:
+// render_still / refine_still pass them as data. resolutionScale renders low-res motion previews.
+const D = M.data({
+  exposure: 1.0,          // overall brightness
+  depthFalloff: 1.0,      // how fast light dies with depth and distance (atmospheric perspective)
+  waterHue: 200,          // degrees
+  waterSaturation: 0.7,
+  deepLevel: 0.16,        // brightness of the deepest water (0-1)
+  warmth: 0.0,            // -1 cool ... +1 warm sunlight
+  rayIntensity: 0.35,     // volumetric light shafts
+  rayCount: 6,
+  raySpread: 0.5,         // how wide the shafts fan
+  raySoftness: 8,         // px blur on the shaft layer
+  causticIntensity: 0.4,  // caustics on floor and subject
+  causticScale: 1.0,
+  causticSpeed: 1.0,      // temporal: ripple speed
+  causticOnSubject: 0.3,
+  shellDetail: 0.4,       // scute contrast on the shell
+  sss: 0.2,               // light passing through thin flipper edges (subsurface stand-in)
+  ambientOcclusion: 0.4,
+  snowDensity: 1.0,
+  snowSize: 1.0,
+  snowLightFollow: 0.2,   // 0: snow lit evenly (default noise look) ... 1: snow glints only inside the shafts
+  snowDrift: 1.0,         // temporal: drift speed
+  focusRack: 1.0,         // 0 keeps focus on the subject; 1 racks to the snow
+  aperture: 1.0,          // depth-of-field strength
+  cameraPush: 0.25,
+  cameraSmoothing: 0.5,   // temporal: 0 linear moves (hard starts/stops) ... 1 eased
+  cameraShake: 0.15,      // temporal: handheld shake
+  grain: 0.4,
+  vignette: 0.35,
+  resolutionScale: 1,
+});
+
+const S = Math.max(0.1, Math.min(1, D.resolutionScale));
+const W = Math.round(1920 * S), H = Math.round(1080 * S);
+const DUR = 6;
+
+// ---- determinism: seeded noise only (time is the only state) --------------------------------
+function mulberry(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rand = mulberry(20261128);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const smooth = (k) => { k = clamp(k, 0, 1); return k * k * k * (k * (k * 6 - 15) + 10); };
+// cameraSmoothing blends a linear ramp (abrupt) with smootherstep (eased).
+const move = (t, a, b) => { const k = clamp((t - a) / (b - a), 0, 1); return lerp(k, smooth(k), D.cameraSmoothing); };
+
+function hsl(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360;
+  const f = (n) => { const k = (n + h * 12) % 12; return l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return [f(0), f(8), f(4)];
+}
+
+// ---- camera ------------------------------------------------------------------------------------
+// tilt: 0 = level, looking slightly up at the surface; 1 = craned up, looking down at the floor.
+function camera(t) {
+  const tilt = move(t, 0.7, 3.3);
+  const push = move(t, 0, DUR) * D.cameraPush;
+  // Shake: two incommensurate sines per axis, deterministic in t.
+  const sh = D.cameraShake * 9;
+  const sx = sh * (Math.sin(t * 23.1) * 0.6 + Math.sin(t * 37.7 + 1.3) * 0.4);
+  const sy = sh * (Math.sin(t * 19.3 + 0.7) * 0.6 + Math.sin(t * 41.9 + 2.1) * 0.4);
+  // Focus distance in metres: on the subject, then racked to the snow near the lens.
+  const rack = move(t, 3.7, 5.0) * D.focusRack;
+  const focus = lerp(7.5, 1.0, rack);
+  return { tilt, pitch: lerp(0.16, -0.62, tilt), camY: lerp(0.0, 3.2, tilt), camZ: push * 6 + t * 0.35, zoom: 1 + push, sx, sy, focus, rack };
+}
+
+// ---- water colour ------------------------------------------------------------------------------
+function palette() {
+  const water = hsl(D.waterHue, D.waterSaturation, 0.42);
+  const deep = hsl(D.waterHue + 12, D.waterSaturation * 0.9, D.deepLevel * 0.5);
+  const sun = [1.0 + 0.12 * D.warmth, 0.97, 0.9 - 0.18 * D.warmth];
+  return { water, deep, sun };
+}
+
+// ---- per-pixel surfaces (low res): the underside of the surface and the caustic floor ----------
+const RW = Math.round(480 * S), RH = Math.round(270 * S);
+const surf = document.createElement('canvas'); surf.width = RW; surf.height = RH;
+const sctx = surf.getContext('2d');
+const sdata = sctx.createImageData(RW, RH);
+const SURFACE = 9, FLOOR = -3.2, TANF = Math.tan(0.62);
+function caustic(x, z, t) {
+  const k = 0.9 / D.causticScale, w = t * D.causticSpeed;
+  let v = Math.sin(x * k + Math.sin(z * 0.7 * k + w * 0.9) * 1.6 + w * 0.7);
+  v += Math.sin(z * 1.1 * k - x * 0.4 * k + Math.sin(x * 0.55 * k - w * 0.6) * 1.3);
+  v += Math.sin((x + z) * 0.6 * k + 2.1 + w * 0.5);
+  v = Math.abs(v) / 3;
+  return Math.pow(1 - v, 5);
+}
+function shaftBand(x, z) { const b = 0.5 + 0.5 * Math.sin(x * 0.55 + Math.sin(z * 0.08) * 1.2 + 0.4); return 0.25 + 1.3 * b * b * b * b; }
+function renderSurfaces(t, cam, P) {
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const sig = [0.32 * D.depthFalloff, 0.075 * D.depthFalloff, 0.045 * D.depthFalloff];
+  const d = sdata.data;
+  for (let py = 0; py < RH; py++) {
+    const v = (1 - (py + 0.5) / RH * 2) * TANF * 9 / 16;
+    for (let px = 0; px < RW; px++) {
+      const u = ((px + 0.5) / RW * 2 - 1) * TANF;
+      // Rotate the view ray by the camera pitch.
+      let dy = v * cp + sp, dz = cp - v * sp, dx = u;
+      const l = Math.hypot(dx, dy, dz); dx /= l; dy /= l; dz /= l;
+      const up = clamp(dy * 2.2, -1, 1);
+      let col = [0, 1, 2].map((i) => lerp(P.deep[i], P.water[i], clamp(0.5 + up * 0.5, 0, 1)) * Math.exp(up * 1.2 - 0.4));
+      let dist = 60;
+      if (dy > 0.02) {
+        dist = (SURFACE - cam.camY) / dy;
+        const x = dx * dist, z = cam.camZ + dz * dist;
+        const c = caustic(x * 0.6, z * 0.6, t) * shaftBand(x, z);
+        col = col.map((cv, i) => cv + P.sun[i] * c * 0.55 * D.exposure);
+      } else if (dy < -0.02) {
+        dist = (cam.camY - FLOOR) / -dy;
+        const x = dx * dist, z = cam.camZ + dz * dist;
+        const sand = 0.5 + 0.08 * Math.sin(x * 9.1) * Math.sin(z * 7.3) + 0.05 * Math.sin(x * 2.3 + z * 1.7);
+        const rock = Math.pow(Math.max(0, Math.sin(x * 0.21 + Math.sin(z * 0.3) * 2)), 3);
+        const alb = [sand * 1.05 - rock * 0.3, sand - rock * 0.25, sand * 0.82 - rock * 0.2];
+        const light = (0.25 + D.causticIntensity * 2.6 * caustic(x, z, t) * shaftBand(x, z)) * D.exposure;
+        const att = sig.map((s) => Math.exp(-s * (dist + (SURFACE - FLOOR) * 0.55)));
+        col = col.map((cv, i) => cv * (1 - att[i]) + alb[i] * light * P.sun[i] * att[i] * 1.6);
+      }
+      // Distance haze toward the deep colour.
+      const haze = 1 - Math.exp(-dist * 0.03 * D.depthFalloff);
+      const o = (py * RW + px) * 4;
+      for (let i = 0; i < 3; i++) d[o + i] = clamp(Math.pow(clamp(lerp(col[i], P.deep[i], haze * 0.6), 0, 1), 1 / 1.1) * 255, 0, 255);
+      d[o + 3] = 255;
+    }
+  }
+  sctx.putImageData(sdata, 0, 0);
+}
+
+// ---- light shafts ------------------------------------------------------------------------------
+const shafts = Array.from({ length: 16 }, (_, i) => ({ off: rand() * 2 - 1, w: 0.4 + rand() * 1.2, ph: rand() * 6.28, a: 0.5 + rand() * 0.5 }));
+const shaftLayer = document.createElement('canvas'); shaftLayer.width = Math.round(W / 2); shaftLayer.height = Math.round(H / 2);
+const shctx = shaftLayer.getContext('2d');
+function drawShafts(t, cam, P) {
+  const w = shaftLayer.width, h = shaftLayer.height;
+  shctx.setTransform(1, 0, 0, 1, 0, 0);
+  shctx.clearRect(0, 0, w, h);
+  const n = Math.round(clamp(D.rayCount, 0, 16));
+  // The source sits above the frame, up and to the left; it slides up out of view as the camera tilts down.
+  const ox = w * 0.24, oy = h * lerp(-0.25, -1.1, cam.tilt);
+  for (let i = 0; i < n; i++) {
+    const s = shafts[i];
+    const ang = 0.38 + s.off * D.raySpread * 0.55 + Math.sin(t * 0.35 + s.ph) * 0.025;
+    const len = h * 2.2, half = (0.02 + s.w * 0.03) * w;
+    const ex = ox + Math.sin(ang) * len, ey = oy + Math.cos(ang) * len;
+    const g = shctx.createLinearGradient(ox, oy, ex, ey);
+    const a = D.rayIntensity * s.a * (0.85 + 0.15 * Math.sin(t * 0.8 + s.ph));
+    const c = P.sun.map((v) => Math.round(clamp(v * 0.85, 0, 1) * 255)).join(',');
+    g.addColorStop(0, `rgba(${c},${a})`);
+    g.addColorStop(0.35, `rgba(${c},${a * 0.55})`);
+    g.addColorStop(lerp(0.9, 0.6, clamp(D.depthFalloff - 0.5, 0, 1.5) / 1.5), `rgba(${c},0)`);
+    shctx.fillStyle = g;
+    shctx.beginPath();
+    shctx.moveTo(ox - half * 0.3, oy);
+    shctx.lineTo(ex - half * 1.8, ey);
+    shctx.lineTo(ex + half * 1.8, ey);
+    shctx.lineTo(ox + half * 0.3, oy);
+    shctx.fill();
+  }
+}
+
+// ---- the hero: a turtle seen from above ---------------------------------------------------------
+const scutes = [];
+for (let i = 0; i < 13; i++) {
+  const a = rand() * 6.28, r = Math.sqrt(rand()) * 0.75;
+  scutes.push([Math.cos(a) * r * 1.0, Math.sin(a) * r * 0.75]);
+}
+scutes.push([0, 0], [0.42, 0], [-0.42, 0]);
+function turtleAt(t) {
+  const k = move(t, 0.4, 3.4), k2 = move(t, 3.4, 6);
+  return {
+    x: lerp(lerp(0.70, 0.60, k), 0.66, k2) * 1920,
+    y: lerp(lerp(0.36, 0.52, k), 0.5, k2) * 1080,
+    s: lerp(lerp(0.055, 0.30, k), 0.4, k2) * 1080,
+    rot: lerp(-0.12, 0.05, k) + Math.sin(t * 1.1) * 0.03,
+    depth: lerp(lerp(16, 7.5, k), 5.5, k2),
+  };
+}
+function drawTurtle(ctx, t, cam, P, T) {
+  const flap = Math.sin(t * 2.2) * 0.35;
+  ctx.save();
+  ctx.translate(T.x, T.y); ctx.rotate(T.rot); ctx.scale(T.s, T.s);
+  const sun = P.sun;
+  const light = (k) => `rgb(${sun.map((v) => Math.round(clamp(v * k, 0, 1) * 255)).join(',')})`;
+  // Flippers first (under the shell): thin, translucent at the edge.
+  const flipper = (x, y, len, wid, ang) => {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.moveTo(0, -wid * 0.5);
+    ctx.bezierCurveTo(len * 0.4, -wid * 0.9, len * 0.9, -wid * 0.2, len, wid * 0.15);
+    ctx.bezierCurveTo(len * 0.7, wid * 0.55, len * 0.3, wid * 0.6, 0, wid * 0.5);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, -wid, 0, wid);
+    g.addColorStop(0, `rgba(${Math.round(70 + 60 * D.sss)},${Math.round(84 + 40 * D.sss)},${Math.round(70 + 10 * D.sss)},1)`);
+    g.addColorStop(0.6, 'rgba(48,62,58,1)');
+    g.addColorStop(1, `rgba(${Math.round(26 * (1 - D.ambientOcclusion) + 10)},${Math.round(34 * (1 - D.ambientOcclusion) + 14)},${Math.round(36 * (1 - D.ambientOcclusion) + 16)},1)`);
+    ctx.fillStyle = g; ctx.fill();
+    // Transmitted light along the thin trailing edge, warmer.
+    if (D.sss > 0) { ctx.lineWidth = 0.035; ctx.strokeStyle = `rgba(255,${Math.round(190 + 30 * D.warmth)},120,${0.55 * D.sss})`; ctx.stroke(); }
+    // Spots.
+    ctx.fillStyle = 'rgba(20,28,26,0.35)';
+    for (let i = 1; i < 5; i++) { ctx.beginPath(); ctx.ellipse(len * i / 5.5, 0, wid * 0.08, wid * 0.06, 0, 0, 6.28); ctx.fill(); }
+    ctx.restore();
+  };
+  flipper(0.35, -0.55, 1.25, 0.36, -0.9 + flap);
+  flipper(0.35, 0.55, 1.25, 0.36, 0.9 - flap + Math.PI * 0);
+  ctx.save(); ctx.scale(1, -1); ctx.restore();
+  flipper(-0.6, -0.42, 0.5, 0.22, -2.4 - flap * 0.4);
+  flipper(-0.6, 0.42, 0.5, 0.22, 2.4 + flap * 0.4);
+  // Head.
+  ctx.beginPath(); ctx.ellipse(1.12, 0, 0.3, 0.22, 0, 0, 6.28);
+  const hg = ctx.createRadialGradient(1.05, -0.08, 0.02, 1.12, 0, 0.32);
+  hg.addColorStop(0, 'rgb(128,140,112)'); hg.addColorStop(1, 'rgb(46,58,50)');
+  ctx.fillStyle = hg; ctx.fill();
+  // Shell: key light from upper left, occlusion toward lower right.
+  ctx.beginPath(); ctx.ellipse(0, 0, 1.0, 0.78, 0, 0, 6.28);
+  const sg = ctx.createRadialGradient(-0.3, -0.32, 0.05, 0, 0, 1.05);
+  sg.addColorStop(0, `rgb(${Math.round(150 * D.exposure)},${Math.round(118 * D.exposure)},${Math.round(70 * D.exposure)})`);
+  sg.addColorStop(0.65, 'rgb(96,74,44)');
+  sg.addColorStop(1, `rgb(${Math.round(60 * (1 - D.ambientOcclusion * 0.7))},${Math.round(44 * (1 - D.ambientOcclusion * 0.7))},${Math.round(30 * (1 - D.ambientOcclusion * 0.7))})`);
+  ctx.fillStyle = sg; ctx.fill();
+  ctx.save(); ctx.clip();
+  // Scutes: nearest-centre cells drawn as dark seams.
+  ctx.lineWidth = 0.035; ctx.strokeStyle = `rgba(30,20,12,${0.25 + 0.6 * D.shellDetail})`;
+  for (let i = 0; i < scutes.length; i++) for (let j = i + 1; j < scutes.length; j++) {
+    const [ax, ay] = scutes[i], [bx, by] = scutes[j];
+    const dd = Math.hypot(ax - bx, ay - by);
+    if (dd > 0.62) continue;
+    const mx = (ax + bx) / 2, my = (ay + by) / 2, nx = -(by - ay) / dd, ny = (bx - ax) / dd;
+    ctx.beginPath(); ctx.moveTo(mx - nx * 0.2, my - ny * 0.2); ctx.lineTo(mx + nx * 0.2, my + ny * 0.2); ctx.stroke();
+  }
+  for (const [cx, cy] of scutes) {
+    const g = ctx.createRadialGradient(cx - 0.05, cy - 0.05, 0, cx, cy, 0.25);
+    g.addColorStop(0, `rgba(230,180,110,${0.18 * D.shellDetail})`); g.addColorStop(1, 'rgba(230,180,110,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 0.25, 0, 6.28); ctx.fill();
+  }
+  // Caustics projected on the shell (same pattern as the floor, in shell space).
+  if (D.causticOnSubject > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineWidth = 0.025;
+    for (let k = 0; k < 7; k++) {
+      ctx.strokeStyle = light(D.causticOnSubject * 0.35);
+      ctx.beginPath();
+      for (let a = -1.1; a <= 1.1; a += 0.05) {
+        const y = -0.8 + k * 0.26 + 0.08 * Math.sin(a * 5 + t * D.causticSpeed * 1.4 + k) + 0.05 * Math.sin(a * 11 - t * D.causticSpeed);
+        if (a === -1.1) ctx.moveTo(a, y); else ctx.lineTo(a, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.restore();
+  // Specular rim where the key light grazes the shell.
+  ctx.beginPath(); ctx.ellipse(0, 0, 0.99, 0.77, 0, 3.6, 5.2);
+  ctx.lineWidth = 0.03; ctx.strokeStyle = light(0.35 * D.exposure); ctx.stroke();
+  ctx.restore();
+}
+
+// ---- marine snow -------------------------------------------------------------------------------
+const flakes = Array.from({ length: 900 }, () => ({ x: rand(), y: rand(), z: 0.6 + Math.pow(rand(), 1.7) * 18, r: 0.5 + rand(), ph: rand() * 6.28 }));
+function shaftLightAt(x, y, t, cam) {
+  // Brightness of the shaft field at a screen point (same geometry as drawShafts).
+  const ox = 0.24 * 1920, oy = 1080 * lerp(-0.25, -1.1, cam.tilt);
+  const ang = Math.atan2(x - ox, y - oy);
+  let best = 0;
+  const n = Math.round(clamp(D.rayCount, 0, 16));
+  for (let i = 0; i < n; i++) {
+    const s = shafts[i];
+    const a = 0.38 + s.off * D.raySpread * 0.55 + Math.sin(t * 0.35 + s.ph) * 0.025;
+    best = Math.max(best, Math.exp(-((ang - a) ** 2) / (2 * (0.012 + s.w * 0.012) ** 2)) * s.a);
+  }
+  return best;
+}
+function drawSnow(ctx, t, cam, P, near) {
+  const count = Math.round(clamp(D.snowDensity, 0, 3) * 300);
+  for (let i = 0; i < Math.min(count, flakes.length); i++) {
+    const f = flakes[i];
+    if ((f.z < 2.2) !== near) continue;
+    // Sinking + slow swirl, wrapped; parallax: nearer flakes move more with the camera.
+    const drift = t * D.snowDrift;
+    let x = (f.x + Math.sin(drift * 0.4 + f.ph) * 0.01 + drift * 0.004 / f.z * 4) % 1;
+    let y = (f.y + drift * 0.012 + cam.tilt * 0.9 / f.z) % 1;
+    if (x < 0) x += 1;
+    const zx = 960 + (x * 1920 - 960) * (1 + (cam.zoom - 1) * 3 / f.z), zy = 540 + (y * 1080 - 540) * (1 + (cam.zoom - 1) * 3 / f.z);
+    const size = f.r * 2.2 * D.snowSize * (4 / f.z + 0.6);
+    const coc = Math.abs(1 / f.z - 1 / cam.focus) * 38 * D.aperture;
+    const rad = Math.max(0.7, Math.hypot(size, coc));
+    const lit = lerp(1, 0.25 + 1.6 * shaftLightAt(zx, zy, t, cam), D.snowLightFollow);
+    const a = clamp(0.75 * lit * size * size / (rad * rad) * Math.exp(-f.z * 0.09 * D.depthFalloff), 0, 0.95);
+    if (a < 0.01) continue;
+    const col = P.sun.map((v, k) => Math.round(clamp(v * 0.8 + P.water[k] * 0.3, 0, 1) * 255)).join(',');
+    const g = ctx.createRadialGradient(zx, zy, 0, zx, zy, rad);
+    if (coc > size * 1.5) { g.addColorStop(0, `rgba(${col},${a * 0.55})`); g.addColorStop(0.85, `rgba(${col},${a * 0.7})`); g.addColorStop(1, `rgba(${col},0)`); }
+    else { g.addColorStop(0, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`); }
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(zx, zy, rad, 0, 6.28); ctx.fill();
+  }
+}
+
+// ---- grain tiles (seeded) ----------------------------------------------------------------------
+const GT = 192, grainTiles = [];
+for (let k = 0; k < 6; k++) {
+  const c = document.createElement('canvas'); c.width = GT; c.height = GT;
+  const g = c.getContext('2d'), id = g.createImageData(GT, GT);
+  for (let i = 0; i < GT * GT; i++) { const v = Math.round(128 + (rand() - 0.5) * 90); id.data[i * 4] = id.data[i * 4 + 1] = id.data[i * 4 + 2] = v; id.data[i * 4 + 3] = 255; }
+  g.putImageData(id, 0, 0);
+  grainTiles.push(c);
+}
+
+// ---- layers + compositing ---------------------------------------------------------------------
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+const bgx = bg.getContext('2d');
+const mid = document.createElement('canvas'); mid.width = W; mid.height = H;
+const midx = mid.getContext('2d');
+
+M.setup({
+  width: W, height: H, fps: 30, duration: DUR, background: '#02121e',
+  draw(ctx, t) {
+    const cam = camera(t), P = palette();
+    // Background: surfaces + shafts, defocused when focus racks to the lens.
+    renderSurfaces(t, cam, P);
+    drawShafts(t, cam, P);
+    const bgBlur = Math.abs(1 / 12 - 1 / cam.focus) * 9 * D.aperture * S;
+    bgx.setTransform(1, 0, 0, 1, 0, 0);
+    bgx.filter = bgBlur > 0.4 ? `blur(${bgBlur.toFixed(2)}px)` : 'none';
+    bgx.imageSmoothingEnabled = true;
+    bgx.drawImage(surf, -W * 0.02, -H * 0.02, W * 1.04, H * 1.04);
+    bgx.globalCompositeOperation = 'screen';
+    bgx.filter = `blur(${(D.raySoftness * S * 0.5 + bgBlur).toFixed(2)}px)`;
+    bgx.drawImage(shaftLayer, 0, 0, W, H);
+    bgx.globalCompositeOperation = 'source-over';
+    bgx.filter = 'none';
+
+    // Mid layer: far snow, the turtle's shadow and the turtle, defocused by its own depth.
+    midx.setTransform(1, 0, 0, 1, 0, 0);
+    midx.clearRect(0, 0, W, H);
+    midx.setTransform(S, 0, 0, S, 0, 0);
+    const T = turtleAt(t);
+    drawSnow(midx, t, cam, P, false);
+    if (cam.tilt > 0.3) {
+      midx.save();
+      const off = T.s * 0.9 * cam.tilt;
+      const g = midx.createRadialGradient(T.x + off * 0.4, T.y + off, 0, T.x + off * 0.4, T.y + off, T.s * 1.4);
+      g.addColorStop(0, `rgba(0,10,20,${0.45 * cam.tilt * D.ambientOcclusion + 0.1})`); g.addColorStop(1, 'rgba(0,10,20,0)');
+      midx.fillStyle = g; midx.beginPath(); midx.ellipse(T.x + off * 0.4, T.y + off, T.s * 1.4, T.s * 0.9, 0, 0, 6.28); midx.fill();
+      midx.restore();
+    }
+    drawTurtle(midx, t, cam, P, T);
+    const turtleBlur = Math.abs(1 / T.depth - 1 / cam.focus) * 10 * D.aperture * S;
+
+    // Compose under the camera transform (push-in + shake).
+    ctx.save();
+    ctx.translate(W / 2 + cam.sx * S, H / 2 + cam.sy * S);
+    ctx.scale(cam.zoom, cam.zoom);
+    ctx.translate(-W / 2, -H / 2);
+    ctx.drawImage(bg, 0, 0);
+    ctx.filter = turtleBlur > 0.4 ? `blur(${turtleBlur.toFixed(2)}px)` : 'none';
+    ctx.drawImage(mid, 0, 0);
+    ctx.filter = 'none';
+    ctx.restore();
+    // Near snow (in front of the lens), drawn last and not zoomed.
+    ctx.save(); ctx.scale(S, S);
+    drawSnow(ctx, t, cam, P, true);
+    ctx.restore();
+
+    // Grade: exposure, vignette, grain.
+    if (D.exposure !== 1) { ctx.globalCompositeOperation = D.exposure > 1 ? 'screen' : 'multiply'; ctx.fillStyle = D.exposure > 1 ? `rgba(255,255,255,${clamp((D.exposure - 1) * 0.25, 0, 0.6)})` : `rgba(${Math.round(255 * D.exposure)},${Math.round(255 * D.exposure)},${Math.round(255 * D.exposure)},1)`; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over'; }
+    if (D.vignette > 0) {
+      const v = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 1.05);
+      v.addColorStop(0, 'rgba(0,4,10,0)'); v.addColorStop(1, `rgba(0,4,10,${clamp(D.vignette, 0, 1)})`);
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    }
+    if (D.grain > 0) {
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = clamp(D.grain, 0, 1) * 0.25;
+      ctx.fillStyle = ctx.createPattern(grainTiles[Math.floor(t * 30) % grainTiles.length], 'repeat');
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  },
+});
+</script>
+</body>
+</html>

@@ -17,6 +17,8 @@ import { checkPlan, loadIndex } from '../tools/plans.mjs';
 import { source, direction, prepareCutaway, selectCutaway, cutawayStatus, cutawayPreferences } from '../cutaway.mjs';
 import ffmpegPath from 'ffmpeg-static';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import * as refine from '../refine/loop.mjs';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const VERSION = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
@@ -128,6 +130,8 @@ server.registerTool('kit_overview', {
         steps: ['cutaway_preferences', 'cutaway_preview', 'cutaway_select', 'cutaway_status'], guide: 'docs/CUTAWAYS.md' },
       { id: 'custom-scene', useWhen: 'Make a bespoke visual, simulation, character performance, or editorial transition',
         steps: ['render_still', 'make_video', 'look_at'], guide: 'docs/PRODUCTION-PLAYBOOK.md' },
+      { id: 'visual-refinement', useWhen: 'Refine a shot against lookdev reference plates (Stitch, moodboard, concept art) until a hash-bound visual approval, stills first, then motion',
+        steps: ['refine_init', 'refine_still', 'refine_critique', 'refine_temporal', 'refine_final', 'refine_bundle'], guide: 'docs/VISUAL-REFINEMENT.md' },
     ],
   },
   workflow: {
@@ -145,7 +149,7 @@ server.registerTool('kit_overview', {
     explainer: ['notification', 'chat', 'checklist', 'stat', 'compare', 'steps', 'bars', 'phone', 'toast', 'endCard'] },
   captionStyles: ['pill', 'bold', 'box', 'minimal', 'karaoke', 'pop', 'word'],
   overlayCards: Object.keys(CARD_KINDS),
-  docs: ['CLAUDE.md', 'docs/LONGFORM.md', 'docs/OVERLAYS.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
+  docs: ['CLAUDE.md', 'docs/VISUAL-REFINEMENT.md', 'docs/LONGFORM.md', 'docs/OVERLAYS.md', 'docs/MODULES.md', 'docs/EDITOR.md', 'docs/TEMPLATES.md', 'docs/BLOCKS.md', 'design/DESIGN.md'],
   rules: ['Never invent quotes, names or poll numbers: use what people said and what the shoot counted.', 'All on-screen text is drawn in code.', 'Client footage and plans stay out of git.'],
 }));
 
@@ -281,8 +285,17 @@ server.registerTool('render_still', {
     const c = spawn(process.execPath, [join(ROOT, 'render.mjs'), inRepo(scene), '--still', String(t), '--out', out, ...(dataFile ? ['--data', dataFile] : [])], { cwd: ROOT });
     let err = ''; c.stderr.on('data', (d) => (err += d)); c.on('close', (code) => done({ code, err }));
   });
-  return existsSync(out) ? picture(out, { t }) : text({ ok: false, error: res.err.slice(-1500) });
+  if (!existsSync(out)) return text({ ok: false, error: res.err.slice(-1500) });
+  return picture(out, { t, frame: frameRecord(out, t) });
 });
+
+// The visual refinement contract's frame record (refine/contract.mjs): the same shape daily.py and
+// studio-engine exchange, so a still from here can be cited as evidence by hash.
+function frameRecord(file, t) {
+  const buf = readFileSync(file);
+  const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);   // PNG IHDR
+  return { t, path: relative(ROOT, file).split('\\').join('/'), sha256: createHash('sha256').update(buf).digest('hex'), width: w, height: h, reference: null };
+}
 
 server.registerTool('look_at', {
   title: 'See an image',
@@ -291,8 +304,92 @@ server.registerTool('look_at', {
 }, async ({ file }) => {
   const f = inRepo(file);
   if (!existsSync(f) || !/\.(png|jpe?g)$/i.test(f)) return text({ ok: false, error: 'not an image in the kit: ' + file });
-  return picture(f);
+  return picture(f, { sha256: createHash('sha256').update(readFileSync(f)).digest('hex') });
 });
+
+// ---- visual refinement loop (refine/loop.mjs, docs/VISUAL-REFINEMENT.md) ------------------------
+// The loop renders with the same render.mjs --still path as render_still. Critiques must come from
+// an isolated context: hand the packet folder to a separate reviewer (a subagent given only the
+// packet, or `node refine.mjs critic <run>`), never critique your own code in this context.
+const refineRun = (run) => refine.defaultRunDir(run).startsWith(ROOT) && !run.includes('/') ? refine.defaultRunDir(run) : inRepo(run);
+const refineErr = (e) => text({ ok: false, error: e.message, code: e.code || 'error' });
+async function refinePictures(res, extra = {}) {
+  const pkt = res.current?.packet ? join(ROOT, res.current.packet) : null;
+  const files = pkt && existsSync(pkt) ? readdirSync(pkt).filter((f) => /^(compare-|sequence)/.test(f)).sort().map((f) => join(pkt, f)) : [];
+  const content = files.slice(0, 4).map((f) => ({ type: 'image', data: readFileSync(f).toString('base64'), mimeType: 'image/png' }));
+  content.push({ type: 'text', text: JSON.stringify({ ...res, ...extra }, null, 1) });
+  return { content };
+}
+
+server.registerTool('refine_init', {
+  title: 'Start a visual refinement run (step 1: target ingestion)',
+  description: 'Validate a visual refinement contract (shot, lookdev reference plates with sha256, keyframe mapping, DESIGN.md targets, budget) and ingest the plates. Write the contract file first (refine/examples/underwater/contract.json is a complete example; `node refine.mjs ingest <plate>` gives a plate\'s sha256 and size). Returns the run folder.',
+  inputSchema: { contract: z.string().describe('Contract JSON file in the kit'), run: z.string().optional().describe('Run folder (default out/refine/<shot id>)') },
+}, async ({ contract, run }) => {
+  try { const r = await refine.init({ contract: JSON.parse(readFileSync(inRepo(contract), 'utf8')), runDir: run ? inRepo(run) : null }); return text({ ok: true, runDir: relative(ROOT, r.runDir), contractHash: r.contractHash, resumed: r.resumed }); } catch (e) { return refineErr(e); }
+});
+
+server.registerTool('refine_still', {
+  title: 'Render one still iteration (steps 2-4 + measured deltas)',
+  description: 'Render the shot at every keyframe with the given params (merged over the current ones), run the technical checks (decode, resolution, blank/fallback/copied frames), measure each frame against its plate and DESIGN.md, and write an isolated critique packet (pictures, plates, brief, measured deltas, no code). Returns the render|reference comparisons. Then get an isolated critique of the packet and pass it to refine_critique. Every iteration must change params or scene code; the budget is the contract\'s maxIterations (default 6).',
+  inputSchema: { run: z.string(), params: z.record(z.string(), z.any()).optional(), note: z.string().optional().describe('What you changed and why (step 7 record)') },
+}, async ({ run, params, note }) => {
+  try {
+    const dir = refineRun(run);
+    const cur = refine.summary(dir);
+    const base = JSON.parse(readFileSync(join(dir, 'status.json'), 'utf8')).params;
+    const res = await refine.iterate(dir, { params: params ? { ...base, ...params } : null, note: note || '' });
+    return refinePictures(res, { next: res.state === 'awaiting-critique' ? `Give ${res.current.packet}/ (CRITIC.md + images) to an isolated critic, then refine_critique with its critique.json.` : 'Fix the technical failure, then refine_still again.', previousState: cur.state });
+  } catch (e) { return refineErr(e); }
+});
+
+server.registerTool('refine_critique', {
+  title: 'Record the isolated critique (steps 5-9)',
+  description: 'Record a critique.json produced by an isolated critic for the waiting iteration. Validates it (verdicts per criterion, evidence ids from the packet, hashes, no numeric scores), runs the rubric (critic verdict + measured blocks), writes the delta log, re-verifies hashes and opens the approval gate only for the exact state that passed. Returns the decision, failing criteria, and suggested param moves.',
+  inputSchema: { run: z.string(), critique: z.union([z.string(), z.record(z.string(), z.any())]).describe('critique.json path in the kit, or the object') },
+}, async ({ run, critique }) => {
+  try {
+    const c = typeof critique === 'string' ? JSON.parse(readFileSync(inRepo(critique), 'utf8')) : critique;
+    const r = refine.recordCritique(refineRun(run), c);
+    return text({ ...r, status: refine.summary(refineRun(run)) });
+  } catch (e) { return refineErr(e); }
+});
+
+server.registerTool('refine_temporal', {
+  title: 'Temporal refinement (phase 4)',
+  description: 'After a verified still approval: render a low-res motion preview, measure flicker, jitter, swimming, physics pops, duplicate/dropped frames and pacing, sample ordered keyframes (contract keyframes, cut boundaries, peak motion) and write a temporal critique packet. Only the contract\'s temporal params may change here; look changes route back to stills. Returns the sequence sheet.',
+  inputSchema: { run: z.string(), params: z.record(z.string(), z.any()).optional(), note: z.string().optional() },
+}, async ({ run, params, note }) => {
+  try {
+    const dir = refineRun(run);
+    const base = JSON.parse(readFileSync(join(dir, 'status.json'), 'utf8')).params;
+    return refinePictures(await refine.temporal(dir, { params: params ? { ...base, ...params } : null, note: note || '' }));
+  } catch (e) { return refineErr(e); }
+});
+
+server.registerTool('refine_status', {
+  title: 'Refinement run status',
+  description: 'State, budget used, delta distances, the open delta log, suggestions and any escalation (budget exhausted, converged without approval, technical blocker, creative-direction shift) for a run.',
+  inputSchema: { run: z.string() },
+}, async ({ run }) => { try { return text({ ...refine.summary(refineRun(run)), still: refine.verifyApproval(refineRun(run), 'still'), temporal: refine.verifyApproval(refineRun(run), 'temporal') }); } catch (e) { return refineErr(e); } });
+
+server.registerTool('refine_restore', {
+  title: 'Restore a saved iteration',
+  description: 'Restore iteration n\'s scene and params after verifying its snapshot hashes. Any approval is revoked; render and critique again before approval.',
+  inputSchema: { run: z.string(), iteration: z.number().int().min(1) },
+}, async ({ run, iteration }) => { try { return text(refine.restore(refineRun(run), iteration)); } catch (e) { return refineErr(e); } });
+
+server.registerTool('refine_final', {
+  title: 'Final render of the approved state',
+  description: 'Render the full-resolution MP4 from the params bound to the verified temporal approval (silent picture; sound is a separate, authorised step). Refuses without a verified still + temporal approval chain.',
+  inputSchema: { run: z.string(), out: z.string().optional() },
+}, async ({ run, out }) => { try { return text({ ok: true, ...(await refine.finalRender(refineRun(run), { out })) }); } catch (e) { return refineErr(e); } });
+
+server.registerTool('refine_bundle', {
+  title: 'Export the evidence bundle',
+  description: 'Copy the whole run (contract, plates, every iteration\'s scene snapshot, params, frames, packets, critiques, delta logs, hash chain, approvals, final render record) into a self-verifying bundle with manifest.json and SUMMARY.md.',
+  inputSchema: { run: z.string(), dest: z.string().optional() },
+}, async ({ run, dest }) => { try { const r = refine.exportBundle(refineRun(run), { dest }); return text({ ok: true, ...r, verify: refine.verifyBundle(r.dest) }); } catch (e) { return refineErr(e); } });
 
 server.registerTool('overlay_transcribe', {
   title: 'Transcribe one clip (for overlays)',

@@ -1,0 +1,58 @@
+{
+  "critic": { "id": "isolated-subagent-critic-r2-iter5", "context": "isolated", "sawSourceCode": false },
+  "outputHash": "60091e5aeb1c7374f9c19b8f07e81346eb961799318114459d8a18955a2cee8f",
+  "packetHash": "80dda15e1b7c68fcd96d01222c8b6827881b9f546a0ce35af6b13b1165baa2a7",
+  "criteria": {
+    "composition": {
+      "verdict": "pass",
+      "observation": "At t=0.8 the turtle silhouette sits on the right third just above centre, balanced against the shaft fan on the left; at t=3.2 the turtle sits left of centre with its head leading into open floor on the right; at t=5.4 the blurred shell holds centre-left with large bokeh discs framing the corners. The warm shell is where the eye lands first in the hero and macro frames.",
+      "delta": "Plate-1 gives the top fifth to a defined surface band and leaves the subject small and low; the render gives that space to shafts and ribbons instead. Plate-2 centres the turtle; the render offsets it left, which leaves lead room and works. At t=3.2 the bright caustic net covers the whole floor at equal intensity and pulls attention away from the subject more than the plate's background does.",
+      "evidence": ["frame:t=0.8", "compare:t=0.8", "frame:t=3.2", "compare:t=3.2", "frame:t=5.4", "compare:t=5.4"],
+      "correction": "No blocking change. Under the lighting correction, dim the caustic net away from the turtle so the floor stops competing with the subject."
+    },
+    "lighting": {
+      "verdict": "fail",
+      "observation": "At t=0.8 four or five soft shafts fan down-right from the upper left and fade around 60-65% of frame height, which reads as volume. The surface itself is missing, though: the cyan wavy ribbons float across the upper half of open water like overlays instead of sitting on a ripple plane at the top. At t=3.2 the turtle casts no contact shadow on the sand. The caustic net is equally bright from foreground to background, and there are no deep shadows (dark tones lift to mid navy). At t=5.4 the frame is low-contrast murk with no bright key area.",
+      "delta": "Plate-1 has a bright rippled surface band at the top that falls to dark navy below. The render has no surface edge, and its brightness falloff from top to bottom is steeper and more uniform (measured falloff 2.18 vs 0.77). Plate-2 and plate-3 span a much wider tonal range (measured L* p05-p95 50-52 vs 29-31 in the render), with bright cyan highlights against near-black navy. The render's hero and macro frames sit in a compressed middle band.",
+      "evidence": ["frame:t=0.8", "compare:t=0.8", "frame:t=3.2", "compare:t=3.2", "frame:t=5.4", "compare:t=5.4"],
+      "correction": "At t=0.8, replace the mid-water ribbons with a rippled surface plane across the top 15-20% of frame, brightest at upper left, and let the shafts start from it. At t=3.2, add a soft, oval contact shadow on the sand offset down-right of the shell (sun from upper left), about 1.2x the shell size and darkening the caustics under it. Fade the caustic net to about 30% intensity toward the top of frame and outside the shaft footprints. Drop the darkest floor areas to abyssal navy (#02121e) so the range widens. At t=5.4, keep a defocused bright cyan key zone in the upper part of frame (the surface or caustic light) so the macro frame has a real highlight against deep navy."
+    },
+    "materials": {
+      "verdict": "fail",
+      "observation": "The shell at t=3.2 has a smooth brown gradient with a central row of outlined hexagons carrying concentric rings and thin radial tick marks around the rim. It reads as a stamped graphic, not keratin scutes with seams and raised centres. The flippers are flat grey-olive leaf shapes with a hairline outline and sparse dots; only the rear flippers show a faint warm edge. The head is a grey oval with circle scales and a dot eye. Between the caustic lines the sand is flat dark blue with no grain. The caustic lines are dotted, stippled strokes rather than continuous focused light.",
+      "delta": "Plate-2's shell shows irregular polygonal scutes with dark seams and per-plate shading that gives each plate some volume, and its caustic light reads as soft-edged bands. The render's scutes are regular hexagon outlines with no per-plate lift, its sand has no texture (measured Laplacian detail at 0.8 and 5.4 well below the plates), and its flipper edges don't transmit light.",
+      "evidence": ["frame:t=3.2", "compare:t=3.2", "frame:t=5.4", "compare:t=5.4", "reference:plate-2-hero"],
+      "correction": "Replace the hexagon-and-ring scutes with five irregular vertebral and four costal plates per side, separated by dark recessed seams, each with a soft highlight at its upper-left centre and darkening toward its seams. Add a narrow specular rim along the upper-left shell edge where the key grazes. Give the flippers mottled darker blotches and a warm amber-orange translucency along the trailing edges, and remove the hairline outline. Add fine, low-contrast grain to the sand between the caustics and draw the caustics as continuous, sharp-edged lines whose width varies, not dotted strokes."
+    },
+    "spatial": {
+      "verdict": "fail",
+      "observation": "At t=3.2 the floor recedes in perspective, with caustic cells shrinking toward the top as from an oblique camera, but the turtle is drawn as a near-orthographic top-down ellipse with no foreshortened shell side and flippers lying flat in the image plane. With no shadow, nothing shows how high it swims above the sand. At t=5.4 the depth order holds: small sharp flakes sit in the focal plane, larger discs are nearer, and the turtle and floor are soft behind.",
+      "delta": "Plate-2 shows the shell with visible thickness and an underside, so it reads as a volume sitting in the water above the lit floor. The render's turtle and floor read as two layers drawn with different camera angles. The macro rack at t=5.4 matches plate-3's lens behaviour: a blurred subject, large discs near the lens and small points in focus.",
+      "evidence": ["frame:t=3.2", "compare:t=3.2", "frame:t=5.4", "compare:t=5.4", "frame:t=0.8"],
+      "correction": "Tilt the turtle to the same oblique angle as the floor. Show a sliver of the plastron and shell side along its lower-right edge, foreshorten the far flippers, and have the near front flipper overlap the shell edge. Add the down-right offset contact shadow, and add slight atmospheric haze between turtle and floor so the turtle reads about half a shell-length above the sand."
+    },
+    "color": {
+      "verdict": "pass",
+      "observation": "Every keyframe stays in cool blues: mid cobalt at t=0.8, navy with cyan caustics at t=3.2 and navy-teal at t=5.4. The amber-brown shell is the only warm element in the hero and macro frames, warmest on its lit upper-left half. Nothing reads as a default primary.",
+      "delta": "The temperature and accent strategy match the plates and DESIGN. The t=0.8 frame is a lighter, more uniform royal blue than plate-1's navy-to-cyan range. The t=3.2 caustics are a strongly saturated cyan, near the upper edge of 'rich but not neon'. The blurred background at t=5.4 leans slightly teal-green, against DESIGN's 'no greens'.",
+      "evidence": ["frame:t=0.8", "compare:t=0.8", "frame:t=3.2", "compare:t=3.2", "frame:t=5.4", "compare:t=5.4"],
+      "correction": "No blocking change. When reworking the light, pull the t=0.8 lower half toward #02121e, move the caustic colour toward cyan-white #bfefff at lower saturation, and nudge the t=5.4 background teal back toward cobalt."
+    },
+    "narrative": {
+      "verdict": "fail",
+      "observation": "The t=0.8 frame (a lone turtle under soft shafts in open blue) and the t=5.4 rack (snow drifting in front of a soft shell) both carry quiet, observational calm. The hero beat at t=3.2, the moment the brief builds to, does not. The glowing cyan grid over the whole floor and the graphic, illustrated turtle read as a stylised animation or a lit swimming pool, not a natural-history observation.",
+      "delta": "The plates are crude, but they keep the subject inside natural light and water. The render's hero frame changes register, from documentary to illustration, exactly where the brief asks for quiet awe at the subject.",
+      "evidence": ["frame:t=3.2", "compare:t=3.2", "frame:t=0.8", "frame:t=5.4"],
+      "correction": "Bring the hero frame into the same restrained register as t=0.8 and t=5.4. Make caustics a dappled, shifting light pattern concentrated under the shafts, not a full-floor grid. Ground the turtle with the shadow and give it the anatomical shell, plastron edge and flipper detail above. Keep enough dark water around it that the turtle feels observed in a large space."
+    },
+    "originality": {
+      "verdict": "fail",
+      "observation": "Recognisable procedural defaults carry several key elements: a Voronoi-like cell network with stippled dotted edges and even line weight over the entire floor at t=3.2; aurora-style wavy ribbons floating mid-water at t=0.8; stamped hexagons with concentric circles on the shell; circle scales on the head. The shaft fan and the rack-focus bokeh at t=5.4 show specific choices.",
+      "delta": "Even the procedural plates vary caustic band width and brightness and break up their pattern. In the render the floor is a single repeating cell pattern with uniform line weight, which reads as a library effect rather than light focused through a moving surface.",
+      "evidence": ["frame:t=3.2", "compare:t=3.2", "frame:t=0.8", "compare:t=0.8"],
+      "correction": "Build the caustics from two overlapping, differently scaled patterns so lines thicken and pinch, form brighter knots where they converge, and break up into soft dapple away from the shafts. Remove the dotted stroke. Replace the floating ribbons at t=0.8 with the surface plane. Replace the hexagon and circle motifs on shell and head with irregular, hand-placed scute and scale shapes."
+    }
+  },
+  "summary": "Colour, composition and the t=5.4 rack-focus lens behaviour are close to sign-off. The hero beat at t=3.2 is not: there is no contact shadow, the turtle and floor are drawn from different camera angles, the shell, flippers and sand read as graphic stamps, and a uniform neon cell-net turns the frame from documentary to illustration. Plate-2 shows a pale grey shell where the brief and DESIGN ask for amber; I followed DESIGN and do not treat it as a direction change.",
+  "directionShift": false
+}

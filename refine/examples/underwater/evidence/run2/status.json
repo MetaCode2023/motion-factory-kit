@@ -1,0 +1,236 @@
+{
+  "contract": "visual-refinement-contract",
+  "version": "1.0.0",
+  "shotId": "underwater-documentary",
+  "contractHash": "d65c92ffc57ef5a04b2d494d842aec5aca2bfa8e4df8d801c5dffef29601cd34",
+  "state": "escalated",
+  "phase": "still",
+  "iteration": 6,
+  "temporalIteration": 0,
+  "technicalFailures": 0,
+  "params": {
+    "exposure": 1,
+    "depthFalloff": 1.1,
+    "waterHue": 218,
+    "waterSaturation": 0.85,
+    "deepLevel": 0.06,
+    "warmth": -0.3,
+    "rayIntensity": 0.3,
+    "rayCount": 8,
+    "raySpread": 0.95,
+    "raySoftness": 10,
+    "causticIntensity": 4.6,
+    "causticOnSubject": 0.6,
+    "surfaceIntensity": 0.7,
+    "floorLevel": 0.24,
+    "waterGlow": 0.26,
+    "shellDetail": 0.75,
+    "sss": 0.9,
+    "ambientOcclusion": 0.7,
+    "snowDensity": 2.8,
+    "snowLightFollow": 0.75,
+    "aperture": 1.3,
+    "snowSize": 1,
+    "lowerGlow": 0.9,
+    "upLevel": 0.45
+  },
+  "restoredFrom": null,
+  "distances": [
+    {
+      "n": 1,
+      "distance": 0.439
+    },
+    {
+      "n": 2,
+      "distance": 0.48
+    },
+    {
+      "n": 3,
+      "distance": 0.269
+    },
+    {
+      "n": 4,
+      "distance": 0.3
+    },
+    {
+      "n": 5,
+      "distance": 0.206
+    },
+    {
+      "n": 6,
+      "distance": 0.194
+    }
+  ],
+  "log": [
+    {
+      "at": "2026-11-28T03:21:31.137Z",
+      "step": "target-ingestion",
+      "references": [
+        {
+          "id": "plate-1-establishing",
+          "role": "establishing",
+          "source": "procedural-lookdev",
+          "sha256": "5d8d999a0d0d2abc080f2f205e6494617b982db79dbb871d06a7b3000112d61b",
+          "aspectMatches": true
+        },
+        {
+          "id": "plate-2-hero",
+          "role": "hero",
+          "source": "procedural-lookdev",
+          "sha256": "93c42a28481ba63816d3fecc367753fa4296d951250a34a726c84c52178d8ed2",
+          "aspectMatches": true
+        },
+        {
+          "id": "plate-3-macro",
+          "role": "macro",
+          "source": "procedural-lookdev",
+          "sha256": "1149becc68d97f9ca51f9fba2e330bbeebf71f075cfc2f902417b869d5d4f2de",
+          "aspectMatches": true
+        }
+      ]
+    },
+    {
+      "at": "2026-11-28T03:21:35.740Z",
+      "step": "visual-inspection",
+      "iteration": 1,
+      "outputHash": "2ee896f209adb65a30f4ee892df0ac59341d1cdfb19a8f4831c9d9fb682305a0",
+      "distance": 0.439
+    },
+    {
+      "at": "2026-11-28T03:24:01.197Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "composition",
+        "lighting",
+        "materials",
+        "spatial",
+        "color",
+        "narrative",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:24:52.267Z",
+      "step": "visual-inspection",
+      "iteration": 2,
+      "outputHash": "7a44a019d1821cc979ff6f860e2c3303ed324ed784f43c2f4ee0919a58399a2c",
+      "distance": 0.48
+    },
+    {
+      "at": "2026-11-28T03:27:36.676Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "composition",
+        "lighting",
+        "materials",
+        "spatial",
+        "color",
+        "narrative",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:28:00.186Z",
+      "step": "visual-inspection",
+      "iteration": 3,
+      "outputHash": "b2a058992cd82b77c878e5d3d7d36cdb4dc1ffe385cc078c05470f4692384bd3",
+      "distance": 0.269
+    },
+    {
+      "at": "2026-11-28T03:30:30.339Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "composition",
+        "lighting",
+        "materials",
+        "spatial",
+        "color",
+        "narrative",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:32:13.432Z",
+      "step": "visual-inspection",
+      "iteration": 4,
+      "outputHash": "b37b825db02cc24375339599c673ebe7e970f8f1d39127e455e820d5655f7290",
+      "distance": 0.3
+    },
+    {
+      "at": "2026-11-28T03:34:07.984Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "composition",
+        "lighting",
+        "materials",
+        "spatial",
+        "color",
+        "narrative",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:37:35.118Z",
+      "step": "visual-inspection",
+      "iteration": 5,
+      "outputHash": "60091e5aeb1c7374f9c19b8f07e81346eb961799318114459d8a18955a2cee8f",
+      "distance": 0.206
+    },
+    {
+      "at": "2026-11-28T03:40:16.367Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "lighting",
+        "materials",
+        "spatial",
+        "narrative",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:41:33.430Z",
+      "step": "visual-inspection",
+      "iteration": 6,
+      "outputHash": "09d1923badc712a6da7aa1c1da03c94e22cae341bff1e4b339d43a1ef19fa953",
+      "distance": 0.194
+    },
+    {
+      "at": "2026-11-28T03:43:20.075Z",
+      "step": "decision",
+      "phase": "still",
+      "decision": "continue",
+      "failing": [
+        "lighting",
+        "materials",
+        "spatial",
+        "originality"
+      ]
+    },
+    {
+      "at": "2026-11-28T03:43:20.076Z",
+      "step": "escalation",
+      "reason": "budget-exhausted",
+      "detail": "6/6 still iterations without approval; open deltas: [lighting] critic: Plate 1 has a bright, sharply rippled surface with the water darkening quickly below it and shafts dissolving by mid-depth; the render is brighter through the mid-water (falloff 2.18 vs 0.77) and lacks the surface key. Plate 2 has strong bright caustic bands against dark water, giving a wide tonal range; the render's highlights are thin lines so the frame reads flat. Plate 3 keeps bright cyan light structure behind the defocused turtle; the render's background is low-key and grey. -> t=0.8: add a rippled surface band across the top 15-20% of frame with bright cyan-white highlight crests on dark troughs; make shafts 6-8 with irregular widths, brightest just under the surface and fully gone by about 60% frame height; darken the mid- and lower water so the vertical falloff is steep. Give the turtle a soft top-lit edge from upper-left and a faint blue ambient on its underside instead of pure black. t=3.2: widen the caustic highlights into sharp-edged bright bands with darker cells between that still show the sand (lift the floor ambient a little), so highlights reach near cyan-white and the shadows hold texture. t=5.4: keep the defocused caustic/shaft light behind the turtle bright enough to form soft cyan masses so the highlights stretch the range toward the plate. | [materials] critic: Plate 2's shell has distinct plates with shaded seams and a rounded lift per scute, and the flippers show a mottled translucent texture. The render's shell detail is outline-drawn and the overlapping hexagons contradict the plate layout; texture detail at t=0.8 and t=5.4 is about half the plate's (Laplacian 2.6 vs 5.9, 1.7 vs 4.2). -> Remove the hexagon outline row; build the carapace from 5 vertebral, 2x4 costal and a ring of marginal scutes that tile without overlap, each with a slightly lighter centre and darker edge toward the seam so it lifts, with a narrow bright rim only on the upper-left edge where the key grazes. Run the floor caustic pattern over the shell at lower contrast and blur so it crawls on the shell. Give the head and flippers irregular mottled scale patches (dark polygons on olive-grey) and make the trailing flipper edges glow warm only where they face the light, fading inward over 10-20 px. Add fine sand grain and a few low ripples on the floor so caustics fall on a surface, not on black. | [spatial] critic: Plate 2 keeps the turtle and the caustic field on one consistent camera, both foreshortened together. Plate 1 places the turtle against a clear surface plane that sets scale. Plate 3 shows flakes at several sizes and blur levels; the render's in-focus flakes are one uniform dot size. -> At t=3.2 tilt the turtle to the same camera as the floor: compress the shell vertically by about 15-25% with the far (upper) edge narrower, foreshorten the far flippers, and offset the contact shadow down-right consistent with the upper-left sun, softer and farther the higher the turtle swims. At t=0.8 add the surface plane and a few far, faint flakes behind the turtle to set its depth. At t=5.4 give the snow three clear depth classes: small sharp flakes at the focus plane, medium slightly soft ones, and the large discs, with size and brightness varying within each. | [originality] critic: The plates are also procedural, but their caustics vary in width and intensity and their bokeh carries brighter rims and colour from the light behind; the render's discs and lines are uniform, which reads as a library effect. -> Replace the hexagon overlay and square head marks with irregular scute and scale shapes (see materials). Give bokeh discs a slightly brighter rim, a faint cyan tint picked up from nearby light, and varied opacity; fewer large discs (2-4) in the macro, very few or faint ones in the establishing frame. Vary caustic line width along each strand (thin to thick, with bright merging nodes). Concentrate and brighten snow inside the shafts and thin it out in shadowed water so it follows the light."
+    }
+  ],
+  "loopback": false,
+  "escalation": {
+    "at": "2026-11-28T03:43:20.076Z",
+    "reason": "budget-exhausted",
+    "phase": "still",
+    "iteration": 6,
+    "temporalIteration": 0,
+    "detail": "6/6 still iterations without approval; open deltas: [lighting] critic: Plate 1 has a bright, sharply rippled surface with the water darkening quickly below it and shafts dissolving by mid-depth; the render is brighter through the mid-water (falloff 2.18 vs 0.77) and lacks the surface key. Plate 2 has strong bright caustic bands against dark water, giving a wide tonal range; the render's highlights are thin lines so the frame reads flat. Plate 3 keeps bright cyan light structure behind the defocused turtle; the render's background is low-key and grey. -> t=0.8: add a rippled surface band across the top 15-20% of frame with bright cyan-white highlight crests on dark troughs; make shafts 6-8 with irregular widths, brightest just under the surface and fully gone by about 60% frame height; darken the mid- and lower water so the vertical falloff is steep. Give the turtle a soft top-lit edge from upper-left and a faint blue ambient on its underside instead of pure black. t=3.2: widen the caustic highlights into sharp-edged bright bands with darker cells between that still show the sand (lift the floor ambient a little), so highlights reach near cyan-white and the shadows hold texture. t=5.4: keep the defocused caustic/shaft light behind the turtle bright enough to form soft cyan masses so the highlights stretch the range toward the plate. | [materials] critic: Plate 2's shell has distinct plates with shaded seams and a rounded lift per scute, and the flippers show a mottled translucent texture. The render's shell detail is outline-drawn and the overlapping hexagons contradict the plate layout; texture detail at t=0.8 and t=5.4 is about half the plate's (Laplacian 2.6 vs 5.9, 1.7 vs 4.2). -> Remove the hexagon outline row; build the carapace from 5 vertebral, 2x4 costal and a ring of marginal scutes that tile without overlap, each with a slightly lighter centre and darker edge toward the seam so it lifts, with a narrow bright rim only on the upper-left edge where the key grazes. Run the floor caustic pattern over the shell at lower contrast and blur so it crawls on the shell. Give the head and flippers irregular mottled scale patches (dark polygons on olive-grey) and make the trailing flipper edges glow warm only where they face the light, fading inward over 10-20 px. Add fine sand grain and a few low ripples on the floor so caustics fall on a surface, not on black. | [spatial] critic: Plate 2 keeps the turtle and the caustic field on one consistent camera, both foreshortened together. Plate 1 places the turtle against a clear surface plane that sets scale. Plate 3 shows flakes at several sizes and blur levels; the render's in-focus flakes are one uniform dot size. -> At t=3.2 tilt the turtle to the same camera as the floor: compress the shell vertically by about 15-25% with the far (upper) edge narrower, foreshorten the far flippers, and offset the contact shadow down-right consistent with the upper-left sun, softer and farther the higher the turtle swims. At t=0.8 add the surface plane and a few far, faint flakes behind the turtle to set its depth. At t=5.4 give the snow three clear depth classes: small sharp flakes at the focus plane, medium slightly soft ones, and the large discs, with size and brightness varying within each. | [originality] critic: The plates are also procedural, but their caustics vary in width and intensity and their bokeh carries brighter rims and colour from the light behind; the render's discs and lines are uniform, which reads as a library effect. -> Replace the hexagon overlay and square head marks with irregular scute and scale shapes (see materials). Give bokeh discs a slightly brighter rim, a faint cyan tint picked up from nearby light, and varied opacity; fewer large discs (2-4) in the macro, very few or faint ones in the establishing frame. Vary caustic line width along each strand (thin to thick, with bright merging nodes). Concentrate and brighten snow inside the shafts and thin it out in shadowed water so it follows the light.",
+    "needs": "human"
+  }
+}

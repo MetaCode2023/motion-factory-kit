@@ -1,0 +1,358 @@
+{
+  "n": 4,
+  "phase": "still",
+  "parent": "8e344cbcf258b929f43999d2be583dd58db6b9cedf269eab0dbb2080d14d715c",
+  "contractHash": "d65c92ffc57ef5a04b2d494d842aec5aca2bfa8e4df8d801c5dffef29601cd34",
+  "codeHash": "ef01df9272da019c12a41ac972a9c11d288683f860a06cb668992bd3a64304a7",
+  "code": [
+    {
+      "path": "scenes/examples/underwater-documentary.html",
+      "sha256": "eb9d6ebd73393c595fedf8ba8d3c3a78fa88fd96b5b111e98db0ff050b7955d5"
+    },
+    {
+      "path": "kit/motion.js",
+      "sha256": "533934fdff76730dc117783aa857749b26abfb229835ac7a0d8191ccb0e14355"
+    }
+  ],
+  "paramsHash": "d43b0cefb0213408e2b42963d8ed308158a924ab2086b29c87b72b2cc88e9c5b",
+  "params": {
+    "exposure": 1,
+    "depthFalloff": 1.1,
+    "waterHue": 218,
+    "waterSaturation": 0.78,
+    "deepLevel": 0.06,
+    "warmth": -0.3,
+    "rayIntensity": 0.5,
+    "rayCount": 8,
+    "raySpread": 0.95,
+    "raySoftness": 10,
+    "causticIntensity": 2.3,
+    "causticOnSubject": 0.6,
+    "surfaceIntensity": 0.9,
+    "floorLevel": 0.12,
+    "waterGlow": 0.3,
+    "shellDetail": 0.75,
+    "sss": 0.6,
+    "ambientOcclusion": 0.6,
+    "snowDensity": 2.8,
+    "snowLightFollow": 0.75,
+    "aperture": 1.3,
+    "snowSize": 1
+  },
+  "sceneSha256": "eb9d6ebd73393c595fedf8ba8d3c3a78fa88fd96b5b111e98db0ff050b7955d5",
+  "steps": [
+    {
+      "step": "initial-render",
+      "at": "2026-11-28T03:32:12.516Z",
+      "detail": "3/3 stills rendered"
+    },
+    {
+      "step": "technical-check",
+      "at": "2026-11-28T03:32:12.734Z",
+      "detail": "all stills decode at contract resolution with no blank/fallback frames"
+    },
+    {
+      "step": "visual-inspection",
+      "at": "2026-11-28T03:32:13.432Z",
+      "detail": "critique packet iterations/004/packet (9 evidence items, no source code)"
+    },
+    {
+      "step": "rubric-evaluation",
+      "at": "2026-11-28T03:34:07.982Z",
+      "detail": "composition:fail lighting:fail materials:fail spatial:fail color:fail narrative:fail originality:fail"
+    },
+    {
+      "step": "delta-identification",
+      "at": "2026-11-28T03:34:07.982Z",
+      "detail": "29 open delta(s)"
+    },
+    {
+      "step": "approval-gate",
+      "at": "2026-11-28T03:34:07.983Z",
+      "detail": "gate closed: composition, lighting, materials, spatial, color, narrative, originality"
+    },
+    {
+      "step": "code-adjustment",
+      "at": "2026-11-28T03:37:12.817Z",
+      "detail": "8 param change(s) + scene code change"
+    }
+  ],
+  "technical": {
+    "ok": true,
+    "checks": [
+      {
+        "t": 0.8,
+        "ok": true
+      },
+      {
+        "t": 3.2,
+        "ok": true
+      },
+      {
+        "t": 5.4,
+        "ok": true
+      }
+    ]
+  },
+  "outputHash": "b37b825db02cc24375339599c673ebe7e970f8f1d39127e455e820d5655f7290",
+  "stateHash": "cfa256b30ed31cf70e39ff7087b5acc23641313af090d7d768f817fefc725118",
+  "packetHash": "b5ef2889994211ff7c7d63ad5541169aaf2c0cff3dc5cd83236ae77edcd49a44",
+  "critiqueHash": "274a0a3b6dce965748e3f602c060a2af83cbc806fde7e9fd0d3aae47a21ba497",
+  "rubric": {
+    "composition": {
+      "verdict": "fail",
+      "critic": "pass",
+      "measuredBlocks": [
+        "structure@t=0.8 gap 2.69"
+      ],
+      "measuredWatch": [
+        "structure@t=3.2 gap 1.156",
+        "thirdsDistance@t=3.2 gap 1.306",
+        "structure@t=5.4 gap 1.443"
+      ],
+      "observation": "At t=0.8 the turtle silhouette sits on the right third with the shaft fan on the left, balancing the frame and leaving open water below. At t=3.2 the warm shell is the first thing the eye finds, centred-left with the head leading into open space on the right. At t=5.4 the turtle stays the dominant mass with snow and bokeh scattered around it, as in plate-3.",
+      "correction": ""
+    },
+    "lighting": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "lumaMean@t=0.8 gap 2.152",
+        "contrast@t=0.8 gap 3.395",
+        "falloff@t=0.8 gap 5.39",
+        "hist@t=0.8 gap 3.68",
+        "contrast@t=3.2 gap 3.146",
+        "falloff@t=3.2 gap 3.695",
+        "contrast@t=5.4 gap 3.472",
+        "falloff@t=5.4 gap 2.608"
+      ],
+      "measuredWatch": [
+        "hist@t=3.2 gap 1.86",
+        "contrast@t=3.2 gap 1.547",
+        "hist@t=5.4 gap 1.763",
+        "contrast@t=5.4 gap 1.568"
+      ],
+      "observation": "t=0.8: the surface band and upper mid-water are lit almost uniformly bright azure, with shafts fanning from top-left-of-centre. The surface reads as glowing streaks laid over the water, not as a darker ripple sheet with light coming through it. t=3.2: the shafts are faint smears at the top left, and the turtle casts no contact shadow on the floor. The shell has no clear lit top against a shadowed flank, and no caustics crawl across it. The caustic net is drawn as dotted, glowing lines spread evenly over the whole floor. t=5.4: the frame is flat mid-navy with little tonal separation.",
+      "correction": "t=0.8: drop mid-water exposure toward abyssal navy and darken the surface sheet so only its ripple crests catch cyan-white. Keep 5-9 shafts of irregular width fanning from above-left toward lower-right, densest under the surface and gone by the lower third. t=3.2: add a soft, offset contact shadow on the sand down-right of the turtle. Light the shell's upper-left half about 4x brighter than its lower-right flank and run a soft, faint version of the floor caustic net across the shell. Make the floor caustics continuous, sharp-edged bright filaments rather than dotted strings, brightest under the shafts and fading into darkness toward the frame edges. Push blacks deeper at t=3.2 and t=5.4 so L* p95-p05 exceeds 28."
+    },
+    "materials": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "detail@t=0.8 gap 2.32",
+        "speckleDensity@t=3.2 gap 2.415",
+        "speckleDensity@t=5.4 gap 3.387"
+      ],
+      "measuredWatch": [
+        "speckleDensity@t=0.8 gap 1.682",
+        "detail@t=3.2 gap 1.098"
+      ],
+      "observation": "t=3.2: the shell is a flat amber ellipse with thin black outline drawing: a row of hexagons with concentric rings down the spine and radial spokes to the rim. It reads as line art, not raised scutes. There is no specular rim. The flippers are uniform grey-olive flat leaves with no mottling and no warm edge transmission. The head is a grey ellipse with outlined circles. The floor has no sand grain, only dark navy under glowing lines. t=5.4: the shell pattern has changed to rounded, cobble-like scutes, which are closer to real plates but don't match t=3.2.",
+      "correction": "Replace the hexagon/ring/spoke drawing with one consistent scute layout (5 vertebral, 4 costal per side, a ring of marginals), used in both the t=3.2 and t=5.4 frames. Shade each scute as a slightly domed plate, lighter at its centre and darker into the recessed seams, with seams as soft dark grooves rather than black strokes. Add a thin warm specular rim along the shell's upper-left edge where the key grazes. Give the flippers fine dark-on-olive mottling and let their trailing edges glow faintly warm amber where light passes through. Give the floor a fine, matte sand grain in dark blue-grey, visible between the caustic filaments."
+    },
+    "spatial": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "bands@t=0.8 gap 3.129"
+      ],
+      "measuredWatch": [],
+      "observation": "t=3.2: the caustic cells get smaller toward the top, which suggests a receding floor, but with no contact shadow the turtle's height above the sand can't be read and it looks pasted onto the plane. t=5.4: the turtle is heavily defocused, yet the caustic filaments on the floor behind it (lower centre) are noticeably crisper than the shell. Between t=3.2 and t=5.4 the turtle grows by roughly a third and the front flipper's shape and angle change, beyond what a push-in alone would explain.",
+      "correction": "At t=5.4, with focus at the lens, blur the floor and its caustics more than the turtle: a defocus radius that grows with distance, so the farthest sand is the softest. Keep near-lens flakes crisp and a few larger flakes as soft discs. At t=3.2, add the contact shadow and a slight softening and darkening of the floor relative to the turtle to separate the planes. Keep the turtle's flipper pose and scale consistent with a smooth push between keyframes."
+    },
+    "color": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [],
+      "measuredWatch": [],
+      "observation": "t=0.8: the frame is a bright sky-like azure, and the surface streaks shift to cyan-green and mint at their brightest points (upper left and upper right). t=3.2 and t=5.4 sit in navy and cobalt with cyan caustics and the amber shell as the only warm accent, which works. The cyan caustic lines at t=3.2 approach an electric, neon intensity.",
+      "correction": "t=0.8: pull the surface highlights from mint and cyan-green toward shaft cyan-white (#bfefff) and pull the mid-water down from azure toward cobalt (#0b4f8a), grading to navy (#02121e) in the lower half. t=3.2: reduce the caustic saturation a step so the filaments read as cyan-white light on sand rather than neon. Keep the amber shell as is."
+    },
+    "narrative": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [],
+      "measuredWatch": [],
+      "observation": "The establishing frame reads as calm open water with a distant turtle, which fits. The hero frame's glowing, dotted cyan net over a dark plane reads as a digital grid or bioluminescent effect rather than sunlight on sand, which tips the mood toward sci-fi. In the macro frame, the eye goes to a blurred turtle, and the small sharp flakes don't register as the new subject, so the rack focus to marine snow doesn't come across as the payoff.",
+      "correction": "Make the floor read as sand lit by moving sunlight: continuous soft-edged bright filaments over visible grain, strongest under the shafts, with no dotted texture. At t=5.4 give the snow presence: 3-5 larger in-focus flakes near frame centre and upper third, with visible irregular shape and rim light where they cross a shaft. Lower the turtle's brightness and contrast a little so the snow takes over as the subject."
+    },
+    "originality": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [],
+      "measuredWatch": [],
+      "observation": "Several elements read as procedural defaults. The surface at t=0.8 is smooth glowing ribbon arcs, like a stock abstract wallpaper. The caustic floor at t=3.2 is built from evenly spaced dots along every line, like a particle-system stroke. The shell at t=3.2 uses repeated regular hexagons with concentric rings. The bokeh at t=0.8 is a uniform field of similar-sized grey discs across the lower half.",
+      "correction": "Replace the ribbon arcs with a broken, irregular ripple sheet: many small bright crests on a dark underside, compressed with perspective toward the horizon. Draw caustics as continuous filaments that vary in width and brightness, thicker and brighter where they converge. Vary bokeh size, brightness and opacity, with only a few large discs and more small ones, and make flakes brighter inside the shafts than outside them. Use the irregular scute layout from the materials correction in place of the hexagon row."
+    }
+  },
+  "deltaLog": [
+    "[composition] critic: Plate-1 places the turtle smaller and lower with a dark surface band across the top; the render's subject is slightly larger and higher. Plate-2 frames the turtle side-on at eye level; the render frames it from above, which matches the brief's crane-down better. The busy full-frame caustic net at t=3.2 pulls some attention, but it stays subordinate in hue to the amber shell. -> (critic passed; measurement blocks)",
+    "[lighting] critic: Plate-1 keeps the water below the surface dark navy, so the shafts read as volume emerging from depth. The render is lifted overall and exaggerates the surface-to-depth falloff. Plates 2 and 3 have deep blacks and bright cyan peaks, with a tonal range about twice the render's. Contrast at t=3.2 and t=5.4 is below DESIGN's minimum of 28, and the DESIGN items for a 4:1 key/fill and a contact shadow are both missing. -> t=0.8: drop mid-water exposure toward abyssal navy and darken the surface sheet so only its ripple crests catch cyan-white. Keep 5-9 shafts of irregular width fanning from above-left toward lower-right, densest under the surface and gone by the lower third. t=3.2: add a soft, offset contact shadow on the sand down-right of the turtle. Light the shell's upper-left half about 4x brighter than its lower-right flank and run a soft, faint version of the floor caustic net across the shell. Make the floor caustics continuous, sharp-edged bright filaments rather than dotted strings, brightest under the shafts and fading into darkness toward the frame edges. Push blacks deeper at t=3.2 and t=5.4 so L* p95-p05 exceeds 28.",
+    "[materials] critic: Plate-2 shows scutes as shaded polygons with dark seams and slight volume, and the flippers carry a mottled texture. The render's t=3.2 shell has graphic outlines instead of plates, and its sand surface is missing. The pattern change between t=3.2 and t=5.4 breaks continuity, which neither plate does. -> Replace the hexagon/ring/spoke drawing with one consistent scute layout (5 vertebral, 4 costal per side, a ring of marginals), used in both the t=3.2 and t=5.4 frames. Shade each scute as a slightly domed plate, lighter at its centre and darker into the recessed seams, with seams as soft dark grooves rather than black strokes. Add a thin warm specular rim along the shell's upper-left edge where the key grazes. Give the flippers fine dark-on-olive mottling and let their trailing edges glow faintly warm amber where light passes through. Give the floor a fine, matte sand grain in dark blue-grey, visible between the caustic filaments.",
+    "[spatial] critic: Plate-3 defocuses the background at least as much as the turtle, so depth order reads correctly with focus at the lens. The render's floor is sharper than its subject at t=5.4, which contradicts the lens. Plate-2 separates the turtle from the floor with tone and blur. The render has neither cue. -> At t=5.4, with focus at the lens, blur the floor and its caustics more than the turtle: a defocus radius that grows with distance, so the farthest sand is the softest. Keep near-lens flakes crisp and a few larger flakes as soft discs. At t=3.2, add the contact shadow and a slight softening and darkening of the floor relative to the turtle to separate the planes. Keep the turtle's flipper pose and scale consistent with a smooth push between keyframes.",
+    "[color] critic: Plate-1 holds the open-water frame in abyssal navy rising to cobalt, with cyan only at the ripple crests and no green. The render's establishing frame is brighter and greener than plate-1, against DESIGN's 'no greens' rule. Plates 2 and 3 use a softer, deeper cyan than the render's caustic net. -> t=0.8: pull the surface highlights from mint and cyan-green toward shaft cyan-white (#bfefff) and pull the mid-water down from azure toward cobalt (#0b4f8a), grading to navy (#02121e) in the lower half. t=3.2: reduce the caustic saturation a step so the filaments read as cyan-white light on sand rather than neon. Keep the amber shell as is.",
+    "[narrative] critic: The plates carry a quiet, observational natural-history mood in all three beats. The render keeps it at t=0.8 but loses it at t=3.2 to the stylised caustic net, and at t=5.4 the snow isn't made the subject. -> Make the floor read as sand lit by moving sunlight: continuous soft-edged bright filaments over visible grain, strongest under the shafts, with no dotted texture. At t=5.4 give the snow presence: 3-5 larger in-focus flakes near frame centre and upper third, with visible irregular shape and rim light where they cross a shaft. Lower the turtle's brightness and contrast a little so the snow takes over as the subject.",
+    "[originality] critic: The plates are procedural too, but their surface ripple has an irregular broken structure and their snow varies in size and brightness. The render's surface ribbons, dotted caustics and hexagon shell are each more template-like than the corresponding plate element. -> Replace the ribbon arcs with a broken, irregular ripple sheet: many small bright crests on a dark underside, compressed with perspective toward the horizon. Draw caustics as continuous filaments that vary in width and brightness, thicker and brighter where they converge. Vary bokeh size, brightness and opacity, with only a few large discs and more small ones, and make flakes brighter inside the shafts than outside them. Use the irregular scute layout from the materials correction in place of the hexagon row.",
+    "[lighting] t=0.8 overall exposure (L*): render 31.28 vs reference 18.37 (gap 2.152x tolerance): lower it",
+    "[lighting] t=0.8 tonal range p05-p95 (L*): render 58.43 vs reference 31.27 (gap 3.395x tolerance): lower it",
+    "[lighting] t=0.8 surface-to-depth brightness falloff: render 5.059 vs reference 0.766 (gap 5.39x tolerance): lower it",
+    "[lighting] t=0.8 tonal distribution: differs from plate-1-establishing (gap 3.68x tolerance): bring it closer",
+    "[composition] t=0.8 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-1-establishing (gap 2.69x tolerance): bring it closer",
+    "[materials] t=0.8 surface/texture detail (Laplacian): render 2.064 vs reference 5.864 (gap 2.32x tolerance): raise it",
+    "[materials] t=0.8 particulate density (marine snow, sparkle): render 3.09 vs reference 7.795 (gap 1.682x tolerance): raise it",
+    "[spatial] t=0.8 atmospheric depth profile top-to-bottom (L* per band): differs from plate-1-establishing (gap 3.129x tolerance): bring it closer",
+    "[lighting] t=3.2 tonal range p05-p95 (L*): render 24.72 vs reference 49.89 (gap 3.146x tolerance): raise it",
+    "[lighting] t=3.2 surface-to-depth brightness falloff: render 1.117 vs reference 4.074 (gap 3.695x tolerance): raise it",
+    "[lighting] t=3.2 tonal distribution: differs from plate-2-hero (gap 1.86x tolerance): bring it closer",
+    "[composition] t=3.2 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-2-hero (gap 1.156x tolerance): bring it closer",
+    "[composition] t=3.2 focal point placement relative to the reference: render 0.1405 vs reference 0.0491 (gap 1.306x tolerance): lower it",
+    "[materials] t=3.2 surface/texture detail (Laplacian): render 10.945 vs reference 6.676 (gap 1.098x tolerance): lower it",
+    "[materials] t=3.2 particulate density (marine snow, sparkle): render 43.339 vs reference 11.48 (gap 2.415x tolerance): lower it",
+    "[lighting] t=3.2 contrast 24.72 is outside the DESIGN.md target {\"min\":28}: raise it",
+    "[lighting] t=5.4 tonal range p05-p95 (L*): render 24.59 vs reference 52.37 (gap 3.472x tolerance): raise it",
+    "[lighting] t=5.4 surface-to-depth brightness falloff: render 0.923 vs reference 2.301 (gap 2.608x tolerance): raise it",
+    "[lighting] t=5.4 tonal distribution: differs from plate-3-macro (gap 1.763x tolerance): bring it closer",
+    "[composition] t=5.4 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-3-macro (gap 1.443x tolerance): bring it closer",
+    "[materials] t=5.4 particulate density (marine snow, sparkle): render 6.576 vs reference 1.02 (gap 3.387x tolerance): lower it",
+    "[lighting] t=5.4 contrast 24.59 is outside the DESIGN.md target {\"min\":28}: raise it"
+  ],
+  "suggestions": {
+    "params": {
+      "exposure": 0.871,
+      "depthFalloff": 1.204,
+      "waterHue": 218,
+      "waterSaturation": 0.78,
+      "deepLevel": 0.06,
+      "warmth": -0.3,
+      "rayIntensity": 0.573,
+      "rayCount": 8,
+      "raySpread": 0.95,
+      "raySoftness": 10,
+      "causticIntensity": 2.3,
+      "causticOnSubject": 0.6,
+      "surfaceIntensity": 0.9,
+      "floorLevel": 0.12,
+      "waterGlow": 0.3,
+      "shellDetail": 0.811,
+      "sss": 0.6,
+      "ambientOcclusion": 0.6,
+      "snowDensity": 2.613,
+      "snowLightFollow": 0.75,
+      "aperture": 1.3,
+      "snowSize": 1
+    },
+    "moves": [
+      {
+        "param": "exposure",
+        "from": 1,
+        "to": 0.871,
+        "because": "lumaMean lower (lighting)"
+      },
+      {
+        "param": "rayIntensity",
+        "from": 0.5,
+        "to": 0.573,
+        "because": "contrast lower (lighting); contrast raise (lighting)"
+      },
+      {
+        "param": "depthFalloff",
+        "from": 1.1,
+        "to": 1.204,
+        "because": "falloff lower (lighting); falloff raise (lighting)"
+      },
+      {
+        "param": "shellDetail",
+        "from": 0.75,
+        "to": 0.811,
+        "because": "detail raise (materials); detail lower (materials)"
+      },
+      {
+        "param": "snowDensity",
+        "from": 2.8,
+        "to": 2.613,
+        "because": "speckleDensity raise (materials); speckleDensity lower (materials)"
+      }
+    ]
+  },
+  "decision": "continue",
+  "adjustment": {
+    "at": "2026-11-28T03:37:12.817Z",
+    "note": "Scene code: 640x360 surface pass (continuous caustic lines), thicker/less speckly net, caustic light desaturated toward white, floor key with strong top-to-bottom falloff, contact shadow offset down-right and darker, floor defocuses more than the subject on the rack, domed costal plates and lighter seams, warm rim, stronger shell caustics, stronger mottling and flipper glow, rim-lit in-focus flakes at the racked focus, lowerGlow/upLevel controls for the open-water gradient, fogged floor takes the lower-water glow. Params: exposure 1.0, upLevel 0.45, lowerGlow 0.9, surface 0.4, shafts 0.3, caustics 4.6, floor fill 0.24, sat 0.85.",
+    "sceneChanged": true,
+    "params": [
+      {
+        "param": "waterSaturation",
+        "from": 0.78,
+        "to": 0.85
+      },
+      {
+        "param": "rayIntensity",
+        "from": 0.5,
+        "to": 0.3
+      },
+      {
+        "param": "causticIntensity",
+        "from": 2.3,
+        "to": 4.6
+      },
+      {
+        "param": "surfaceIntensity",
+        "from": 0.9,
+        "to": 0.4
+      },
+      {
+        "param": "floorLevel",
+        "from": 0.12,
+        "to": 0.24
+      },
+      {
+        "param": "waterGlow",
+        "from": 0.3,
+        "to": 0.26
+      },
+      {
+        "param": "lowerGlow",
+        "from": null,
+        "to": 0.9
+      },
+      {
+        "param": "upLevel",
+        "from": null,
+        "to": 0.45
+      }
+    ],
+    "suggested": [
+      {
+        "param": "exposure",
+        "from": 1,
+        "to": 0.871,
+        "because": "lumaMean lower (lighting)"
+      },
+      {
+        "param": "rayIntensity",
+        "from": 0.5,
+        "to": 0.573,
+        "because": "contrast lower (lighting); contrast raise (lighting)"
+      },
+      {
+        "param": "depthFalloff",
+        "from": 1.1,
+        "to": 1.204,
+        "because": "falloff lower (lighting); falloff raise (lighting)"
+      },
+      {
+        "param": "shellDetail",
+        "from": 0.75,
+        "to": 0.811,
+        "because": "detail raise (materials); detail lower (materials)"
+      },
+      {
+        "param": "snowDensity",
+        "from": 2.8,
+        "to": 2.613,
+        "because": "speckleDensity raise (materials); speckleDensity lower (materials)"
+      }
+    ],
+    "restoredFrom": null
+  }
+}

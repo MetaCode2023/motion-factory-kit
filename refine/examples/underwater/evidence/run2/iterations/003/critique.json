@@ -1,0 +1,115 @@
+{
+  "critic": {
+    "id": "isolated-subagent-critic-r2-iter3",
+    "context": "isolated",
+    "sawSourceCode": false
+  },
+  "outputHash": "b2a058992cd82b77c878e5d3d7d36cdb4dc1ffe385cc078c05470f4692384bd3",
+  "packetHash": "e3931b0e0c202638cb432a0f644f21d76a873af004b514e09d4440556aba36e3",
+  "criteria": {
+    "composition": {
+      "verdict": "fail",
+      "observation": "t=3.2 is well framed: turtle left of centre, heading right with lead room. At t=0.8 bright cyan-green surface swirls fill the whole upper half, and a second band of rippled highlights runs along the bottom edge. Both are brighter than the small dark turtle at right-third, so the eye goes to the swirls first. At t=5.4 the blurred turtle stays centred and dominant, and nothing in the near plane is sharp enough to hold the eye after the rack.",
+      "delta": "Plate 1 keeps the surface as a tight ripple band in the top quarter over a dark, quiet water column, so the small subject reads against negative space. The render spreads surface light over half the frame and adds a competing band at the bottom. Plate 3 puts one large foreground bokeh disc lower-left as a counterweight to the soft shell. The render's discs are dim and evenly spread.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "frame:t=5.4",
+        "compare:t=5.4",
+        "reference:plate-1-establishing",
+        "reference:plate-3-macro"
+      ],
+      "correction": "At t=0.8, confine the surface ripple to the top 20-25% of frame with a defined underside, let the water below fall to navy, and remove the rippled highlight band along the bottom edge. At t=5.4, place one or two near-lens flakes at a third (e.g. lower-left) as the in-focus or largest bokeh element, and push the turtle further back in brightness so the rack visibly moves attention off it."
+    },
+    "lighting": {
+      "verdict": "fail",
+      "observation": "At t=0.8, four or five shafts fan down-right from the upper left and fade by about 60% of frame height, so the direction is right. Their edges are straight and parallel-sided, and they read as additive stripes. The frame is lifted overall, with no deep navy. At t=3.2 the shafts are pale grey vertical bands that wash the upper-left floor rather than angling from upper left. The shell is evenly lit with no lit top against a shadowed flank and no grazing specular rim. The brightest hotspot is a cyan glow under the head, lower-right of the turtle, which contradicts the upper-left key. Any contact shadow is too faint to ground the turtle.",
+      "delta": "Measured: at t=0.8 exposure 26.8 vs 18.4 L* and tonal range 48.9 vs 31.3, so too bright and too contrasty against a dark plate. At t=3.2 and t=5.4 the tonal range is 29.7 and 28.0 vs about 50-52, so too flat. Plate 2 has a strong lit top on the shell and bright caustics against dark gaps. Plate 1 has soft-edged shafts emerging from dark water, not bright stripes.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "compare:t=5.4",
+        "reference:plate-1-establishing",
+        "reference:plate-2-hero"
+      ],
+      "correction": "At t=0.8, drop the mid and lower water to about #02121e-#0b2f55 and give the shafts soft, irregular widths that are brightest just under the surface and blend out by the lower third. At t=3.2, angle the shafts from upper-left to down-right, light the shell's upper-left half about 4x brighter than its lower-right flank, and add a narrow cyan-white rim on the upper-left edge. Move the strongest caustic hotspot so it falls upper-left of the turtle, and add a soft dark contact shadow offset down-right on the floor. Deepen the gaps between caustic lines toward black to restore range."
+    },
+    "materials": {
+      "verdict": "fail",
+      "observation": "The shell is a flat brown ellipse with a dark coin-like rim, a ring of radial seam ticks and a row of five overlapping hexagon outlines down the centre. It reads as a drawn pattern, not plated scutes with lift. The flippers are dark grey-green with round polka-dot spots and no warm edge transmission. The rear flipper is a long thin whip. The head is a grey oval with circles. The floor has no sand grain at all, just smooth navy. The caustics are smooth neon strands, not a sharp-edged cell net, and they do not crawl over the shell. Snow is sparse at t=0.8 and t=3.2.",
+      "delta": "Plate 2 shows irregular polygonal scutes tiling the whole carapace with dark seams and rounded lift, a grainy floor, dense fine particulate and bright caustic cells. Measured: texture detail is 1.9-2.5 vs 4.2-6.7 and particle density 2.1-2.4 vs 7.8-11.5, both well short.",
+      "evidence": [
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=5.4",
+        "reference:plate-2-hero"
+      ],
+      "correction": "Replace the hexagon chain with a tiled carapace: 5 central (vertebral) and 4 per side (costal) irregular polygonal scutes plus a marginal ring of small plates. Give each scute a slightly brighter domed centre and a dark seam about 3-4 px wide, and break up the amber with fine mottling. Make the flippers tapered paddles with irregular pale scale patches instead of dots, give the trailing edges a thin warm amber transmission where the key hits, and shorten the rear flippers to short paddles. Add fine matte sand grain to the floor. Turn the caustics into a sharp-edged polygonal cell net with bright thin edges and dark cells, and project a softer copy of it across the shell. Roughly triple the marine-snow count across all depths."
+    },
+    "spatial": {
+      "verdict": "fail",
+      "observation": "At t=0.8 the turtle is seen straight from above (dorsal view) while the background is the water surface's underside, which implies the camera is looking up. The two cues contradict each other. The rippled band at the bottom edge reads as a second surface or a floor in the wrong place. At t=3.2 the floor caustics keep the same line width and spacing from top to bottom of frame, so the floor reads as a vertical wall with no foreshortening, and the turtle's height above it is unreadable. At t=5.4 the defocus is plausible, but the large discs are dim grey and sit at similar brightness to the background.",
+      "delta": "Plate 1 holds one consistent upward-looking view: surface above, subject seen from below. Plate 2 foreshortens the floor caustics, which are tighter and smaller toward the horizon, and the subject sits above them with clear separation. Measured: the top-to-bottom depth profile differs at all three keyframes.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "frame:t=5.4",
+        "reference:plate-1-establishing",
+        "reference:plate-2-hero"
+      ],
+      "correction": "At t=0.8, show the turtle from below or three-quarter below (plastron and flipper undersides, dark against the bright surface) so it agrees with the upward view, and remove the bottom ripple band. At t=3.2, put the floor in perspective: caustic cells about 2x larger at the bottom of frame than at the top, a slight haze lift toward the top, and a contact shadow offset from the turtle by a visible gap to show its height. At t=5.4, make the near-lens discs brighter where they cross light (cyan-white rim, translucent centre) so they separate in front of the background."
+    },
+    "color": {
+      "verdict": "fail",
+      "observation": "The overall cast is cool blue and the shell is the only warm element, which is the right intent. At t=0.8 the surface swirls carry a distinct green-teal tint, and the frame sits at mid cobalt with no abyssal navy. At t=3.2 the grey shaft bands lift the upper left to slate, the caustic hotspot under the head is a saturated neon cyan, and the flippers read grey-green. At t=3.2 the shell is muddy grey-brown rather than amber, though at t=5.4 it reads closer to amber.",
+      "delta": "Plates 1 and 2 sit in navy-to-cobalt with cyan highlights and no green. DESIGN asks for no greens beyond a faint skin tint and an amber shell around #9a6a3a. The render's swirls and flippers drift green, and its shaft overlays desaturate the water to grey. The plates' shell is a neutral beige; I followed DESIGN's amber, which the render partly meets.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "frame:t=5.4",
+        "reference:plate-1-establishing",
+        "reference:plate-2-hero"
+      ],
+      "correction": "Shift the surface swirl highlights from green-teal to cyan-white #bfefff over cobalt #0b4f8a, and take the hue out of any green. Tint the shafts blue-cyan instead of neutral grey so they don't lift the water to slate. Pull the caustic peak saturation down so the hotspot tops out near #7fdcff rather than pure cyan. Warm and brighten the shell's key-lit half toward #9a6a3a-#b07a40 and let its shadowed half fall to a desaturated blue-brown. Move the flippers to a blue-grey skin with only a faint warm edge."
+    },
+    "narrative": {
+      "verdict": "fail",
+      "observation": "The pace and palette read as calm and blue. But the hexagon-chain shell, polka-dot flippers and glowing neon strand floor read as an animated illustration or screensaver, not observed wildlife, so the observational documentary tone doesn't come across. The 'quiet awe' of the establishing frame is undercut by how bright and busy the upper half is.",
+      "delta": "The plates, though procedural, stay dark and restrained, with light coming only through the surface and onto the subject. That restraint carries the documentary feeling. The render is brighter and more decorative.",
+      "evidence": [
+        "frame:t=0.8",
+        "frame:t=3.2",
+        "frame:t=5.4",
+        "compare:t=0.8",
+        "compare:t=3.2",
+        "reference:plate-1-establishing"
+      ],
+      "correction": "Make the establishing frame mostly dark open water with a restrained surface band and soft shafts, with the turtle as a distant silhouette. Fix the turtle's anatomy and materials (see materials) so it reads as an animal, not a graphic. Keep the floor caustics thin and sharp rather than glowing, so the hero beat feels lit by the sun rather than by neon."
+    },
+    "originality": {
+      "verdict": "fail",
+      "observation": "Several elements read as procedural defaults. The caustics and surface are smooth flowing noise contours, like an aurora or plasma pattern. The shafts are straight-edged parallel stripes. The shell is an ellipse with a regular hexagon chain, the flippers are dotted with circles, and the head is an oval with circles. The bokeh at t=0.8 is a uniform field of same-size grey discs.",
+      "delta": "Plate 2 uses an irregular scute tiling and a varied caustic structure. The render's shapes are symmetric and regular, which signals placeholder geometry.",
+      "evidence": [
+        "frame:t=0.8",
+        "frame:t=3.2",
+        "frame:t=5.4",
+        "compare:t=3.2",
+        "reference:plate-2-hero"
+      ],
+      "correction": "Replace the regular shapes with irregular ones: polygonal scutes of varying size, a jagged caustic cell net instead of smooth contour lines, and shafts with tapered, uneven edges and varied widths. Vary bokeh disc sizes (a few large near the lens, many small) and brightness by whether they cross a shaft. Give the head real anatomy (beak, eye socket, scale plates) instead of a circle-decorated oval."
+    }
+  },
+  "summary": "Shot structure and cool palette are in place, and the t=3.2 framing works. The three biggest problems are a turtle that reads as graphic placeholder art (hexagon chain, polka-dot flippers, no scute tiling, no flipper subsurface), lighting that is too bright and flat in the wrong places (lifted t=0.8, no lit-top/shadow-flank on the shell, a caustic hotspot against the key), and a floor without sand grain, perspective or a sharp caustic net. The plates show a beige shell where DESIGN asks for amber; I followed DESIGN, and it is not a material conflict.",
+  "directionShift": false
+}
