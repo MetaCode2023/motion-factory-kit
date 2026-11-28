@@ -1,0 +1,113 @@
+{
+  "critic": {
+    "id": "isolated-subagent-critic-r2-iter6",
+    "context": "isolated",
+    "sawSourceCode": false
+  },
+  "outputHash": "09d1923badc712a6da7aa1c1da03c94e22cae341bff1e4b339d43a1ef19fa953",
+  "packetHash": "b897d34af8e006770b6b21d0bf55dee3cee6847e6e411c9b81ff2a3116060633",
+  "criteria": {
+    "composition": {
+      "verdict": "pass",
+      "observation": "t=0.8: shafts occupy the left third and the turtle silhouette sits on the right third just above centre; the eye travels down the shafts to the turtle. t=3.2: turtle left of centre with its head leading into open floor on the right, contact shadow below-right. t=5.4: blurred turtle centre-left with large bokeh discs framing the corners, near flakes scattered over the frame.",
+      "delta": "Plate 1 anchors the top of frame with a bright rippled surface band that the render lacks, so the render's upper half is softer and less structured; plate 2 frames the turtle side-on and centred where the render looks down on it. Both read as deliberate framings with one subject. At t=3.2 the brightest vertical caustic streak behind the front flipper pulls attention close to the head; acceptable but worth calming.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "frame:t=5.4",
+        "compare:t=5.4"
+      ],
+      "correction": ""
+    },
+    "lighting": {
+      "verdict": "fail",
+      "observation": "t=0.8: four to five shafts fan from upper-left, but they are near-uniform in width and brightness and still visible past mid-frame into the lower third; there is no defined bright water surface, only a faint speckled ripple haze across the top. The turtle is an unlit black cut-out with a thin pale rim. t=3.2: floor between caustic lines is near black, caustic lines are glowing cyan strokes of constant width; tonal range is compressed (p05-p95 about 31 vs 50 on the plate). t=5.4: background is dim navy with little bright structure; range again about 32 vs 52.",
+      "delta": "Plate 1 has a bright, sharply rippled surface with the water darkening quickly below it and shafts dissolving by mid-depth; the render is brighter through the mid-water (falloff 2.18 vs 0.77) and lacks the surface key. Plate 2 has strong bright caustic bands against dark water, giving a wide tonal range; the render's highlights are thin lines so the frame reads flat. Plate 3 keeps bright cyan light structure behind the defocused turtle; the render's background is low-key and grey.",
+      "evidence": [
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "reference:plate-1-establishing",
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "reference:plate-2-hero",
+        "frame:t=5.4",
+        "compare:t=5.4",
+        "reference:plate-3-macro"
+      ],
+      "correction": "t=0.8: add a rippled surface band across the top 15-20% of frame with bright cyan-white highlight crests on dark troughs; make shafts 6-8 with irregular widths, brightest just under the surface and fully gone by about 60% frame height; darken the mid- and lower water so the vertical falloff is steep. Give the turtle a soft top-lit edge from upper-left and a faint blue ambient on its underside instead of pure black. t=3.2: widen the caustic highlights into sharp-edged bright bands with darker cells between that still show the sand (lift the floor ambient a little), so highlights reach near cyan-white and the shadows hold texture. t=5.4: keep the defocused caustic/shaft light behind the turtle bright enough to form soft cyan masses so the highlights stretch the range toward the plate."
+    },
+    "materials": {
+      "verdict": "fail",
+      "observation": "t=3.2: the shell is a smooth amber ellipse with thin black seam lines plus a row of overlapping hexagon outlines drawn over the centre, so the scutes read as line art, not raised plates; caustics on the shell are a faint white scribble. The head is a flat grey shape with drawn squares and a dot eye. Flippers are flat olive-grey with an amber trailing edge, which reads as a painted stripe rather than light passing through. The sand has no grain: it is a near-black field with neon-like cyan lines. t=0.8: the turtle is a flat silhouette with no surface information. t=5.4: the defocused shell shows plate-like cells, which works better than at t=3.2.",
+      "delta": "Plate 2's shell has distinct plates with shaded seams and a rounded lift per scute, and the flippers show a mottled translucent texture. The render's shell detail is outline-drawn and the overlapping hexagons contradict the plate layout; texture detail at t=0.8 and t=5.4 is about half the plate's (Laplacian 2.6 vs 5.9, 1.7 vs 4.2).",
+      "evidence": [
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "reference:plate-2-hero",
+        "frame:t=0.8",
+        "frame:t=5.4",
+        "compare:t=5.4"
+      ],
+      "correction": "Remove the hexagon outline row; build the carapace from 5 vertebral, 2x4 costal and a ring of marginal scutes that tile without overlap, each with a slightly lighter centre and darker edge toward the seam so it lifts, with a narrow bright rim only on the upper-left edge where the key grazes. Run the floor caustic pattern over the shell at lower contrast and blur so it crawls on the shell. Give the head and flippers irregular mottled scale patches (dark polygons on olive-grey) and make the trailing flipper edges glow warm only where they face the light, fading inward over 10-20 px. Add fine sand grain and a few low ripples on the floor so caustics fall on a surface, not on black."
+    },
+    "spatial": {
+      "verdict": "fail",
+      "observation": "t=3.2: the floor recedes in perspective toward the top of frame, but the turtle is drawn as a straight top-down plan view with no foreshortening of shell or flippers, so it sits on a different projection from the floor; the contact shadow below-right helps place it above the sand. t=0.8: the turtle's size relative to the shafts and the absent surface leaves its distance ambiguous. t=5.4: depth order reads correctly (sharp flakes, large discs nearest the lens, turtle soft behind), though the sharp flakes are all the same small size and brightness so they don't separate into depths.",
+      "delta": "Plate 2 keeps the turtle and the caustic field on one consistent camera, both foreshortened together. Plate 1 places the turtle against a clear surface plane that sets scale. Plate 3 shows flakes at several sizes and blur levels; the render's in-focus flakes are one uniform dot size.",
+      "evidence": [
+        "frame:t=3.2",
+        "compare:t=3.2",
+        "reference:plate-2-hero",
+        "frame:t=0.8",
+        "compare:t=0.8",
+        "frame:t=5.4",
+        "compare:t=5.4",
+        "reference:plate-3-macro"
+      ],
+      "correction": "At t=3.2 tilt the turtle to the same camera as the floor: compress the shell vertically by about 15-25% with the far (upper) edge narrower, foreshorten the far flippers, and offset the contact shadow down-right consistent with the upper-left sun, softer and farther the higher the turtle swims. At t=0.8 add the surface plane and a few far, faint flakes behind the turtle to set its depth. At t=5.4 give the snow three clear depth classes: small sharp flakes at the focus plane, medium slightly soft ones, and the large discs, with size and brightness varying within each."
+    },
+    "color": {
+      "verdict": "pass",
+      "observation": "All three frames hold a cool cobalt-to-navy palette; the turtle's amber shell is the only warm element and the flipper edges carry a small amount of the same amber. No green cast; caustics are cyan. The t=5.4 lower frame sinks to near-black navy.",
+      "delta": "The plates lean more cyan-teal in their highlights while the render sits more ultramarine/cobalt, which matches the DESIGN palette (#0b4f8a mid-water, #02121e abyssal). The shell is warm across its whole surface rather than only on the key-lit side as DESIGN asks; the cyan caustic lines at t=3.2 edge toward electric. Neither breaks the palette.",
+      "evidence": [
+        "frame:t=0.8",
+        "frame:t=3.2",
+        "frame:t=5.4",
+        "compare:t=0.8",
+        "compare:t=3.2",
+        "compare:t=5.4"
+      ],
+      "correction": ""
+    },
+    "narrative": {
+      "verdict": "pass",
+      "observation": "t=0.8 reads as quiet open water with light coming down and a lone turtle; t=5.4 reads as a soft, contemplative pause with snow drifting in front of the lens. t=3.2 gives the subject reveal over the lit floor. The progression establishing to hero to macro is legible from the stills.",
+      "delta": "The plates carry more of the 'awe' through the bright surface and strong caustic light; the render is calmer and dimmer, and the neon-like caustic web at t=3.2 tips that beat toward a graphic look rather than observational footage. The mood asked for is still recognisable.",
+      "evidence": [
+        "frame:t=0.8",
+        "frame:t=3.2",
+        "frame:t=5.4",
+        "compare:t=3.2"
+      ],
+      "correction": ""
+    },
+    "originality": {
+      "verdict": "fail",
+      "observation": "Several elements read as procedural defaults: the overlapping hexagon outlines on the shell, the head with drawn squares and a dot eye, the dotted particle-noise ripple pattern across the top at t=0.8, the constant-width glowing caustic strokes, and the bokeh discs at t=0.8 and t=5.4 that are flat, evenly filled grey-blue circles of similar opacity. Snow at t=3.2 is an even speckle field rather than following the light.",
+      "delta": "The plates are also procedural, but their caustics vary in width and intensity and their bokeh carries brighter rims and colour from the light behind; the render's discs and lines are uniform, which reads as a library effect.",
+      "evidence": [
+        "frame:t=0.8",
+        "frame:t=3.2",
+        "frame:t=5.4",
+        "compare:t=5.4",
+        "reference:plate-3-macro"
+      ],
+      "correction": "Replace the hexagon overlay and square head marks with irregular scute and scale shapes (see materials). Give bokeh discs a slightly brighter rim, a faint cyan tint picked up from nearby light, and varied opacity; fewer large discs (2-4) in the macro, very few or faint ones in the establishing frame. Vary caustic line width along each strand (thin to thick, with bright merging nodes). Concentrate and brighten snow inside the shafts and thin it out in shadowed water so it follows the light."
+    }
+  },
+  "summary": "Colour, composition and the shot's quiet mood hold up; the frame is held back by flat, low-range lighting with no surface key at t=0.8, and by line-art materials on the turtle (hexagon overlay, drawn head) over a grainless floor with neon-like caustic strokes. Perspective mismatch between the top-down turtle and the receding floor at t=3.2 also needs fixing.",
+  "directionShift": false
+}

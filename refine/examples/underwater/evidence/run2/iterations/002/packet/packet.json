@@ -1,0 +1,170 @@
+{
+  "contract": "visual-refinement-contract",
+  "version": "1.0.0",
+  "phase": "still",
+  "iteration": 2,
+  "shotId": "underwater-documentary",
+  "brief": "A calm natural-history documentary shot: sunlight shafts in open water, the camera cranes down onto a sea turtle gliding over caustic-lit sand, then racks focus to marine snow drifting in front of the lens. Quiet awe, observational, cool deep blue with the turtle's amber shell as the only warm accent.",
+  "design": "# Underwater documentary shot: lookdev ground truth\n\nShot: 6 s, 1920x1080, 30 fps, one continuous move. Open water with light shafts (establishing,\n0-1.5 s), the camera cranes up and tilts down onto a sea turtle gliding over a caustic-lit floor\n(hero, 2.5-3.8 s), then focus racks to marine snow drifting just in front of the lens (macro, 4.8-6 s).\nTone: calm, observational natural-history documentary. Quiet awe, not spectacle.\n\nPlates (procedural lookdev stand-ins, `refine/lookdev/underwater/`, made by `tools/lookdev-plates.mjs`):\n\n| Plate | Maps to | What it fixes |\n| --- | --- | --- |\n| plate-1-establishing | t = 0.8 s | Shaft geometry and falloff, surface ripple, deep-water colour |\n| plate-2-hero | t = 3.2 s | Light on the subject, caustics on shell and floor, translucent flipper edges |\n| plate-3-macro | t = 5.4 s | Bokeh scale, snow density near the lens, background softness |\n\n## Lighting\n\n- One key: the sun, refracted through the surface, entering from upper left and travelling down-right.\n  Every highlight in frame must agree with that direction.\n- Shafts are volume, not overlays: they fan from a source above frame, are brightest near the\n  surface and are gone by the lower third. 5-9 visible shafts, irregular widths.\n- Key/fill: the turtle's lit top vs shadowed flank roughly 4:1. Ambient fill is blue and weak.\n- Occlusion grounds the subject: a soft contact shadow on the floor once the floor is in frame.\n- Caustics: bright, sharp-edged net on the sand; the same pattern, softer, crawling over the shell.\n\n## Colour\n\n- Cool, deep blue. Temperature reads around 8000-9500 K: measured b* stays at or below -12 on every\n  keyframe. Red is absorbed first: the shell keeps warmth only where the key light hits it.\n- Palette: abyssal navy (#02121e), mid-water cobalt (#0b4f8a), shaft cyan-white (#bfefff), shell\n  amber (#9a6a3a) as the only warm accent. No greens beyond a faint skin tint.\n- Saturation: rich but not neon; chroma C* at least 15.\n\n## Materials\n\n- Shell: scutes read as plates with seams and a slight lift at their centres, not as stripes or\n  scribbles. Roughness high, a narrow specular rim where the key grazes.\n- Flippers: thin, mottled skin; their trailing edges transmit warm light (subsurface).\n- Sand: fine-grained, matte, lit only by caustics and ambient.\n\n## Particles\n\n- Marine snow at three depths. Near-lens flakes become soft bokeh discs during the rack focus.\n- Density: present everywhere but sparse (measured speckle density at least 1 per 1000 px at\n  analysis size), and brighter where it crosses a shaft: snow follows the light, it is not a uniform\n  noise field.\n\n## Camera\n\n- Smooth crane and push, eased in and out; no handheld shake at this focal length.\n- Depth of field: subject sharp through the hero beat; the rack to the lens completes by 5.0 s and holds.\n\n## Measurable targets (checked on every keyframe; the critic still decides)\n\n| Metric | Target | Why |\n| --- | --- | --- |\n| bMean (b*) | <= -12 | cool deep-water temperature |\n| chroma (C*) | >= 15 | rich, not grey |\n| contrast (L* p95-p05) | >= 28 | motivated key light, not flat |\n| speckleDensity | >= 1 | marine snow present |\n| primaryFraction | <= 0.01 | no default primaries |\n",
+  "outputHash": "7a44a019d1821cc979ff6f860e2c3303ed324ed784f43c2f4ee0919a58399a2c",
+  "criteria": [
+    {
+      "id": "composition",
+      "title": "Composition & visual hierarchy",
+      "question": "Is there one clear focal point, placed with intent (thirds, leading lines, framing), with secondary elements subordinate to it and a balanced frame?",
+      "passWhen": "The eye lands on the intended subject first; nothing competes with it; the frame is balanced against the mapped reference.",
+      "failWhen": "Competing focal points, a centred-by-default subject with dead space, cramped or cropped subject, or a layout that ignores the reference's framing."
+    },
+    {
+      "id": "lighting",
+      "title": "Lighting, contrast & atmospheric depth",
+      "question": "Does the light have a source, direction and falloff (key/fill ratio, volumetric shafts, occlusion) that builds depth like the reference?",
+      "passWhen": "Motivated light with visible falloff into depth, a tonal range comparable to the reference, and occlusion that grounds forms.",
+      "failWhen": "Flat or unmotivated light, crushed or clipped tones, no atmospheric falloff, or light shafts that read as overlays rather than volume."
+    },
+    {
+      "id": "materials",
+      "title": "Material believability",
+      "question": "Do surfaces respond to light like physical materials (roughness, specular response, subsurface scattering, texture detail at the right scale)?",
+      "passWhen": "Each material reads as what it is, with consistent response to the scene light.",
+      "failWhen": "Plastic or uniform shading, texture detail at the wrong scale, or materials that ignore the scene's light."
+    },
+    {
+      "id": "spatial",
+      "title": "Scale, perspective & spatial coherence",
+      "question": "Are proportions, foreshortening, depth cues and lens behaviour (depth of field, perspective) coherent across the frame?",
+      "passWhen": "Scale is legible, depth order is unambiguous, and focus/defocus matches a plausible lens.",
+      "failWhen": "Objects at contradictory scales, flat depth, focus that contradicts depth order, or perspective that breaks between layers."
+    },
+    {
+      "id": "color",
+      "title": "Colour harmony",
+      "question": "Does the palette, saturation balance and colour temperature match the reference plates and DESIGN.md, and stay consistent across the shot?",
+      "passWhen": "Palette and temperature sit with the reference; accents are deliberate; no unintended casts.",
+      "failWhen": "Colour casts, oversaturation, default primaries, or temperature drifting from the reference."
+    },
+    {
+      "id": "narrative",
+      "title": "Narrative purpose",
+      "question": "Does the image serve the brief's tone, mood and dramatic intent?",
+      "passWhen": "A viewer would describe the mood the brief asks for without being told.",
+      "failWhen": "The image is technically fine but says something else, or nothing, about the brief."
+    },
+    {
+      "id": "originality",
+      "title": "Originality & avoidance of generic aesthetics",
+      "question": "Does the image avoid flat lighting, default procedural noise and programmer-art defaults, and carry a specific point of view?",
+      "passWhen": "Specific design choices are visible; nothing reads as a library default.",
+      "failWhen": "Even default noise, stock gradients, default colours or symmetric placeholder shapes carry the image."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "frame:t=0.8",
+      "file": "frame-0_800.png",
+      "t": 0.8,
+      "reference": "plate-1-establishing"
+    },
+    {
+      "id": "compare:t=0.8",
+      "file": "compare-0_800.png",
+      "t": 0.8,
+      "reference": "plate-1-establishing"
+    },
+    {
+      "id": "frame:t=3.2",
+      "file": "frame-3_200.png",
+      "t": 3.2,
+      "reference": "plate-2-hero"
+    },
+    {
+      "id": "compare:t=3.2",
+      "file": "compare-3_200.png",
+      "t": 3.2,
+      "reference": "plate-2-hero"
+    },
+    {
+      "id": "frame:t=5.4",
+      "file": "frame-5_400.png",
+      "t": 5.4,
+      "reference": "plate-3-macro"
+    },
+    {
+      "id": "compare:t=5.4",
+      "file": "compare-5_400.png",
+      "t": 5.4,
+      "reference": "plate-3-macro"
+    },
+    {
+      "id": "reference:plate-1-establishing",
+      "file": "reference-plate-1-establishing.png",
+      "role": "establishing",
+      "source": "procedural-lookdev"
+    },
+    {
+      "id": "reference:plate-2-hero",
+      "file": "reference-plate-2-hero.png",
+      "role": "hero",
+      "source": "procedural-lookdev"
+    },
+    {
+      "id": "reference:plate-3-macro",
+      "file": "reference-plate-3-macro.png",
+      "role": "macro",
+      "source": "procedural-lookdev"
+    }
+  ],
+  "measuredDeltas": [
+    "[lighting] t=0.8 tonal range p05-p95 (L*): render 43.1 vs reference 31.27 (gap 1.479x tolerance): lower it",
+    "[lighting] t=0.8 surface-to-depth brightness falloff: render 7.755 vs reference 0.766 (gap 6.611x tolerance): lower it",
+    "[lighting] t=0.8 tonal distribution: differs from plate-1-establishing (gap 1.32x tolerance): bring it closer",
+    "[composition] t=0.8 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-1-establishing (gap 2.566x tolerance): bring it closer",
+    "[materials] t=0.8 surface/texture detail (Laplacian): render 1.384 vs reference 5.864 (gap 3.207x tolerance): raise it",
+    "[materials] t=0.8 particulate density (marine snow, sparkle): render 0.482 vs reference 7.795 (gap 5.057x tolerance): raise it",
+    "[spatial] t=0.8 atmospheric depth profile top-to-bottom (L* per band): differs from plate-1-establishing (gap 2.193x tolerance): bring it closer",
+    "[materials] t=0.8 speckleDensity 0.482 is outside the DESIGN.md target {\"min\":1}: raise it",
+    "[lighting] t=3.2 overall exposure (L*): render 6.07 vs reference 19.19 (gap 2.187x tolerance): raise it",
+    "[lighting] t=3.2 tonal range p05-p95 (L*): render 18.58 vs reference 49.89 (gap 3.914x tolerance): raise it",
+    "[lighting] t=3.2 surface-to-depth brightness falloff: render 0.918 vs reference 4.074 (gap 4.255x tolerance): raise it",
+    "[lighting] t=3.2 tonal distribution: differs from plate-2-hero (gap 3.82x tolerance): bring it closer",
+    "[color] t=3.2 blue-yellow balance / colour temperature (b*): render -4.32 vs reference -19.73 (gap 3.082x tolerance): lower it",
+    "[color] t=3.2 saturation (C*): render 5.8 vs reference 21.45 (gap 2.608x tolerance): raise it",
+    "[color] t=3.2 dominant hue (degrees): differs from plate-2-hero (gap 1.529x tolerance): bring it closer",
+    "[composition] t=3.2 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-2-hero (gap 2.033x tolerance): bring it closer",
+    "[materials] t=3.2 surface/texture detail (Laplacian): render 1.622 vs reference 6.676 (gap 3.143x tolerance): raise it",
+    "[materials] t=3.2 particulate density (marine snow, sparkle): render 2.494 vs reference 11.48 (gap 2.775x tolerance): raise it",
+    "[spatial] t=3.2 atmospheric depth profile top-to-bottom (L* per band): differs from plate-2-hero (gap 1.875x tolerance): bring it closer",
+    "[color] t=3.2 bMean -4.32 is outside the DESIGN.md target {\"max\":-12}: lower it",
+    "[color] t=3.2 chroma 5.8 is outside the DESIGN.md target {\"min\":15}: raise it",
+    "[lighting] t=3.2 contrast 18.58 is outside the DESIGN.md target {\"min\":28}: raise it",
+    "[lighting] t=5.4 overall exposure (L*): render 8.6 vs reference 21.94 (gap 2.223x tolerance): raise it",
+    "[lighting] t=5.4 tonal range p05-p95 (L*): render 23.79 vs reference 52.37 (gap 3.573x tolerance): raise it",
+    "[lighting] t=5.4 surface-to-depth brightness falloff: render 0.824 vs reference 2.301 (gap 2.932x tolerance): raise it",
+    "[lighting] t=5.4 tonal distribution: differs from plate-3-macro (gap 3.866x tolerance): bring it closer",
+    "[color] t=5.4 blue-yellow balance / colour temperature (b*): render -4.25 vs reference -16.87 (gap 2.524x tolerance): lower it",
+    "[color] t=5.4 saturation (C*): render 6.59 vs reference 19.7 (gap 2.185x tolerance): raise it",
+    "[color] t=5.4 dominant hue (degrees): differs from plate-3-macro (gap 1.471x tolerance): bring it closer",
+    "[composition] t=5.4 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-3-macro (gap 1.948x tolerance): bring it closer",
+    "[materials] t=5.4 surface/texture detail (Laplacian): render 1.148 vs reference 4.204 (gap 2.883x tolerance): raise it",
+    "[spatial] t=5.4 atmospheric depth profile top-to-bottom (L* per band): differs from plate-3-macro (gap 1.905x tolerance): bring it closer",
+    "[color] t=5.4 bMean -4.25 is outside the DESIGN.md target {\"max\":-12}: lower it",
+    "[color] t=5.4 chroma 6.59 is outside the DESIGN.md target {\"min\":15}: raise it",
+    "[lighting] t=5.4 contrast 23.79 is outside the DESIGN.md target {\"min\":28}: raise it"
+  ],
+  "temporal": null,
+  "limitations": [
+    "stills only: motion, flicker and pacing are not visible in this packet"
+  ],
+  "files": {
+    "frame-0_800.png": "bcdd98c332dcf6bfe43aff5e8354dd1538324ee9fe5d67a4b92eb8c6c8a10b83",
+    "compare-0_800.png": "d287a26cc7136e6ea8f0f8c10429d87ce0b3e265994fedff89f89ebd58cb6a31",
+    "frame-3_200.png": "024693eeca16d3a82f45aefac12d6d14607c865f299fb2174b166aee1b69842a",
+    "compare-3_200.png": "1c564d0848b16fbc817978f3ab64ce5877e61ab7bdfec67ae94384f0b8f4d0ec",
+    "frame-5_400.png": "7e141b6832c079f1734c2975108ecb8846a56a3315ebfa97773b73c2d6817f0c",
+    "compare-5_400.png": "a88da8d5e744bdd6d46f8f6f01b2d667c6fc53fde74b9ce0a07322a0cb206860",
+    "reference-plate-1-establishing.png": "5d8d999a0d0d2abc080f2f205e6494617b982db79dbb871d06a7b3000112d61b",
+    "reference-plate-2-hero.png": "93c42a28481ba63816d3fecc367753fa4296d951250a34a726c84c52178d8ed2",
+    "reference-plate-3-macro.png": "1149becc68d97f9ca51f9fba2e330bbeebf71f075cfc2f902417b869d5d4f2de"
+  },
+  "packetHash": "4e7860cf33ee689bb8ad73608f9f794e761738e1bdb921b45e11d8e7d9583f1e"
+}

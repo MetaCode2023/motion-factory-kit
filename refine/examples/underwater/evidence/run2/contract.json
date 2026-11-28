@@ -1,0 +1,222 @@
+{
+  "contract": "visual-refinement-contract",
+  "version": "1.0.0",
+  "shot": {
+    "id": "underwater-documentary",
+    "scene": "scenes/examples/underwater-documentary.html",
+    "durationS": 6,
+    "fps": 30,
+    "width": 1920,
+    "height": 1080,
+    "cuts": [],
+    "brief": "A calm natural-history documentary shot: sunlight shafts in open water, the camera cranes down onto a sea turtle gliding over caustic-lit sand, then racks focus to marine snow drifting in front of the lens. Quiet awe, observational, cool deep blue with the turtle's amber shell as the only warm accent."
+  },
+  "references": [
+    {
+      "id": "plate-1-establishing",
+      "role": "establishing",
+      "source": "procedural-lookdev",
+      "path": "refine/lookdev/underwater/plate-1-establishing.png",
+      "sha256": "5d8d999a0d0d2abc080f2f205e6494617b982db79dbb871d06a7b3000112d61b",
+      "width": 960,
+      "height": 540
+    },
+    {
+      "id": "plate-2-hero",
+      "role": "hero",
+      "source": "procedural-lookdev",
+      "path": "refine/lookdev/underwater/plate-2-hero.png",
+      "sha256": "93c42a28481ba63816d3fecc367753fa4296d951250a34a726c84c52178d8ed2",
+      "width": 960,
+      "height": 540
+    },
+    {
+      "id": "plate-3-macro",
+      "role": "macro",
+      "source": "procedural-lookdev",
+      "path": "refine/lookdev/underwater/plate-3-macro.png",
+      "sha256": "1149becc68d97f9ca51f9fba2e330bbeebf71f075cfc2f902417b869d5d4f2de",
+      "width": 960,
+      "height": 540
+    }
+  ],
+  "keyframes": [
+    {
+      "t": 0.8,
+      "reference": "plate-1-establishing",
+      "role": "establishing wide"
+    },
+    {
+      "t": 3.2,
+      "reference": "plate-2-hero",
+      "role": "hero subject lighting"
+    },
+    {
+      "t": 5.4,
+      "reference": "plate-3-macro",
+      "role": "macro detail"
+    }
+  ],
+  "design": {
+    "doc": "refine/examples/underwater/DESIGN.md",
+    "sha256": "802d0fdc0a7937f9a88df371369dfdc9874face9aa303317f7e93690d3405ac1",
+    "targets": {
+      "bMean": {
+        "max": -12,
+        "tol": 4,
+        "criterion": "color",
+        "why": "cool deep-water temperature"
+      },
+      "chroma": {
+        "min": 15,
+        "tol": 4,
+        "criterion": "color",
+        "why": "rich, not grey"
+      },
+      "contrast": {
+        "min": 28,
+        "tol": 6,
+        "criterion": "lighting",
+        "why": "motivated key light"
+      },
+      "speckleDensity": {
+        "min": 1,
+        "tol": 0.5,
+        "criterion": "materials",
+        "why": "marine snow present"
+      },
+      "primaryFraction": {
+        "max": 0.01,
+        "tol": 0.01,
+        "criterion": "originality",
+        "why": "no default primaries"
+      }
+    }
+  },
+  "params": {},
+  "tuning": {
+    "lumaMean": [
+      {
+        "param": "exposure",
+        "gain": 0.06,
+        "min": 0.4,
+        "max": 2,
+        "default": 1,
+        "maxStep": 0.2
+      }
+    ],
+    "contrast": [
+      {
+        "param": "rayIntensity",
+        "gain": 0.06,
+        "min": 0,
+        "max": 1.5,
+        "default": 0.35,
+        "maxStep": 0.15
+      }
+    ],
+    "bMean": [
+      {
+        "param": "warmth",
+        "gain": 0.12,
+        "min": -1,
+        "max": 1,
+        "default": 0,
+        "maxStep": 0.3
+      },
+      {
+        "param": "waterSaturation",
+        "gain": -0.04,
+        "min": 0.2,
+        "max": 1,
+        "default": 0.7,
+        "maxStep": 0.1
+      }
+    ],
+    "aMean": [
+      {
+        "param": "waterHue",
+        "gain": 3,
+        "min": 180,
+        "max": 240,
+        "default": 200,
+        "maxStep": 8
+      }
+    ],
+    "chroma": [
+      {
+        "param": "waterSaturation",
+        "gain": 0.04,
+        "min": 0.2,
+        "max": 1,
+        "default": 0.7,
+        "maxStep": 0.1
+      }
+    ],
+    "falloff": [
+      {
+        "param": "depthFalloff",
+        "gain": 0.12,
+        "min": 0.4,
+        "max": 3,
+        "default": 1,
+        "maxStep": 0.3
+      }
+    ],
+    "detail": [
+      {
+        "param": "shellDetail",
+        "gain": 0.1,
+        "min": 0,
+        "max": 1,
+        "default": 0.4,
+        "maxStep": 0.2
+      }
+    ],
+    "speckleDensity": [
+      {
+        "param": "snowDensity",
+        "gain": 0.15,
+        "min": 0,
+        "max": 3,
+        "default": 1,
+        "maxStep": 0.3
+      }
+    ]
+  },
+  "temporal": {
+    "params": [
+      "cameraSmoothing",
+      "cameraShake",
+      "causticSpeed",
+      "snowDrift",
+      "grain"
+    ],
+    "previewFps": 15,
+    "previewData": {
+      "resolutionScale": 0.25
+    },
+    "analysisWidth": 160
+  },
+  "budget": {
+    "maxIterations": 6,
+    "maxTemporalIterations": 3,
+    "convergenceDelta": 0.015,
+    "patience": 2
+  },
+  "authorization": {
+    "paidApi": false,
+    "publish": false,
+    "deploy": false,
+    "merge": false
+  },
+  "criteria": [
+    "composition",
+    "lighting",
+    "materials",
+    "spatial",
+    "color",
+    "narrative",
+    "originality"
+  ]
+}

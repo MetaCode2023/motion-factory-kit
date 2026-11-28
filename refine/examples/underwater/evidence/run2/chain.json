@@ -1,0 +1,44 @@
+[
+  {
+    "n": 1,
+    "phase": "still",
+    "stateHash": "61225f64a216458f4e5eff28041c8c39db90a5022c537c47e82f1e0c50352c1b",
+    "parent": null,
+    "decision": "continue"
+  },
+  {
+    "n": 2,
+    "phase": "still",
+    "stateHash": "e47fa1ef786cc64b3de5e13c44f3d77a75c5364434fea40a8b37b6df170990a8",
+    "parent": "61225f64a216458f4e5eff28041c8c39db90a5022c537c47e82f1e0c50352c1b",
+    "decision": "continue"
+  },
+  {
+    "n": 3,
+    "phase": "still",
+    "stateHash": "8e344cbcf258b929f43999d2be583dd58db6b9cedf269eab0dbb2080d14d715c",
+    "parent": "e47fa1ef786cc64b3de5e13c44f3d77a75c5364434fea40a8b37b6df170990a8",
+    "decision": "continue"
+  },
+  {
+    "n": 4,
+    "phase": "still",
+    "stateHash": "cfa256b30ed31cf70e39ff7087b5acc23641313af090d7d768f817fefc725118",
+    "parent": "8e344cbcf258b929f43999d2be583dd58db6b9cedf269eab0dbb2080d14d715c",
+    "decision": "continue"
+  },
+  {
+    "n": 5,
+    "phase": "still",
+    "stateHash": "655d73bd13119cbf2e9c7c787daa378f489cce20fff64a5e5cd5f7bf9ac4dce8",
+    "parent": "cfa256b30ed31cf70e39ff7087b5acc23641313af090d7d768f817fefc725118",
+    "decision": "continue"
+  },
+  {
+    "n": 6,
+    "phase": "still",
+    "stateHash": "aae5ed4738b15660efc9875f0d975a0234a4ba8481b155ee41e160b89caa2941",
+    "parent": "655d73bd13119cbf2e9c7c787daa378f489cce20fff64a5e5cd5f7bf9ac4dce8",
+    "decision": "continue"
+  }
+]

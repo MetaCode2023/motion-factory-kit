@@ -1,0 +1,434 @@
+{
+  "n": 1,
+  "phase": "still",
+  "parent": null,
+  "contractHash": "d65c92ffc57ef5a04b2d494d842aec5aca2bfa8e4df8d801c5dffef29601cd34",
+  "codeHash": "149b4513e09828c3764431759c4efde92e93cd0bd0894f4cdb21dc571ecbcf7c",
+  "code": [
+    {
+      "path": "scenes/examples/underwater-documentary.html",
+      "sha256": "e68302764e91640ba6207bbd338cad7fcfdab29f36f6ff4ba70292806126089d"
+    },
+    {
+      "path": "kit/motion.js",
+      "sha256": "533934fdff76730dc117783aa857749b26abfb229835ac7a0d8191ccb0e14355"
+    }
+  ],
+  "paramsHash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "params": {},
+  "sceneSha256": "e68302764e91640ba6207bbd338cad7fcfdab29f36f6ff4ba70292806126089d",
+  "steps": [
+    {
+      "step": "initial-render",
+      "at": "2026-11-28T03:21:35.040Z",
+      "detail": "3/3 stills rendered"
+    },
+    {
+      "step": "technical-check",
+      "at": "2026-11-28T03:21:35.204Z",
+      "detail": "all stills decode at contract resolution with no blank/fallback frames"
+    },
+    {
+      "step": "visual-inspection",
+      "at": "2026-11-28T03:21:35.740Z",
+      "detail": "critique packet iterations/001/packet (9 evidence items, no source code)"
+    },
+    {
+      "step": "rubric-evaluation",
+      "at": "2026-11-28T03:24:01.185Z",
+      "detail": "composition:fail lighting:fail materials:fail spatial:fail color:fail narrative:fail originality:fail"
+    },
+    {
+      "step": "delta-identification",
+      "at": "2026-11-28T03:24:01.196Z",
+      "detail": "41 open delta(s)"
+    },
+    {
+      "step": "approval-gate",
+      "at": "2026-11-28T03:24:01.197Z",
+      "detail": "gate closed: composition, lighting, materials, spatial, color, narrative, originality"
+    },
+    {
+      "step": "code-adjustment",
+      "at": "2026-11-28T03:24:45.838Z",
+      "detail": "18 param change(s) + scene code change"
+    }
+  ],
+  "technical": {
+    "ok": true,
+    "checks": [
+      {
+        "t": 0.8,
+        "ok": true
+      },
+      {
+        "t": 3.2,
+        "ok": true
+      },
+      {
+        "t": 5.4,
+        "ok": true
+      }
+    ]
+  },
+  "outputHash": "2ee896f209adb65a30f4ee892df0ac59341d1cdfb19a8f4831c9d9fb682305a0",
+  "stateHash": "61225f64a216458f4e5eff28041c8c39db90a5022c537c47e82f1e0c50352c1b",
+  "packetHash": "9db23e348d195f63460960cda80fd847f2f3eb3e4f6e48fcde37c16194e76fad",
+  "critiqueHash": "784ad90231c6029bb3c6b363e0084f5b6bcc4ae68881367d6cda95611cb94c7d",
+  "rubric": {
+    "composition": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "structure@t=0.8 gap 3.503"
+      ],
+      "measuredWatch": [
+        "structure@t=3.2 gap 1.945",
+        "structure@t=5.4 gap 1.993",
+        "thirdsDistance@t=5.4 gap 1.187"
+      ],
+      "observation": "At t=0.8 a bright ripple field fills the top two thirds and ends in a hard horizontal band of glints at about 65% frame height, which reads as a horizon line. The turtle is already large and warm in the right third, so it competes with the shafts for the eye. At t=3.2 the turtle fills the centre-right, the lower-right flipper is cut by the frame edge, and the left 40% is empty dark teal. At t=5.4 the blurred turtle still fills the right half and the near-lens snow is tiny, so the subject of the macro beat (the snow) has no weight.",
+      "correction": "t=0.8: limit the surface ripple to the top 25% of frame and remove the glint band and horizon line below it. Shrink the turtle to roughly 8% of frame width as a dim silhouette near 60% x / 55% y so the shafts lead. t=3.2: pull the camera back until the whole turtle, all four flippers included, fits inside the central 60% of frame with clear water around it. t=5.4: keep the turtle as a soft mass at the same frame position as the hero beat, and put 2-3 large near-lens bokeh discs (one about 15-20% of frame height, lower-left) in the foreground so they become the focal point."
+    },
+    "lighting": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "lumaMean@t=0.8 gap 2.837",
+        "contrast@t=0.8 gap 4.571",
+        "falloff@t=0.8 gap 5.368",
+        "hist@t=0.8 gap 4.863",
+        "contrast@t=3.2 gap 2.009",
+        "falloff@t=3.2 gap 3.524"
+      ],
+      "measuredWatch": [
+        "lumaMean@t=3.2 gap 1.063",
+        "hist@t=3.2 gap 1.911",
+        "contrast@t=5.4 gap 1.773",
+        "falloff@t=5.4 gap 1.668",
+        "hist@t=5.4 gap 1.469"
+      ],
+      "observation": "At t=0.8 the frame is overexposed and cyan-white at the top. Three or four parallel, hard-edged beams run from top-centre to the bottom edge at near-constant brightness, so they read as overlay stripes and not as volume. At t=3.2 and t=5.4 the turtle is lit flat: one soft radial glow sits mid-shell, nothing separates a lit top from a shadowed flank, the shell has no caustic pattern on it, there is no floor and no contact shadow. Shafts are faint grey bands that do not reach the subject.",
+      "correction": "t=0.8: drop overall exposure about one stop so mid-water sits near #0b4f8a-to-#02121e and only the surface band reaches shaft cyan-white. Rebuild the shafts as 5-9 soft, irregular-width beams that fan from a source above frame upper-left, are brightest under the surface and fade fully by the lower third. t=3.2: key the shell from upper-left so the top-left of the carapace is about 4x brighter than the lower-right flank and underside. Project a sharp-edged bright caustic net onto a sand floor under the turtle, carry the same net softer across the shell, and add a soft dark contact shadow on the sand offset down-right. Keep fill blue and weak."
+    },
+    "materials": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "speckleDensity@t=5.4 gap 2.723"
+      ],
+      "measuredWatch": [
+        "detail@t=3.2 gap 1.773",
+        "detail@t=5.4 gap 1.6"
+      ],
+      "observation": "The shell is a flat amber ellipse with evenly spaced white sine-wave stripes and a dark cluster of crossed stick strokes in the middle, which reads as scribble rather than scutes. Flippers are flat sage-green leaf shapes with an outline and polka dots, with no thickness or transmission. The head is a plain ellipse. No sand surface is visible in any frame. Every element reads as a 2D vector shape.",
+      "correction": "Replace the stripe and stick texture with a domed carapace made of 5 central and 4 pairs of lateral polygonal scutes plus a marginal ring. Give each scute dark recessed seams and a slightly raised, lighter centre, high roughness, and a narrow specular rim only where the upper-left key grazes the dome edge. Make the flippers tapered, with irregular mottled scale patches in dark olive-brown, and let their trailing edges glow faint warm amber where backlit. Give the head form shading and scale plates. Add a fine-grained matte sand floor lit only by the caustic net and blue ambient."
+    },
+    "spatial": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "bands@t=0.8 gap 3.424"
+      ],
+      "measuredWatch": [
+        "bands@t=3.2 gap 1.013"
+      ],
+      "observation": "At t=0.8 the ripple field recedes to a horizon, which places the camera above a water plane looking across it, while the turtle is seen straight from above. The two perspectives contradict each other and the shot does not read as being underwater looking up toward the surface. At t=3.2 there is no floor and no shadow, so the turtle's height and scale cannot be read. At t=5.4 the whole frame is blurred by about the same amount; the snow dots are small and fairly crisp, not lens-proximate discs, so the focus does not tell you the plane has moved to just in front of the lens.",
+      "correction": "t=0.8: tilt the camera so the surface appears as an overhead ceiling band (top 25%) with no horizon, and show the turtle in side or three-quarter profile at mid-depth, consistent with looking up. t=3.2: put the sand floor in frame below the turtle, with its contact shadow and caustics foreshortened toward a soft distance, so the turtle reads at about 1 m length. t=5.4: put the focus plane about 10 cm from the lens. Render near flakes as large soft discs (several at 4-18% of frame height, with faint bright rims), mid flakes as small soft dots, and the turtle and background evenly soft behind them."
+    },
+    "color": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [
+        "bMean@t=0.8 gap 2.964",
+        "aMean@t=0.8 gap 3.334",
+        "chroma@t=0.8 gap 2.315",
+        "hue@t=0.8 gap 2.793",
+        "bMean@t=3.2 gap 3.404",
+        "hue@t=3.2 gap 2.8",
+        "bMean@t=3.2 gap 3.323",
+        "chroma@t=3.2 gap 2.198",
+        "bMean@t=5.4 gap 3.648",
+        "hue@t=5.4 gap 9.386",
+        "bMean@t=5.4 gap 4.343"
+      ],
+      "measuredWatch": [
+        "chroma@t=3.2 gap 1.873",
+        "chroma@t=5.4 gap 1.257",
+        "chroma@t=5.4 gap 1.71"
+      ],
+      "observation": "t=0.8 is a bright cyan-teal with a green lean (measured a* -8 against +8.6 on the plate). At t=3.2 and t=5.4 the water goes to a murky desaturated teal-grey (b* -2.7 and +1.4, C* 10-12), well outside the cool-blue target. Flippers and head are sage green, which DESIGN excludes. The shell amber is a reasonable hue, but it is uniformly saturated across the whole ellipse and not only where the key hits.",
+      "correction": "Grade all three keyframes to the same deep blue: shadows #02121e, mid-water #0b4f8a, highlights in shafts/caustics only toward #bfefff. Push b* to -15 or below and C* to 20 or above on every keyframe, and pull the green out of the ambient so the water leans slightly toward violet-blue, not teal. Recolour flippers and head to a desaturated blue-grey olive with only a faint warm skin tint. Let the shell drop to a cool desaturated brown in shadow and keep amber #9a6a3a only on the key-lit upper-left of the dome."
+    },
+    "narrative": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [],
+      "measuredWatch": [],
+      "observation": "The frames read as a stylised cartoon or screensaver: a bright cyan surface, a flat sticker-like turtle with a scribbled back, and evenly sprinkled bokeh. The establishing frame shows the turtle immediately instead of revealing it, and the macro frame looks like the hero frame with a blur over it, so the three beats (open water, turtle, marine snow) do not register as separate observational moments.",
+      "correction": "Make the establishing frame mostly empty dark water under a rippled ceiling, with shafts and only a tiny distant turtle, so the crane-down reveals the animal. Hold the hero frame on a physically modelled turtle with caustics crawling over it above lit sand. End on large, slow near-lens snow discs that clearly sit in front of a soft turtle, so the final beat is about the drifting particles."
+    },
+    "originality": {
+      "verdict": "fail",
+      "critic": "fail",
+      "measuredBlocks": [],
+      "measuredWatch": [],
+      "observation": "Programmer-art defaults carry the image: a perfect ellipse shell, sine-wave stripes, random crossed-line strokes as texture, symmetric leaf flippers with polka dots, uniformly sized grey circles as bokeh, ruler-straight parallel shaft stripes, and a turbulence-noise teal background at t=3.2 and t=5.4.",
+      "correction": "Replace each primitive with an observed form: an asymmetric carapace silhouette (wider at the front, notched at the rear) with a scute layout, front flippers longer and more swept than the rear ones, bokeh discs drawn from a wide size distribution with slight rim brightening and only a few near the lens, shafts with irregular widths and soft, breaking edges, and the snow brighter where it crosses a shaft rather than spread as uniform noise."
+    }
+  },
+  "deltaLog": [
+    "[composition] critic: Plate-1 keeps the turtle as a small dark silhouette right of centre (about 62% x, 55% y), confines the surface to the top quarter and leaves the lower frame as open deep water. Plate-2 centres the turtle with breathing room on all sides and nothing cropped. Plate-3 lets a few large bokeh discs (lower-left, centre) carry the frame while the turtle sits soft behind them. -> t=0.8: limit the surface ripple to the top 25% of frame and remove the glint band and horizon line below it. Shrink the turtle to roughly 8% of frame width as a dim silhouette near 60% x / 55% y so the shafts lead. t=3.2: pull the camera back until the whole turtle, all four flippers included, fits inside the central 60% of frame with clear water around it. t=5.4: keep the turtle as a soft mass at the same frame position as the hero beat, and put 2-3 large near-lens bokeh discs (one about 15-20% of frame height, lower-left) in the foreground so they become the focal point.",
+    "[lighting] critic: Plate-1 is much darker (L* around 18 against 35 in the render) with a bright rippled surface band at the top and broad, soft, uneven shafts that fade into navy. Plate-2 has bright cyan caustic filaments behind and below the turtle and a clearly modelled shell with a lit top and darker underside. The measured surface-to-depth falloff is 5x too strong at t=0.8 and 3.5x too weak at t=3.2. -> t=0.8: drop overall exposure about one stop so mid-water sits near #0b4f8a-to-#02121e and only the surface band reaches shaft cyan-white. Rebuild the shafts as 5-9 soft, irregular-width beams that fan from a source above frame upper-left, are brightest under the surface and fade fully by the lower third. t=3.2: key the shell from upper-left so the top-left of the carapace is about 4x brighter than the lower-right flank and underside. Project a sharp-edged bright caustic net onto a sand floor under the turtle, carry the same net softer across the shell, and add a soft dark contact shadow on the sand offset down-right. Keep fill blue and weak.",
+    "[materials] critic: Plate-2 shows a domed carapace divided into polygonal scutes with dark seams and a lift at each scute centre, plus a shaded volume and a grazing highlight. Flippers have mottled texture. Measured texture detail is about half that of the plate at t=3.2 and t=5.4. -> Replace the stripe and stick texture with a domed carapace made of 5 central and 4 pairs of lateral polygonal scutes plus a marginal ring. Give each scute dark recessed seams and a slightly raised, lighter centre, high roughness, and a narrow specular rim only where the upper-left key grazes the dome edge. Make the flippers tapered, with irregular mottled scale patches in dark olive-brown, and let their trailing edges glow faint warm amber where backlit. Give the head form shading and scale plates. Add a fine-grained matte sand floor lit only by the caustic net and blue ambient.",
+    "[spatial] critic: Plate-1 reads unambiguously from below: an overhead surface band, depth falling off downward, the turtle small at mid-depth. Plate-3 shows clear depth layering: large soft near-lens discs of several sizes, a soft mid-ground turtle and a softer background. The measured top-to-bottom depth profile differs from plate-1 by 3.4x tolerance. -> t=0.8: tilt the camera so the surface appears as an overhead ceiling band (top 25%) with no horizon, and show the turtle in side or three-quarter profile at mid-depth, consistent with looking up. t=3.2: put the sand floor in frame below the turtle, with its contact shadow and caustics foreshortened toward a soft distance, so the turtle reads at about 1 m length. t=5.4: put the focus plane about 10 cm from the lens. Render near flakes as large soft discs (several at 4-18% of frame height, with faint bright rims), mid flakes as small soft dots, and the turtle and background evenly soft behind them.",
+    "[color] critic: The plates hold a saturated deep navy-to-cobalt base with cyan highlights (b* -33 / -20 / -17, C* 34 / 21 / 20) and a slight violet-blue lean. The render drifts warmer and greener with each keyframe, so temperature is not consistent across the shot, and the t=3.2 and t=5.4 frames miss the DESIGN b* <= -12 and C* >= 15 targets. -> Grade all three keyframes to the same deep blue: shadows #02121e, mid-water #0b4f8a, highlights in shafts/caustics only toward #bfefff. Push b* to -15 or below and C* to 20 or above on every keyframe, and pull the green out of the ambient so the water leans slightly toward violet-blue, not teal. Recolour flippers and head to a desaturated blue-grey olive with only a faint warm skin tint. Let the shell drop to a cool desaturated brown in shadow and keep amber #9a6a3a only on the key-lit upper-left of the dome.",
+    "[narrative] critic: The plates convey depth, scale and quiet. A small creature in a large dark blue volume opens the shot, a modelled turtle sits under moving light, and the shot ends on soft drifting particles in front of it. The render conveys none of the 'quiet awe, observational natural-history' tone. -> Make the establishing frame mostly empty dark water under a rippled ceiling, with shafts and only a tiny distant turtle, so the crane-down reveals the animal. Hold the hero frame on a physically modelled turtle with caustics crawling over it above lit sand. End on large, slow near-lens snow discs that clearly sit in front of a soft turtle, so the final beat is about the drifting particles.",
+    "[originality] critic: The plates, though procedural stand-ins, show specific choices: a polygonal scute pattern, irregular caustic filaments, bokeh discs of varied sizes with bright rims, and a surface band with irregular ripple geometry. The render keeps none of these and replaces them with generic primitives. -> Replace each primitive with an observed form: an asymmetric carapace silhouette (wider at the front, notched at the rear) with a scute layout, front flippers longer and more swept than the rear ones, bokeh discs drawn from a wide size distribution with slight rim brightening and only a few near the lens, shafts with irregular widths and soft, breaking edges, and the snow brighter where it crosses a shaft rather than spread as uniform noise.",
+    "[lighting] t=0.8 overall exposure (L*): render 35.39 vs reference 18.37 (gap 2.837x tolerance): lower it",
+    "[lighting] t=0.8 tonal range p05-p95 (L*): render 67.84 vs reference 31.27 (gap 4.571x tolerance): lower it",
+    "[lighting] t=0.8 surface-to-depth brightness falloff: render 5.019 vs reference 0.766 (gap 5.368x tolerance): lower it",
+    "[lighting] t=0.8 tonal distribution: differs from plate-1-establishing (gap 4.863x tolerance): bring it closer",
+    "[color] t=0.8 blue-yellow balance / colour temperature (b*): render -17.82 vs reference -32.64 (gap 2.964x tolerance): lower it",
+    "[color] t=0.8 green-magenta balance (a*): render -8.03 vs reference 8.64 (gap 3.334x tolerance): raise it",
+    "[color] t=0.8 saturation (C*): render 20.35 vs reference 34.24 (gap 2.315x tolerance): raise it",
+    "[color] t=0.8 dominant hue (degrees): differs from plate-1-establishing (gap 2.793x tolerance): bring it closer",
+    "[composition] t=0.8 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-1-establishing (gap 3.503x tolerance): bring it closer",
+    "[spatial] t=0.8 atmospheric depth profile top-to-bottom (L* per band): differs from plate-1-establishing (gap 3.424x tolerance): bring it closer",
+    "[lighting] t=3.2 overall exposure (L*): render 12.81 vs reference 19.19 (gap 1.063x tolerance): raise it",
+    "[lighting] t=3.2 tonal range p05-p95 (L*): render 33.82 vs reference 49.89 (gap 2.009x tolerance): raise it",
+    "[lighting] t=3.2 surface-to-depth brightness falloff: render 1.186 vs reference 4.074 (gap 3.524x tolerance): raise it",
+    "[lighting] t=3.2 tonal distribution: differs from plate-2-hero (gap 1.911x tolerance): bring it closer",
+    "[color] t=3.2 blue-yellow balance / colour temperature (b*): render -2.71 vs reference -19.73 (gap 3.404x tolerance): lower it",
+    "[color] t=3.2 saturation (C*): render 10.21 vs reference 21.45 (gap 1.873x tolerance): raise it",
+    "[color] t=3.2 dominant hue (degrees): differs from plate-2-hero (gap 2.8x tolerance): bring it closer",
+    "[composition] t=3.2 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-2-hero (gap 1.945x tolerance): bring it closer",
+    "[materials] t=3.2 surface/texture detail (Laplacian): render 3.005 vs reference 6.676 (gap 1.773x tolerance): raise it",
+    "[spatial] t=3.2 atmospheric depth profile top-to-bottom (L* per band): differs from plate-2-hero (gap 1.013x tolerance): bring it closer",
+    "[color] t=3.2 bMean -2.71 is outside the DESIGN.md target {\"max\":-12}: lower it",
+    "[color] t=3.2 chroma 10.21 is outside the DESIGN.md target {\"min\":15}: raise it",
+    "[lighting] t=5.4 tonal range p05-p95 (L*): render 38.19 vs reference 52.37 (gap 1.773x tolerance): raise it",
+    "[lighting] t=5.4 surface-to-depth brightness falloff: render 1.283 vs reference 2.301 (gap 1.668x tolerance): raise it",
+    "[lighting] t=5.4 tonal distribution: differs from plate-3-macro (gap 1.469x tolerance): bring it closer",
+    "[color] t=5.4 blue-yellow balance / colour temperature (b*): render 1.37 vs reference -16.87 (gap 3.648x tolerance): lower it",
+    "[color] t=5.4 saturation (C*): render 12.16 vs reference 19.7 (gap 1.257x tolerance): raise it",
+    "[color] t=5.4 dominant hue (degrees): differs from plate-3-macro (gap 9.386x tolerance): bring it closer",
+    "[composition] t=5.4 coarse layout of light and colour (mean dE over a 4x4 grid): differs from plate-3-macro (gap 1.993x tolerance): bring it closer",
+    "[composition] t=5.4 focal point placement relative to the reference: render 0.0459 vs reference 0.129 (gap 1.187x tolerance): raise it",
+    "[materials] t=5.4 surface/texture detail (Laplacian): render 2.046 vs reference 4.204 (gap 1.6x tolerance): raise it",
+    "[materials] t=5.4 particulate density (marine snow, sparkle): render 4.563 vs reference 1.02 (gap 2.723x tolerance): lower it",
+    "[color] t=5.4 bMean 1.37 is outside the DESIGN.md target {\"max\":-12}: lower it",
+    "[color] t=5.4 chroma 12.16 is outside the DESIGN.md target {\"min\":15}: raise it"
+  ],
+  "suggestions": {
+    "params": {
+      "exposure": 0.947,
+      "rayIntensity": 0.366,
+      "depthFalloff": 1.067,
+      "warmth": -0.3,
+      "waterSaturation": 0.797,
+      "waterHue": 208,
+      "shellDetail": 0.569,
+      "snowDensity": 0.7
+    },
+    "moves": [
+      {
+        "param": "exposure",
+        "from": 1,
+        "to": 0.947,
+        "because": "lumaMean lower (lighting); lumaMean raise (lighting)"
+      },
+      {
+        "param": "rayIntensity",
+        "from": 0.35,
+        "to": 0.366,
+        "because": "contrast lower (lighting); contrast raise (lighting)"
+      },
+      {
+        "param": "depthFalloff",
+        "from": 1,
+        "to": 1.067,
+        "because": "falloff lower (lighting); falloff raise (lighting)"
+      },
+      {
+        "param": "warmth",
+        "from": 0,
+        "to": -0.3,
+        "because": "bMean lower (color)"
+      },
+      {
+        "param": "waterSaturation",
+        "from": 0.7,
+        "to": 0.797,
+        "because": "bMean lower (color); chroma raise (color)"
+      },
+      {
+        "param": "waterHue",
+        "from": 200,
+        "to": 208,
+        "because": "aMean raise (color)"
+      },
+      {
+        "param": "shellDetail",
+        "from": 0.4,
+        "to": 0.569,
+        "because": "detail raise (materials)"
+      },
+      {
+        "param": "snowDensity",
+        "from": 1,
+        "to": 0.7,
+        "because": "speckleDensity lower (materials)"
+      }
+    ]
+  },
+  "decision": "continue",
+  "adjustment": {
+    "at": "2026-11-28T03:24:45.838Z",
+    "note": "Scene code: rebuilt turtle (scute plates, seams, lifted centres, key/flank split, specular rim, shell caustics, mottled blue-grey flippers with warm transmitted edges, 3/4 foreshortening), lit caustic sand floor, Snell-window fade to remove the false horizon, irregular shafts that end by the lower third, depth haze on the subject, near-lens bokeh flakes and stronger defocus on the rack. Params: navy/cobalt grade (hue 218, deep 0.07), cooler key, exposure -15%, snow follows shafts.",
+    "sceneChanged": true,
+    "params": [
+      {
+        "param": "exposure",
+        "from": null,
+        "to": 0.85
+      },
+      {
+        "param": "depthFalloff",
+        "from": null,
+        "to": 1.15
+      },
+      {
+        "param": "waterHue",
+        "from": null,
+        "to": 218
+      },
+      {
+        "param": "waterSaturation",
+        "from": null,
+        "to": 0.85
+      },
+      {
+        "param": "deepLevel",
+        "from": null,
+        "to": 0.07
+      },
+      {
+        "param": "warmth",
+        "from": null,
+        "to": -0.3
+      },
+      {
+        "param": "rayIntensity",
+        "from": null,
+        "to": 0.45
+      },
+      {
+        "param": "rayCount",
+        "from": null,
+        "to": 7
+      },
+      {
+        "param": "raySpread",
+        "from": null,
+        "to": 0.55
+      },
+      {
+        "param": "raySoftness",
+        "from": null,
+        "to": 10
+      },
+      {
+        "param": "causticIntensity",
+        "from": null,
+        "to": 0.6
+      },
+      {
+        "param": "causticOnSubject",
+        "from": null,
+        "to": 0.45
+      },
+      {
+        "param": "shellDetail",
+        "from": null,
+        "to": 0.75
+      },
+      {
+        "param": "sss",
+        "from": null,
+        "to": 0.6
+      },
+      {
+        "param": "ambientOcclusion",
+        "from": null,
+        "to": 0.6
+      },
+      {
+        "param": "snowDensity",
+        "from": null,
+        "to": 0.8
+      },
+      {
+        "param": "snowLightFollow",
+        "from": null,
+        "to": 0.7
+      },
+      {
+        "param": "aperture",
+        "from": null,
+        "to": 1.3
+      }
+    ],
+    "suggested": [
+      {
+        "param": "exposure",
+        "from": 1,
+        "to": 0.947,
+        "because": "lumaMean lower (lighting); lumaMean raise (lighting)"
+      },
+      {
+        "param": "rayIntensity",
+        "from": 0.35,
+        "to": 0.366,
+        "because": "contrast lower (lighting); contrast raise (lighting)"
+      },
+      {
+        "param": "depthFalloff",
+        "from": 1,
+        "to": 1.067,
+        "because": "falloff lower (lighting); falloff raise (lighting)"
+      },
+      {
+        "param": "warmth",
+        "from": 0,
+        "to": -0.3,
+        "because": "bMean lower (color)"
+      },
+      {
+        "param": "waterSaturation",
+        "from": 0.7,
+        "to": 0.797,
+        "because": "bMean lower (color); chroma raise (color)"
+      },
+      {
+        "param": "waterHue",
+        "from": 200,
+        "to": 208,
+        "because": "aMean raise (color)"
+      },
+      {
+        "param": "shellDetail",
+        "from": 0.4,
+        "to": 0.569,
+        "because": "detail raise (materials)"
+      },
+      {
+        "param": "snowDensity",
+        "from": 1,
+        "to": 0.7,
+        "because": "speckleDensity lower (materials)"
+      }
+    ],
+    "restoredFrom": null
+  }
+}

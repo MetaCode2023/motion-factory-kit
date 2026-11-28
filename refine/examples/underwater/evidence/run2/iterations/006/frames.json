@@ -1,0 +1,32 @@
+{
+  "kind": "still",
+  "shotId": "underwater-documentary",
+  "iteration": 6,
+  "frames": [
+    {
+      "t": 0.8,
+      "path": "iterations/006/frames/frame-0_800.png",
+      "sha256": "abf17558daea05ef897a62ef1437c097f0817813927e20a951a25b9cc86de44c",
+      "width": 1920,
+      "height": 1080,
+      "reference": "plate-1-establishing"
+    },
+    {
+      "t": 3.2,
+      "path": "iterations/006/frames/frame-3_200.png",
+      "sha256": "b9946cb1151410579ce7cd63a4d6d3ef02ac46bb7ab955bb18c81c53373b07b9",
+      "width": 1920,
+      "height": 1080,
+      "reference": "plate-2-hero"
+    },
+    {
+      "t": 5.4,
+      "path": "iterations/006/frames/frame-5_400.png",
+      "sha256": "d2f8e3819de98e79985969aa972b6d362cc9f2817a393da1982146559b76c07a",
+      "width": 1920,
+      "height": 1080,
+      "reference": "plate-3-macro"
+    }
+  ],
+  "outputHash": "09d1923badc712a6da7aa1c1da03c94e22cae341bff1e4b339d43a1ef19fa953"
+}

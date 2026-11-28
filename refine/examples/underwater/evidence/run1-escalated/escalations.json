@@ -1,0 +1,11 @@
+[
+  {
+    "at": "2026-11-28T03:20:03.262Z",
+    "reason": "creative-direction-shift",
+    "phase": "still",
+    "iteration": 1,
+    "temporalIteration": 0,
+    "detail": "All seven criteria fail: the render reads as flat vector placeholders (striped, scribbled ellipse turtle, ruled overlay shafts, uniform bokeh) in water that is too bright at t=0.8 and grey-warm at t=3.2/5.4, with no caustic key, no sand, and no rack focus to near-lens snow. The plates show a teal-green shell while the brief and DESIGN ask for amber as the only warm accent, so a human should confirm which shell colour is the target.",
+    "needs": "human"
+  }
+]
