@@ -122,7 +122,7 @@ function caustic(x, z, t) {
   const small = Math.pow(clamp(1 - cellEdge(wx * 2.3 + 5, wz * 2.3 - 3, w * 1.3) * 3.4, 0, 1), 10) * 0.18;
   // Uneven line weight: focus varies across the net.
   const focus = 0.45 + 0.55 * Math.pow(0.5 + 0.5 * Math.sin(wx * 0.9 + wz * 0.6 + w * 0.4), 2);
-  return (big + small) * focus;
+  return (big + small + big * small * 3) * focus;
 }
 function ripple(x, z, t) {
   const k = 0.9 / D.causticScale, w = t * D.causticSpeed;
@@ -133,7 +133,13 @@ function ripple(x, z, t) {
   return Math.pow(1 - v, 5);
 }
 function shaftBand(x, z) { const b = 0.5 + 0.5 * Math.sin(x * 0.55 + Math.sin(z * 0.08) * 1.2 + 0.4); return 0.25 + 1.3 * b * b * b * b; }
+let SH = { x: 0, y: 0, rx: 1, ry: 1, k: 0 };
 function renderSurfaces(t, cam, P) {
+  // Where the turtle's shadow lands on the sand (screen space): down and right of it, away from the key.
+  const T0 = turtleAt(t), zc = cam.zoom;
+  const toScreen = (x, y) => [960 + (x - 960) * zc, 540 + (y - 540) * zc];
+  const [shx, shy] = toScreen(T0.x + T0.s * 0.55, T0.y + T0.s * 1.0);
+  SH = { x: shx, y: shy, rx: T0.s * 1.25 * zc, ry: T0.s * 0.85 * zc, k: smooth((cam.tilt - 0.4) / 0.4) * D.ambientOcclusion * 1.4 };
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const sig = [0.32 * D.depthFalloff, 0.075 * D.depthFalloff, 0.045 * D.depthFalloff];
   const d = sdata.data;
@@ -153,8 +159,8 @@ function renderSurfaces(t, cam, P) {
         const x = dx * dist, z = cam.camZ + dz * dist;
         // Snell's window: the ripple is visible looking up and fades out toward grazing angles
         // (where it would alias into a hard sparkle line).
-        const graze = smooth((dy - 0.12) / 0.35);
-        const c = ripple(x * 0.6, z * 0.6, t) * shaftBand(x, z) * graze;
+        const graze = smooth((dy - 0.2) / 0.16);
+        const c = (caustic(x * 1.7, z * 1.7, t * 1.3) * 0.8 + ripple(x * 1.2, z * 1.2, t) * 0.35) * shaftBand(x, z) * graze;
         const cool = [0.72, 0.92, 1.0];   // the surface reads cyan-white, not green
         col = col.map((cv, i) => cv + cool[i] * c * D.surfaceIntensity * D.exposure * Math.exp(-sig[i] * dist * 0.15));
       } else if (dy < -0.02) {
@@ -166,13 +172,17 @@ function renderSurfaces(t, cam, P) {
         // Sunlight reaching the sand has crossed the water column (red goes first); the caustic net is
         // sharp where the surface focuses it. Then the view path from the sand back to the lens.
         const key = 0.15 + 1.5 * Math.pow(1 - clamp((px / RW) * 0.35 + (py / RH) * 0.65, 0, 1), 1.5);   // the sun key lands upper left, dark toward the bottom
-        const grain = 0.92 + 0.16 * hash2(Math.floor(x * 30), Math.floor(z * 30)) + 0.06 * Math.sin(x * 3.1 + Math.sin(z * 1.3) * 2);
-        const net = caustic(x, z, t) * shaftBand(x, z) * key;
+        const sx = (px + 0.5) / RW * 1920, sy = (py + 0.5) / RH * 1080;
+        const shaftLit = 0.3 + 0.9 * shaftLightAt(sx, sy, t, cam);   // caustics are strongest where shafts land
+        // The turtle stands between the sun and the sand: no caustics in its shadow.
+        const sdx = (sx - SH.x) / SH.rx, sdy = (sy - SH.y) / SH.ry, shadow = SH.k * (1 - smooth((Math.hypot(sdx, sdy) - 0.55) / 0.6));
+        const grain = 0.8 + 0.35 * hash2(Math.floor(x * 24), Math.floor(z * 24)) + 0.1 * Math.sin(x * 3.1 + Math.sin(z * 1.3) * 2);
+        const net = caustic(x, z, t) * shaftBand(x, z) * key * shaftLit * (1 - shadow);
         // Light on the sand is blue-cyan (red is gone by this depth); in-scattered blue fills the view path.
-        const light = sig.map((s2, i) => P.sun[i] * (Math.exp(-s2 * (SURFACE - FLOOR) * 0.32) * D.floorLevel + lerp(Math.exp(-s2 * (SURFACE - FLOOR) * 0.32), 0.85, 0.45) * D.causticIntensity * 3.6 * net) * D.exposure);
+        const light = sig.map((s2, i) => P.sun[i] * (Math.exp(-s2 * (SURFACE - FLOOR) * 0.32) * D.floorLevel + lerp(Math.exp(-s2 * (SURFACE - FLOOR) * 0.32), 0.9, 0.62) * D.causticIntensity * 3.6 * net) * D.exposure);
         const att = sig.map((s2) => Math.exp(-s2 * dist * 0.8));
         const fill = P.water.map((w) => w * D.waterGlow * 1.25);
-        const floor = fill.map((f, i) => (f * (1 - att[i]) + alb[i] * grain * light[i] * att[i] * 1.5 + f * 0.35) * (0.45 + 0.55 * key / 1.65));
+        const floor = fill.map((f, i) => (f * (1 - att[i]) + alb[i] * grain * light[i] * att[i] * 1.5 + f * 0.25) * (0.35 + 0.65 * key / 1.65) * (1 - 0.55 * shadow));
         // Fog the far floor into the open-water colour at the horizon, so there is no hard line.
         // Mid-water at the start: the floor is too deep to see until the camera cranes down.
         const fog = Math.max(smooth((dist - 8) / 22), 1 - smooth((cam.tilt - 0.2) / 0.45)), horizon = ow(Math.min(dy, -0.02));
@@ -287,7 +297,7 @@ function drawTurtle(ctx, t, cam, P, T) {
     // Light passing through the thin trailing edge (subsurface stand-in).
     if (D.sss > 0) {
       const e = ctx.createLinearGradient(0, wid * 0.15, 0, wid * 0.6);
-      e.addColorStop(0, 'rgba(255,170,90,0)'); e.addColorStop(1, `rgba(255,${Math.round(165 + 25 * D.warmth)},95,${0.85 * D.sss})`);
+      e.addColorStop(0, 'rgba(255,170,90,0)'); e.addColorStop(1, `rgba(255,${Math.round(165 + 25 * D.warmth)},95,${Math.min(1, 1.1 * D.sss)})`);
       ctx.fillStyle = e; ctx.fillRect(0, -wid, len, wid * 2);
     }
     ctx.restore();
@@ -304,12 +314,14 @@ function drawTurtle(ctx, t, cam, P, T) {
   hg.addColorStop(0, rgb(104 * ex, 106 * ex, 88 * ex)); hg.addColorStop(1, rgb(32, 40, 42));
   ctx.fillStyle = hg; ctx.fill();
   ctx.strokeStyle = rgb(30, 28, 22, 0.6); ctx.lineWidth = 0.012;
-  for (const [x, y, r] of [[0.08, -0.06, 0.06], [0.2, -0.05, 0.05], [0.14, 0.05, 0.06], [0.28, 0.02, 0.04]]) { ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.8, 0, 0, 6.28); ctx.stroke(); }
+  ctx.strokeStyle = rgb(30, 28, 22, 0.3);
+  for (const [x, y] of [[0.06, -0.08], [0.18, -0.06], [0.12, 0.04], [0.26, 0.0]]) { ctx.beginPath(); ctx.moveTo(x - 0.05, y); ctx.lineTo(x, y - 0.04); ctx.lineTo(x + 0.05, y); ctx.lineTo(x, y + 0.04); ctx.closePath(); ctx.stroke(); }
   ctx.fillStyle = rgb(10, 10, 12); ctx.beginPath(); ctx.ellipse(0.27, -0.1, 0.025, 0.018, 0, 0, 6.28); ctx.fill();
   ctx.restore();
   // Flank / plastron edge: the shell's thickness, in shadow (key:fill about 4:1).
-  ctx.beginPath(); ctx.ellipse(0.02, 0.1, 1.0, 0.76, 0, 0, 6.28);
-  ctx.fillStyle = rgb(46 * (1 - ao * 0.5), 38 * (1 - ao * 0.5), 30 * (1 - ao * 0.5)); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0.03, 0.16, 1.0, 0.76, 0, 0, 6.28);
+  ctx.fillStyle = rgb(58 * (1 - ao * 0.4), 52 * (1 - ao * 0.4), 44 * (1 - ao * 0.4)); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0.03, 0.16, 1.0, 0.76, 0, 0.3, 2.6); ctx.lineWidth = 0.02; ctx.strokeStyle = 'rgba(150,200,225,0.35)'; ctx.stroke();
   // Carapace.
   ctx.beginPath(); ctx.ellipse(0, 0, 1.0, 0.78, 0, 0, 6.28);
   const sg = ctx.createRadialGradient(-0.35, -0.38, 0.05, -0.05, 0, 1.15);
@@ -352,8 +364,7 @@ function drawTurtle(ctx, t, cam, P, T) {
   ctx.lineWidth = 0.018;
   for (let i = 0; i < 24; i++) { const a = i / 24 * 6.283; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 0.86, Math.sin(a) * 0.66); ctx.lineTo(Math.cos(a) * 1.0, Math.sin(a) * 0.78); ctx.stroke(); }
   // Fine growth lines inside each plate.
-  ctx.strokeStyle = 'rgba(40,26,14,0.18)'; ctx.lineWidth = 0.008;
-  for (const v of VERT) for (const r of [0.07, 0.12]) { ctx.beginPath(); ctx.ellipse(v.x, 0, r, r * 1.05, 0, 0, 6.28); ctx.stroke(); }
+
   // Caustics crawling over the shell, the same pattern as the floor, softer.
   if (D.causticOnSubject > 0) {
     renderShellCaustics(t * D.causticSpeed);
